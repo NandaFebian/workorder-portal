@@ -17,8 +17,12 @@ export class UsersService {
         const newUser = new this.userModel(createUserDto);
         return newUser.save();
     }
-
+    // Method untuk mengupdate companyId user
     async updateCompanyId(userId: Types.ObjectId, companyId: Types.ObjectId): Promise<void> {
         await this.userModel.updateOne({ _id: userId }, { $set: { companyId: companyId } });
+    }
+    // Method untuk mencari user berdasarkan ID
+    async findById(id: any): Promise<UserDocument | null> {
+        return this.userModel.findById(id).exec();
     }
 }

@@ -1,4 +1,14 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+    Controller,
+    Post,
+    Body,
+    HttpCode,
+    HttpStatus,
+    Get,
+    Req,
+    UseGuards
+} from '@nestjs/common';
+import { AuthGuard } from './guards/auth.guard';
 import { AuthService } from './auth.service';
 import { RegisterAuthDto } from './dto/register-auth.dto';
 import { RegisterOwnerDto } from './dto/register-owner.dto';
@@ -50,6 +60,22 @@ export class AuthController {
             success: true,
             message: 'Logout successful',
             data: data,
+        };
+    }
+
+    @Get('profile')
+    @UseGuards(AuthGuard) // Terapkan si penjaga di sini!
+    getProfile(@Req() request: any) {
+        // Karena Guard sudah menyematkan user, kita bisa ambil di sini
+        const user = request.user;
+
+        // Hapus password sebelum dikirim
+        const { password, ...profile } = user.toObject();
+
+        return {
+            success: true,
+            message: 'Profile retrieved successfully',
+            data: profile,
         };
     }
 }

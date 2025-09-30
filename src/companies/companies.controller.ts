@@ -1,7 +1,9 @@
-import { Controller, Get, HttpCode, HttpStatus, Param, Put, Body, UseGuards } from "@nestjs/common";
+import { Controller, Get, HttpCode, HttpStatus, Param, Put, Body, UseGuards, Post, Req } from "@nestjs/common";
 import { CompaniesService } from "./companies.service";
 import { AuthGuard } from "src/auth/guards/auth.guard";
 import { UpdateCompanyDto } from "./dto/update-company.dto";
+import { InviteEmployeesDto } from "./dto/invite-employees.dto";
+import { InviteEmployeesResponse } from "./interfaces/invitation.interface";
 
 @Controller('companies')
 export class CompaniesController {
@@ -47,5 +49,20 @@ export class CompaniesController {
                 company: company,
             }
         };
+    }
+
+    @Post(':id/invite-employees')
+    @UseGuards(AuthGuard)
+    async inviteEmployees(
+        @Param('id') id: string,
+        @Body() inviteEmployeesDto: InviteEmployeesDto
+    ): Promise<InviteEmployeesResponse> {
+        return this.companiesService.inviteEmployees(id, inviteEmployeesDto);
+    }
+
+    @Get('invitations/history')
+    @UseGuards(AuthGuard)
+    async getInvitationHistory(@Req() request: any) {
+        return this.companiesService.getInvitationHistory(request.user._id);
     }
 }

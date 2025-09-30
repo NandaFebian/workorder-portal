@@ -15,7 +15,7 @@ export class RegisterAuthDto {
     password: string;
 
     // Untuk awal, kita batasi registrasi hanya untuk role 'client'
-    @IsEnum(['client'], { message: 'Role must be client' })
+    @IsEnum(['client', 'staff_unassigned'], { message: 'Role must be client or staff_unassigned' })
     @IsNotEmpty()
     role: string;
 }

@@ -55,11 +55,11 @@ export class CompaniesService {
         const company = await this.findById(companyId);
         const successfulInvites: SuccessfulInvite[] = [];
         const errors: InviteError[] = [];
-        
+
         for (const invite of inviteEmployeesDto.invites) {
             try {
                 const user = await this.usersService.findOneByEmail(invite.email);
-                
+
                 if (!user) {
                     errors.push({
                         invite,

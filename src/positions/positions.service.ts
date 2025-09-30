@@ -7,7 +7,7 @@ import { Position, PositionDocument } from './schemas/position.schema';
 export class PositionsService {
     constructor(
         @InjectModel(Position.name) private positionModel: Model<PositionDocument>
-    ) {}
+    ) { }
 
     async findAll() {
         return this.positionModel.find({ isActive: true }).exec();

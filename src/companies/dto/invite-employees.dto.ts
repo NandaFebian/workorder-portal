@@ -6,8 +6,8 @@ class InviteDto {
     @IsNotEmpty()
     email: string;
 
-    @IsEnum(['manager_company', 'staff_company'], { 
-        message: 'Role must be either manager_company or staff_company' 
+    @IsEnum(['manager_company', 'staff_company'], {
+        message: 'Role must be either manager_company or staff_company'
     })
     @IsNotEmpty()
     role: string;

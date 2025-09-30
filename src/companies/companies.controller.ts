@@ -1,9 +1,11 @@
-import { Controller, Get, HttpCode, HttpStatus, Param, Put, Body, UseGuards, Post, Req } from "@nestjs/common";
+import { Controller, Get, HttpCode, HttpStatus, Param, Put, Body, UseGuards, Post, ForbiddenException, UnauthorizedException, Req } from "@nestjs/common";
 import { CompaniesService } from "./companies.service";
 import { AuthGuard } from "src/auth/guards/auth.guard";
 import { UpdateCompanyDto } from "./dto/update-company.dto";
 import { InviteEmployeesDto } from "./dto/invite-employees.dto";
 import { InviteEmployeesResponse } from "./interfaces/invitation.interface";
+import { GetUser } from '../common/decorators/get-user.decorator';
+import type { UserDocument } from '../users/schemas/user.schema';
 
 @Controller('companies')
 export class CompaniesController {
@@ -51,13 +53,23 @@ export class CompaniesController {
         };
     }
 
-    @Post(':id/invite-employees')
+    @Post('invite')
     @UseGuards(AuthGuard)
     async inviteEmployees(
-        @Param('id') id: string,
+        @GetUser() invitingUser: UserDocument,
         @Body() inviteEmployeesDto: InviteEmployeesDto
     ): Promise<InviteEmployeesResponse> {
-        return this.companiesService.inviteEmployees(id, inviteEmployeesDto);
+        // Validasi role user
+        if (!['owner_company', 'manager_company'].includes(invitingUser.role)) {
+            throw new ForbiddenException('Only company owners and managers can invite employees');
+        }
+
+        // Validasi company ID
+        if (!invitingUser.companyId) {
+            throw new ForbiddenException('User must belong to a company to invite employees');
+        }
+
+        return this.companiesService.inviteEmployees(invitingUser.companyId.toString(), inviteEmployeesDto);
     }
 
     @Get('invitations/history')

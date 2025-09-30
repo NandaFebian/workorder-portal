@@ -1,13 +1,19 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Company, CompanySchema } from '../schemas/company.schemas';
+import { Company, CompanySchema } from './schemas/company.schemas';
 import { CompaniesService } from './companies.service';
+import { CompaniesController } from './companies.controller';
+import { AuthModule } from 'src/auth/auth.module';
+import { UsersModule } from 'src/users/users.module';
 
 @Module({
     imports: [
         MongooseModule.forFeature([{ name: Company.name, schema: CompanySchema }]),
+        UsersModule,
+        forwardRef(() => AuthModule),
     ],
+    controllers: [CompaniesController],
     providers: [CompaniesService],
-    exports: [CompaniesService], // Ekspor agar bisa dipakai di AuthModule
+    exports: [CompaniesService],
 })
 export class CompaniesModule { }

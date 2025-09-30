@@ -8,8 +8,11 @@ export class Company {
     @Prop({ required: true })
     name: string;
 
-    @Prop({ required: true })
+    @Prop({ required: false, default: null })
     address: string;
+
+    @Prop({ required: false, default: null })
+    description: string;
 
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
     ownerId: MongooseSchema.Types.ObjectId;
@@ -20,8 +23,8 @@ export class Company {
     @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'User' }], default: [] })
     staffs: MongooseSchema.Types.ObjectId[];
 
-    @Prop({ default: true })
-    status: boolean;
+    @Prop({ default: false })
+    isActive: boolean;
 }
 
 export const CompanySchema = SchemaFactory.createForClass(Company);

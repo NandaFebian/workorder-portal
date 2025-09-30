@@ -11,7 +11,7 @@ import {
 import { AuthGuard } from './guards/auth.guard';
 import { AuthService } from './auth.service';
 import { RegisterAuthDto } from './dto/register-auth.dto';
-import { RegisterOwnerDto } from './dto/register-owner.dto';
+import { RegisterCompanyDto } from './dto/register-company.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { LogoutDto } from './dto/logout.dto';
 
@@ -30,13 +30,15 @@ export class AuthController {
         };
     }
 
-    @Post('register-owner')
+    @Post('register-company')
     @HttpCode(HttpStatus.OK)
-    async registerOwner(@Body() registerOwnerDto: RegisterOwnerDto) {
-        const data = await this.authService.registerOwner(registerOwnerDto);
+    async registerCompany(@Body() registerCompanyDto: RegisterCompanyDto) {
+        const data = await this.authService.registerCompany(registerCompanyDto);
         return {
-            success: true,
-            message: 'Owner and company registered successfully',
+            message: 'Company and owner registered successfully',
+            meta: {
+                welcome: true,
+            },
             data: data,
         };
     }

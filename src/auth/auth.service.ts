@@ -11,7 +11,7 @@ import { UsersService } from '../users/users.service';
 import { CompaniesService } from '../companies/companies.service';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { RegisterAuthDto } from './dto/register-auth.dto';
-import { RegisterOwnerDto } from './dto/register-owner.dto';
+import { RegisterCompanyDto } from './dto/register-company.dto';
 import { LogoutDto } from './dto/logout.dto';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
@@ -24,6 +24,7 @@ export class AuthService {
         @InjectModel(ActiveToken.name) private activeTokenModel: Model<ActiveTokenDocument>,
     ) { }
 
+    // Register user biasa (bukan owner perusahaan)
     async register(registerAuthDto: RegisterAuthDto) {
         const existingUser = await this.usersService.findOneByEmail(
             registerAuthDto.email,
@@ -45,34 +46,26 @@ export class AuthService {
         return result;
     }
 
-    async registerOwner(registerOwnerDto: RegisterOwnerDto) {
+    // Register perusahaan beserta pembuatan data owner
+    async registerCompany(registerCompanyDto: RegisterCompanyDto) {
         const {
             name,
             email,
             password,
-            confirmPassword,
             companyName,
-            companyAddress,
-        } = registerOwnerDto;
-
-        if (password !== confirmPassword) {
-            throw new BadRequestException('Passwords do not match');
-        }
+        } = registerCompanyDto;
 
         const existingUser = await this.usersService.findOneByEmail(email);
         if (existingUser) {
             throw new HttpException(
                 {
-                    success: false,
                     message: 'Email already registered',
-                    errors: { email: 'This email is already in use' },
-                    code: 'AUTH_EMAIL_EXISTS',
+                    code: 'EMAIL_ALREADY_EXISTS',
                 },
                 HttpStatus.BAD_REQUEST,
             );
         }
 
-        // Panggilan ini sekarang valid karena objek yang kita buat cocok dengan struktur CreateUserDto
         const newOwner = await this.usersService.create({
             name,
             email,
@@ -82,7 +75,7 @@ export class AuthService {
 
         const newCompany = await this.companiesService.create({
             name: companyName,
-            address: companyAddress,
+            address: null,
             ownerId: newOwner._id as import('mongoose').Types.ObjectId,
         });
 
@@ -91,14 +84,30 @@ export class AuthService {
             newCompany._id as import('mongoose').Types.ObjectId
         );
 
+        // Generate token for auto-login
+        const tokenString = uuidv4();
+        const newToken = new this.activeTokenModel({
+            token: tokenString,
+            userId: newOwner._id,
+        });
+        await newToken.save();
+
+        // Prepare response object
         return {
-            id: newOwner._id,
-            name: newOwner.name,
-            email: newOwner.email,
-            role: 'owner_company',
+            user: {
+                name: newOwner.name,
+                email: newOwner.email,
+                role: newOwner.role,
+                company: {
+                    _id: newCompany._id,
+                    name: newCompany.name,
+                }
+            },
+            token: `Bearer ${tokenString}`,
         };
     }
 
+    // Login user dan buat token aktif
     async login(loginAuthDto: LoginAuthDto) {
         const { email, password } = loginAuthDto;
         const user = await this.usersService.findOneByEmail(email);
@@ -106,12 +115,18 @@ export class AuthService {
         if (!user) {
             throw new HttpException(
                 {
-                    success: false,
+                    // Gunakan 'message' dan 'code' yang lebih umum untuk login
                     message: 'Invalid credentials',
-                    errors: { email: 'Email not found' },
                     code: 'AUTH_INVALID_CREDENTIALS',
+                    // Ubah format 'errors' menjadi array
+                    errors: [
+                        {
+                            field: 'email',
+                            message: 'Email not registered',
+                        },
+                    ],
                 },
-                HttpStatus.BAD_REQUEST,
+                HttpStatus.BAD_REQUEST, // Atau HttpStatus.UNAUTHORIZED (401) lebih cocok
             );
         }
 
@@ -119,12 +134,17 @@ export class AuthService {
         if (!isPasswordMatching) {
             throw new HttpException(
                 {
-                    success: false,
                     message: 'Invalid credentials',
-                    errors: { password: 'Password is incorrect' },
                     code: 'AUTH_INVALID_CREDENTIALS',
+                    // Ubah format 'errors' menjadi array
+                    errors: [
+                        {
+                            field: 'password',
+                            message: 'Password is incorrect',
+                        },
+                    ],
                 },
-                HttpStatus.BAD_REQUEST,
+                HttpStatus.BAD_REQUEST, // Atau HttpStatus.UNAUTHORIZED (401)
             );
         }
 
@@ -153,6 +173,7 @@ export class AuthService {
         };
     }
 
+    // Logout user dengan menghapus token aktif
     async logout(logoutDto: LogoutDto) {
         // Hapus 'Bearer ' dari string token jika ada
         const token = logoutDto.token.startsWith('Bearer ')

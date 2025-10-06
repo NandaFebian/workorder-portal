@@ -93,6 +93,19 @@ export class CompaniesService {
                     continue;
                 }
 
+                const existingInvitation = await this.invitationModel.findOne({
+                    userId: user._id,
+                    status: 'pending',
+                }).exec();
+
+                if (existingInvitation) {
+                    errors.push({
+                        invite,
+                        message: "User has a pending invitation",
+                    });
+                    continue;
+                }
+
                 const expiresAt = new Date();
                 expiresAt.setDate(expiresAt.getDate() + 7);
 

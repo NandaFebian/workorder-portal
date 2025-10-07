@@ -66,13 +66,11 @@ export class AuthController {
     }
 
     @Get('profile')
-    @UseGuards(AuthGuard) // Terapkan si penjaga di sini!
+    @UseGuards(AuthGuard)
     getProfile(@Req() request: any) {
-        // Karena Guard sudah menyematkan user, kita bisa ambil di sini
-        const user = request.user;
+        const profile = request.user;
 
-        // Hapus password sebelum dikirim
-        const { password, ...profile } = user.toObject();
+        delete profile.password;
 
         return {
             success: true,

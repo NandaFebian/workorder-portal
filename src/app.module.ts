@@ -1,3 +1,4 @@
+// src/app.module.ts
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -5,6 +6,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { CompaniesModule } from './companies/companies.module';
+import { PositionsModule } from './positions/positions.module';
 
 @Module({
   imports: [
@@ -12,6 +14,7 @@ import { CompaniesModule } from './companies/companies.module';
     AuthModule,
     UsersModule,
     CompaniesModule,
+    PositionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

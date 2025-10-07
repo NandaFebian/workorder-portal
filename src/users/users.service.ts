@@ -22,7 +22,13 @@ export class UsersService {
         await this.userModel.updateOne({ _id: userId }, { $set: { companyId: companyId } });
     }
     // Method untuk mencari user berdasarkan ID
-    async findById(id: any): Promise<UserDocument | null> {
-        return this.userModel.findById(id).exec();
+    findById(id: any) {
+        return this.userModel.findById(id);
+    }
+    // Method untuk mendapatkan semua user berdasarkan companyId
+    async findAllByCompanyId(companyId: Types.ObjectId): Promise<UserDocument[]> {
+        return this.userModel.find({ companyId })
+            .populate('positionId', 'name') // Populate posisi agar lebih informatif
+            .exec();
     }
 }

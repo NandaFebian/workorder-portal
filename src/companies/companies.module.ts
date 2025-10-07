@@ -1,3 +1,4 @@
+// src/companies/companies.module.ts
 import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Company, CompanySchema } from './schemas/company.schemas';
@@ -6,6 +7,7 @@ import { CompaniesService } from './companies.service';
 import { CompaniesController } from './companies.controller';
 import { AuthModule } from 'src/auth/auth.module';
 import { UsersModule } from 'src/users/users.module';
+import { PositionsModule } from 'src/positions/positions.module';
 
 @Module({
     imports: [
@@ -15,6 +17,7 @@ import { UsersModule } from 'src/users/users.module';
         ]),
         UsersModule,
         forwardRef(() => AuthModule),
+        PositionsModule,
     ],
     controllers: [CompaniesController],
     providers: [CompaniesService],

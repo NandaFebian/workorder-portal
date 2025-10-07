@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Company, CompanyDocument } from './schemas/company.schemas';
@@ -7,6 +7,7 @@ import { Invitation, InvitationDocument } from './schemas/invitation.schemas';
 import { UsersService } from '../users/users.service';
 import { InviteEmployeesDto } from './dto/invite-employees.dto';
 import { SuccessfulInvite, InviteError, InviteEmployeesResponse } from './interfaces/invitation.interface';
+import { PositionsService } from 'src/positions/positions.service';
 
 @Injectable()
 export class CompaniesService {
@@ -14,6 +15,7 @@ export class CompaniesService {
         @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
         @InjectModel(Invitation.name) private invitationModel: Model<InvitationDocument>,
         private usersService: UsersService,
+        private positionsService: PositionsService,
     ) { }
 
     // Method untuk membuat perusahaan baru
@@ -36,7 +38,8 @@ export class CompaniesService {
 
     // Method untuk mendapatkan semua perusahaan (untuk keperluan admin)
     async findAll(): Promise<CompanyDocument[]> {
-        return this.companyModel.find().exec();
+        // Populate ownerId untuk mendapatkan detail owner
+        return this.companyModel.find().populate('ownerId', 'name email').exec();
     }
 
     // Method untuk mendapatkan perusahaan berdasarkan ID
@@ -44,7 +47,8 @@ export class CompaniesService {
         if (!Types.ObjectId.isValid(id)) {
             throw new NotFoundException(`Invalid company ID: ${id}`);
         }
-        const company = await this.companyModel.findById(id).exec();
+        // Populate ownerId untuk mendapatkan detail owner
+        const company = await this.companyModel.findById(id).populate('ownerId', 'name email').exec();
         if (!company) {
             throw new NotFoundException(`Company with ID ${id} not found`);
         }
@@ -54,42 +58,33 @@ export class CompaniesService {
     async inviteEmployees(companyId: string, inviteEmployeesDto: InviteEmployeesDto): Promise<InviteEmployeesResponse> {
         const company = await this.findById(companyId);
         const successfulInvites: SuccessfulInvite[] = [];
-        const errors: InviteError[] = [];
+        const errors: InviteError[] = []; // Tipe data ini sekarang sudah sesuai dengan interface baru
 
         for (const invite of inviteEmployeesDto.invites) {
+            // Helper ini sekarang akan membuat error dengan format yang benar
+            const createError = (message: string): InviteError => ({
+                invite: {
+                    email: invite.email,
+                    role: invite.role,
+                    positionId: { _id: invite.positionId }, // Transformasi dilakukan di sini
+                },
+                message,
+            });
+
             try {
+                if (!Types.ObjectId.isValid(invite.positionId)) {
+                    errors.push(createError("Invalid Position ID format"));
+                    continue;
+                }
+                const position = await this.positionsService.findById(invite.positionId);
+                if (!position) {
+                    errors.push(createError(`Position with ID ${invite.positionId} not found`));
+                    continue;
+                }
+
                 const user = await this.usersService.findOneByEmail(invite.email);
-
                 if (!user) {
-                    errors.push({
-                        invite,
-                        message: "User not found"
-                    });
-                    continue;
-                }
-
-                if (user.role !== 'staff_unassigned') {
-                    errors.push({
-                        invite,
-                        message: "User is not available for invitation"
-                    });
-                    continue;
-                }
-
-                if (user.companyId) {
-                    errors.push({
-                        invite,
-                        message: "User already belongs to a company"
-                    });
-                    continue;
-                }
-
-                // Validate role
-                if (!['staff_company', 'manager_company'].includes(invite.role)) {
-                    errors.push({
-                        invite,
-                        message: "Invalid role specified"
-                    });
+                    errors.push(createError("User not found"));
                     continue;
                 }
 
@@ -99,10 +94,21 @@ export class CompaniesService {
                 }).exec();
 
                 if (existingInvitation) {
-                    errors.push({
-                        invite,
-                        message: "User has a pending invitation",
-                    });
+                    errors.push(createError("User has a pending invitation"));
+                    continue;
+                }
+
+                // ... (validasi lainnya tetap sama)
+                if (user.role !== 'staff_unassigned') {
+                    errors.push(createError("User is not available for invitation"));
+                    continue;
+                }
+                if (user.companyId) {
+                    errors.push(createError("User already belongs to a company"));
+                    continue;
+                }
+                if (!['staff_company', 'manager_company'].includes(invite.role)) {
+                    errors.push(createError("Invalid role specified"));
                     continue;
                 }
 
@@ -119,22 +125,16 @@ export class CompaniesService {
                 });
 
                 successfulInvites.push({
-                    user: {
-                        name: user.name,
-                        email: user.email
-                    },
+                    user: { name: user.name, email: user.email },
                     role_offered: invite.role,
                     position_offered: {
-                        _id: invite.positionId,
-                        name: "STATIC DUMMY"
+                        _id: position.id,
+                        name: position.name,
                     }
                 });
 
             } catch (error) {
-                errors.push({
-                    invite,
-                    message: error.message
-                });
+                errors.push(createError(error.message));
             }
         }
 
@@ -142,15 +142,16 @@ export class CompaniesService {
             message: "Invite process finished",
             meta: {
                 successCount: successfulInvites.length,
-                errorCount: errors.length
+                errorCount: errors.length,
             },
             data: {
                 company: {
-                    _id: company._id.toString(),
+                    _id: company.id,
                     name: company.name
                 },
                 invited: successfulInvites
             },
+            // Larik 'errors' sekarang sudah memiliki tipe yang benar
             ...(errors.length > 0 && { errors })
         };
     }
@@ -158,13 +159,31 @@ export class CompaniesService {
     async getInvitationHistory(userId: string) {
         const invitations = await this.invitationModel
             .find({ userId: new Types.ObjectId(userId) })
-            .populate('companyId', 'name')
+            .populate([
+                { path: 'companyId', select: 'name' },
+                { path: 'positionId', select: 'name' },
+                { path: 'userId', select: 'name email' }
+            ])
             .exec();
+
+        // Lakukan transformasi di sini agar controller lebih bersih
+        const transformedInvitations = invitations.map(inv => {
+            const invObject = inv.toObject();
+            return {
+                ...invObject,
+                company: invObject.companyId,
+                user: invObject.userId,
+                position: invObject.positionId,
+                companyId: undefined,
+                userId: undefined,
+                positionId: undefined,
+            };
+        });
 
         return {
             message: "Invitations retrieved successfully",
             data: {
-                invitations: invitations
+                invitations: transformedInvitations,
             }
         };
     }

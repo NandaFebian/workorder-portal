@@ -6,10 +6,17 @@ import { InviteEmployeesDto } from "./dto/invite-employees.dto";
 import { InviteEmployeesResponse } from "./interfaces/invitation.interface";
 import { GetUser } from '../common/decorators/get-user.decorator';
 import type { UserDocument } from '../users/schemas/user.schema';
+import { Roles } from "src/common/decorators/roles.decorator";
+import { RolesGuard } from "src/auth/guards/roles.guard";
+import { UsersService } from "src/users/users.service";
+import type { AuthenticatedUser } from "src/auth/interfaces/authenticated-user.interface";
 
 @Controller('companies')
 export class CompaniesController {
-    constructor(private readonly companiesService: CompaniesService) { }
+    constructor(
+        private readonly companiesService: CompaniesService,
+        private readonly usersService: UsersService,
+    ) { }
 
     @Get()
     @HttpCode(HttpStatus.OK)
@@ -54,27 +61,50 @@ export class CompaniesController {
     }
 
     @Post('invite')
-    @UseGuards(AuthGuard)
+    @UseGuards(AuthGuard, RolesGuard)
+    @Roles('owner_company')
     async inviteEmployees(
-        @GetUser() invitingUser: UserDocument,
+        @GetUser() invitingUser: AuthenticatedUser,
         @Body() inviteEmployeesDto: InviteEmployeesDto
     ): Promise<InviteEmployeesResponse> {
-        // Validasi role user
-        if (!['owner_company', 'manager_company'].includes(invitingUser.role)) {
-            throw new ForbiddenException('Only company owners and managers can invite employees');
-        }
 
-        // Validasi company ID
-        if (!invitingUser.companyId) {
+        if (!invitingUser.company?._id) {
             throw new ForbiddenException('User must belong to a company to invite employees');
         }
 
-        return this.companiesService.inviteEmployees(invitingUser.companyId.toString(), inviteEmployeesDto);
+        return this.companiesService.inviteEmployees(invitingUser.company._id.toString(), inviteEmployeesDto);
     }
 
     @Get('invitations/history')
     @UseGuards(AuthGuard)
-    async getInvitationHistory(@Req() request: any) {
-        return this.companiesService.getInvitationHistory(request.user._id);
+    async getInvitationHistory(@GetUser() user: AuthenticatedUser) {
+        return this.companiesService.getInvitationHistory(user._id.toString());
+    }
+
+    @Get('employees')
+    @UseGuards(AuthGuard, RolesGuard)
+    @Roles('owner_company', 'manager_company')
+    @HttpCode(HttpStatus.OK)
+    async findAllEmployees(@GetUser() user: AuthenticatedUser) {
+        if (!user.company?._id) {
+            throw new ForbiddenException('You are not associated with any company.');
+        }
+
+        const employees = await this.usersService.findAllByCompanyId(user.company._id);
+
+        const transformedEmployees = employees.map(emp => {
+            const empObject: any = emp.toObject();
+            if (empObject.positionId) {
+                empObject.position = empObject.positionId;
+                delete empObject.positionId;
+            }
+            delete empObject.password;
+            return empObject;
+        });
+
+        return {
+            message: 'Employees retrieved successfully',
+            data: transformedEmployees,
+        };
     }
 }

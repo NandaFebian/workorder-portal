@@ -14,7 +14,9 @@ export interface InviteError {
     invite: {
         email: string;
         role: string;
-        positionId: string;
+        positionId: {
+            _id: string;
+        };
     };
     message: string;
 }

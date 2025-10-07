@@ -8,6 +8,7 @@ import { UsersService } from '../users/users.service';
 import { InviteEmployeesDto } from './dto/invite-employees.dto';
 import { SuccessfulInvite, InviteError, InviteEmployeesResponse } from './interfaces/invitation.interface';
 import { PositionsService } from 'src/positions/positions.service';
+import { UserDocument } from 'src/users/schemas/user.schema';
 
 @Injectable()
 export class CompaniesService {
@@ -58,57 +59,70 @@ export class CompaniesService {
     async inviteEmployees(companyId: string, inviteEmployeesDto: InviteEmployeesDto): Promise<InviteEmployeesResponse> {
         const company = await this.findById(companyId);
         const successfulInvites: SuccessfulInvite[] = [];
-        const errors: InviteError[] = []; // Tipe data ini sekarang sudah sesuai dengan interface baru
+        const errors: InviteError[] = [];
 
         for (const invite of inviteEmployeesDto.invites) {
-            // Helper ini sekarang akan membuat error dengan format yang benar
-            const createError = (message: string): InviteError => ({
-                invite: {
-                    email: invite.email,
-                    role: invite.role,
-                    positionId: { _id: invite.positionId }, // Transformasi dilakukan di sini
-                },
-                message,
-            });
-
             try {
+                // Validasi Position ID dan ambil datanya terlebih dahulu
                 if (!Types.ObjectId.isValid(invite.positionId)) {
-                    errors.push(createError("Invalid Position ID format"));
+                    errors.push({
+                        user: { email: invite.email },
+                        role_offered: invite.role,
+                        position_offered: { _id: invite.positionId, name: "Invalid ID" },
+                        message: "Invalid Position ID format",
+                    });
                     continue;
                 }
                 const position = await this.positionsService.findById(invite.positionId);
                 if (!position) {
-                    errors.push(createError(`Position with ID ${invite.positionId} not found`));
+                    errors.push({
+                        user: { email: invite.email },
+                        role_offered: invite.role,
+                        position_offered: { _id: invite.positionId, name: "Not Found" },
+                        message: `Position with ID ${invite.positionId} not found`,
+                    });
                     continue;
                 }
 
+                // Helper untuk membuat objek error dengan format baru yang konsisten
+                const createError = (message: string, user?: UserDocument): InviteError => ({
+                    user: {
+                        email: invite.email,
+                        name: user?.name, // Sertakan nama jika user ditemukan
+                    },
+                    role_offered: invite.role,
+                    position_offered: {
+                        _id: position.id,
+                        name: position.name,
+                    },
+                    message,
+                });
+
+                // Lanjutkan validasi user
                 const user = await this.usersService.findOneByEmail(invite.email);
                 if (!user) {
                     errors.push(createError("User not found"));
                     continue;
                 }
 
-                const existingInvitation = await this.invitationModel.findOne({
-                    userId: user._id,
-                    status: 'pending',
-                }).exec();
-
+                const existingInvitation = await this.invitationModel.findOne({ userId: user._id, status: 'pending' }).exec();
                 if (existingInvitation) {
-                    errors.push(createError("User has a pending invitation"));
+                    errors.push(createError("User has a pending invitation", user));
                     continue;
                 }
 
-                // ... (validasi lainnya tetap sama)
                 if (user.role !== 'staff_unassigned') {
-                    errors.push(createError("User is not available for invitation"));
+                    errors.push(createError("User is not available for invitation", user));
                     continue;
                 }
+
                 if (user.companyId) {
-                    errors.push(createError("User already belongs to a company"));
+                    errors.push(createError("User already belongs to a company", user));
                     continue;
                 }
+
                 if (!['staff_company', 'manager_company'].includes(invite.role)) {
-                    errors.push(createError("Invalid role specified"));
+                    errors.push(createError("Invalid role specified", user));
                     continue;
                 }
 
@@ -134,7 +148,13 @@ export class CompaniesService {
                 });
 
             } catch (error) {
-                errors.push(createError(error.message));
+                // Fallback error jika terjadi kesalahan tak terduga
+                errors.push({
+                    user: { email: invite.email },
+                    role_offered: invite.role,
+                    position_offered: { _id: invite.positionId, name: "Unknown" },
+                    message: error.message,
+                });
             }
         }
 
@@ -151,7 +171,6 @@ export class CompaniesService {
                 },
                 invited: successfulInvites
             },
-            // Larik 'errors' sekarang sudah memiliki tipe yang benar
             ...(errors.length > 0 && { errors })
         };
     }
@@ -168,7 +187,7 @@ export class CompaniesService {
 
         // Lakukan transformasi di sini agar controller lebih bersih
         const transformedInvitations = invitations.map(inv => {
-            const invObject = inv.toObject();
+            const invObject: any = inv.toObject();
             return {
                 ...invObject,
                 company: invObject.companyId,

@@ -11,12 +11,14 @@ export interface SuccessfulInvite {
 }
 
 export interface InviteError {
-    invite: {
+    user: {
         email: string;
-        role: string;
-        positionId: {
-            _id: string;
-        };
+        name?: string;
+    };
+    role_offered?: string;
+    position_offered?: {
+        _id: string;
+        name: string;
     };
     message: string;
 }

@@ -8,6 +8,7 @@ import { UsersModule } from './users/users.module';
 import { CompaniesModule } from './company/companies.module';
 import { PositionsModule } from './positions/positions.module';
 import { FormModule } from './form/form.module';
+import { ServicesModule } from './service/services.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { FormModule } from './form/form.module';
     CompaniesModule,
     PositionsModule,
     FormModule,
+    ServicesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

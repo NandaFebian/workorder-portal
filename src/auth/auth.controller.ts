@@ -6,14 +6,14 @@ import {
     HttpStatus,
     Get,
     Req,
-    UseGuards
+    UseGuards,
+    UnauthorizedException,
 } from '@nestjs/common';
 import { AuthGuard } from './guards/auth.guard';
 import { AuthService } from './auth.service';
 import { RegisterAuthDto } from './dto/register-auth.dto';
 import { RegisterCompanyDto } from './dto/register-company.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
-import { LogoutDto } from './dto/logout.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -55,13 +55,25 @@ export class AuthController {
     }
 
     @Post('logout')
+    @UseGuards(AuthGuard) // Gunakan AuthGuard untuk memastikan ada token yang valid
     @HttpCode(HttpStatus.OK)
-    async logout(@Body() logoutDto: LogoutDto) {
-        const data = await this.authService.logout(logoutDto);
+    async logout(@Req() request: any) {
+        // Ekstrak token dari header
+        const authHeader = request.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            throw new UnauthorizedException('Token not found in header');
+        }
+        const token = authHeader.substring(7);
+
+        const data = await this.authService.logout(token);
+
         return {
             success: true,
-            message: 'Logout successful',
-            data: data,
+            message: data.message,
+            data: {
+                userId: data.userId,
+                timestamp: data.timestamp,
+            },
         };
     }
 

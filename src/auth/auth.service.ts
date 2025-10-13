@@ -8,11 +8,10 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ActiveToken, ActiveTokenDocument } from './schemas/active-token.schema';
 import { UsersService } from '../users/users.service';
-import { CompaniesService } from '../companies/companies.service';
+import { CompaniesService } from '../company/companies.service';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { RegisterAuthDto } from './dto/register-auth.dto';
 import { RegisterCompanyDto } from './dto/register-company.dto';
-import { LogoutDto } from './dto/logout.dto';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -173,13 +172,7 @@ export class AuthService {
         };
     }
 
-    // Logout user dengan menghapus token aktif
-    async logout(logoutDto: LogoutDto) {
-        // Hapus 'Bearer ' dari string token jika ada
-        const token = logoutDto.token.startsWith('Bearer ')
-            ? logoutDto.token.substring(7)
-            : logoutDto.token;
-
+    async logout(token: string) {
         // Cari dan hapus token dari database
         const deletedToken = await this.activeTokenModel.findOneAndDelete({ token: token }).exec();
 
@@ -188,13 +181,14 @@ export class AuthService {
             throw new HttpException({
                 success: false,
                 message: 'Invalid or expired token',
-                errors: { token: 'The provided token is not valid or has expired' },
+                errors: { token: 'The provided token is not valid or has already been invalidated' },
                 code: 'AUTH_TOKEN_INVALID'
             }, HttpStatus.UNAUTHORIZED);
         }
 
         // Jika berhasil, kembalikan response sukses
         return {
+            message: 'Logout successful',
             userId: deletedToken.userId,
             timestamp: new Date(),
         };

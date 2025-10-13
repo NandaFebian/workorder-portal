@@ -3,7 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
-import { CompaniesModule } from '../companies/companies.module';
+import { CompaniesModule } from '../company/companies.module';
 import { ActiveToken, ActiveTokenSchema } from './schemas/active-token.schema';
 import { AuthGuard } from './guards/auth.guard'; // <-- 1. Impor Guard
 

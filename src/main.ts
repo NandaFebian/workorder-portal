@@ -1,3 +1,4 @@
+// src/main.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, BadRequestException } from '@nestjs/common';
@@ -10,15 +11,15 @@ async function bootstrap() {
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
-      // exceptionFactory adalah "pabrik" untuk membuat format error kustom
+
+      transform: true,
+
       exceptionFactory: (errors: ValidationError[]) => {
         const formattedErrors = errors.map((error) => ({
           field: error.property,
-          // Mengambil pesan error pertama dari daftar constraints
           message: error.constraints ? Object.values(error.constraints)[0] : 'Unknown validation error',
         }));
 
-        // Mengembalikan exception dengan format yang Anda inginkan
         return new BadRequestException({
           message: 'Validation failed',
           code: 'VALIDATION_ERROR',

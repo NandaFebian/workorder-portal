@@ -1,4 +1,3 @@
-// src/forms/dto/create-form-template.dto.ts
 import { Type } from 'class-transformer';
 import {
     IsString, IsNotEmpty, IsArray, ValidateNested, IsEnum,
@@ -60,17 +59,9 @@ export class CreateFormTemplateDto {
     @IsOptional()
     description?: string;
 
-    @IsString()
+    @IsEnum(['work_order', 'report'])
     @IsNotEmpty()
-    accessType: string;
-
-    @IsArray()
-    @IsString({ each: true })
-    accessibleBy: string[];
-
-    @IsArray()
-    @IsString({ each: true })
-    allowedPositions: string[];
+    formType: string;
 
     @IsArray()
     @ValidateNested({ each: true })

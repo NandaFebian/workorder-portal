@@ -13,24 +13,22 @@ import { ServicesService } from './services.service';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { GetUser } from '../common/decorators/get-user.decorator';
-import type { UserDocument } from '../users/schemas/user.schema';
+import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { Roles } from 'src/common/decorators/roles.decorator';
 
 @Controller('services')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
 export class ServicesController {
     constructor(private readonly servicesService: ServicesService) { }
 
     @Post()
     @HttpCode(HttpStatus.CREATED)
+    @Roles('owner_company', 'manager_company')
     async create(
         @Body() createServiceDto: CreateServiceDto,
-        @GetUser() user: UserDocument,
+        @GetUser() user: AuthenticatedUser,
     ) {
-        if (!['owner_company', 'manager_company'].includes(user.role)) {
-            throw new ForbiddenException(
-                'Only company owners and managers can create services',
-            );
-        }
         const newService = await this.servicesService.create(createServiceDto, user);
         return {
             success: true,
@@ -41,12 +39,8 @@ export class ServicesController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
-    async findAll(@GetUser() user: UserDocument) {
-        if (!['owner_company', 'manager_company'].includes(user.role)) {
-            throw new ForbiddenException(
-                'Only company owners and managers can access this resource',
-            );
-        }
+    @Roles('owner_company', 'manager_company')
+    async findAll(@GetUser() user: AuthenticatedUser) {
         const services = await this.servicesService.findAll(user);
         return {
             success: true,
@@ -57,12 +51,8 @@ export class ServicesController {
 
     @Get(':id')
     @HttpCode(HttpStatus.OK)
-    async findOne(@Param('id') id: string, @GetUser() user: UserDocument) {
-        if (!['owner_company', 'manager_company'].includes(user.role)) {
-            throw new ForbiddenException(
-                'Only company owners and managers can access this resource',
-            );
-        }
+    @Roles('owner_company', 'manager_company')
+    async findOne(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
         const service = await this.servicesService.findOne(id, user);
         return {
             success: true,

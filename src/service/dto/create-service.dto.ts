@@ -25,6 +25,17 @@ class RequiredStaffDto {
     maximumStaff: number;
 }
 
+// DTO baru untuk merepresentasikan form dengan urutannya
+class OrderedFormDto {
+    @IsNumber()
+    @IsNotEmpty()
+    order: number;
+
+    @IsMongoId()
+    @IsNotEmpty()
+    form: string;
+}
+
 export class CreateServiceDto {
     @IsString()
     @IsNotEmpty()
@@ -39,15 +50,18 @@ export class CreateServiceDto {
     @Type(() => RequiredStaffDto)
     requiredStaff: RequiredStaffDto[];
 
+    // Menggunakan DTO baru untuk validasi
     @IsArray()
-    @IsString({ each: true })
+    @ValidateNested({ each: true })
+    @Type(() => OrderedFormDto)
     @IsOptional()
-    workOrderFormsKey: string[];
+    workOrderForms: OrderedFormDto[];
 
     @IsArray()
-    @IsString({ each: true })
+    @ValidateNested({ each: true })
+    @Type(() => OrderedFormDto)
     @IsOptional()
-    reportFormsKey: string[];
+    reportForms: OrderedFormDto[];
 
     @IsEnum(['public', 'member-only', 'internal'])
     @IsNotEmpty()

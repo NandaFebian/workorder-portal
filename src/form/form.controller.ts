@@ -1,4 +1,3 @@
-// src/forms/forms.controller.ts
 import { Controller, Post, Body, Get, Put, Param, UseGuards } from '@nestjs/common';
 import { FormsService } from './form.service';
 import { CreateFormTemplateDto } from './dto/create-form-template.dto';
@@ -18,15 +17,15 @@ export class FormsController {
     @Post('templates')
     @UseGuards(RolesGuard)
     @Roles('owner_company', 'manager_company')
-    async createTemplate(@Body() createFormTemplateDto: CreateFormTemplateDto) {
-        const template = await this.formsService.createTemplate(createFormTemplateDto);
+    async createTemplate(@Body() createFormTemplateDto: CreateFormTemplateDto, @GetUser() user: AuthenticatedUser) {
+        const template = await this.formsService.createTemplate(createFormTemplateDto, user);
         return { message: 'Form template created successfully', data: template };
     }
 
     @Get('templates')
-    async findAllTemplates() {
-        const templates = await this.formsService.findAllTemplates();
-        return { message: 'Form templates retrieved successfully', data: templates };
+    async findAllTemplates(@GetUser() user: AuthenticatedUser) {
+        const templates = await this.formsService.findAllTemplates(user);
+        return { message: 'Latest form templates retrieved successfully', data: templates };
     }
 
     @Get('templates/:id')
@@ -35,15 +34,17 @@ export class FormsController {
         return { message: 'Form template retrieved successfully', data: template };
     }
 
-    @Put('templates/:id')
+    // Endpoint diubah untuk menerima formKey
+    @Put('templates/:formKey')
     @UseGuards(RolesGuard)
     @Roles('owner_company', 'manager_company')
     async updateTemplate(
-        @Param('id') id: string,
+        @Param('formKey') formKey: string,
         @Body() updateFormTemplateDto: UpdateFormTemplateDto,
+        @GetUser() user: AuthenticatedUser,
     ) {
-        const updatedTemplate = await this.formsService.updateTemplate(id, updateFormTemplateDto);
-        return { message: 'Form template updated successfully', data: updatedTemplate };
+        const newVersion = await this.formsService.updateTemplate(formKey, updateFormTemplateDto, user);
+        return { message: 'New form version created successfully', data: newVersion };
     }
 
     @Post('submissions')

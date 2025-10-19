@@ -8,9 +8,11 @@ import {
     HttpCode,
     HttpStatus,
     ForbiddenException,
+    Put,
 } from '@nestjs/common';
 import { ServicesService } from './services.service';
 import { CreateServiceDto } from './dto/create-service.dto';
+import { UpdateServiceDto } from './dto/update-service.dto';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { GetUser } from '../common/decorators/get-user.decorator';
 import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
@@ -44,7 +46,7 @@ export class ServicesController {
         const services = await this.servicesService.findAll(user);
         return {
             success: true,
-            message: 'Services retrieved successfully',
+            message: 'Latest services retrieved successfully',
             data: services,
         };
     }
@@ -53,11 +55,27 @@ export class ServicesController {
     @HttpCode(HttpStatus.OK)
     @Roles('owner_company', 'manager_company')
     async findOne(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-        const service = await this.servicesService.findOne(id, user);
+        const service = await this.servicesService.findByVersionId(id, user);
         return {
             success: true,
-            message: 'Service retrieved successfully',
+            message: 'Service version retrieved successfully',
             data: service,
+        };
+    }
+
+    @Put(':serviceKey')
+    @HttpCode(HttpStatus.OK)
+    @Roles('owner_company', 'manager_company')
+    async update(
+        @Param('serviceKey') serviceKey: string,
+        @Body() updateServiceDto: UpdateServiceDto,
+        @GetUser() user: AuthenticatedUser,
+    ) {
+        const newVersion = await this.servicesService.update(serviceKey, updateServiceDto, user);
+        return {
+            success: true,
+            message: 'New service version created successfully',
+            data: newVersion,
         };
     }
 }

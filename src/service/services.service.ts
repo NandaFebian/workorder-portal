@@ -7,7 +7,9 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Service, type ServiceDocument } from './schemas/service.schema';
 import { CreateServiceDto } from './dto/create-service.dto';
+import { UpdateServiceDto } from './dto/update-service.dto';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class ServicesService {
@@ -19,14 +21,14 @@ export class ServicesService {
         createServiceDto: CreateServiceDto,
         user: AuthenticatedUser,
     ): Promise<ServiceDocument> {
-        // Perbaikan 2: Tambahkan pengecekan untuk user.company
         if (!user.company?._id) {
             throw new ForbiddenException('User is not associated with any company.');
         }
-
         const newService = new this.serviceModel({
             ...createServiceDto,
+            serviceKey: uuidv4(),
             companyId: user.company._id,
+            __v: 0, // Versi awal adalah 0
         });
         return newService.save();
     }
@@ -35,65 +37,114 @@ export class ServicesService {
         if (!user.company?._id) {
             throw new ForbiddenException('User is not associated with any company.');
         }
-
-        return this.serviceModel
-            .find({ companyId: user.company._id })
-            .populate([
-                { path: 'requiredStaff.position', select: 'name' },
-                { path: 'workOrderForms.form' },
-                { path: 'reportForms.form' },
-            ])
-            .exec();
+        const latestServices = await this.serviceModel.aggregate([
+            { $match: { companyId: user.company._id } },
+            { $sort: { __v: -1 } },
+            {
+                $group: {
+                    _id: '$serviceKey',
+                    latest_doc: { $first: '$$ROOT' }
+                }
+            },
+            { $replaceRoot: { newRoot: '$latest_doc' } }
+        ]);
+        return latestServices;
     }
 
-    async findOne(id: string, user: AuthenticatedUser): Promise<ServiceDocument> {
+    async findByVersionId(id: string, user: AuthenticatedUser): Promise<ServiceDocument> {
         if (!user.company?._id) {
             throw new ForbiddenException('User is not associated with any company.');
         }
-
         if (!Types.ObjectId.isValid(id)) {
             throw new NotFoundException(`Invalid service ID: ${id}`);
         }
-        const service = await this.serviceModel
-            .findById(id)
-            .populate([
-                { path: 'requiredStaff.position', select: 'name' },
-            ])
-            .exec();
+        const service = await this.serviceModel.findById(id).populate([
+            { path: 'requiredStaff.positionId', select: 'name' },
+            { path: 'workOrderForms.formId' }, // Populate form dari formId
+            { path: 'reportForms.formId' }, // Populate form dari formId
+            { path: 'workOrderForms.fillableByPositionIds', select: 'name' },
+            { path: 'workOrderForms.viewableByPositionIds', select: 'name' },
+            { path: 'reportForms.fillableByPositionIds', select: 'name' },
+            { path: 'reportForms.viewableByPositionIds', select: 'name' },
+        ]).exec();
 
-        if (!service) {
+        if (!service || service.companyId.toString() !== user.company._id.toString()) {
             throw new NotFoundException(`Service with ID ${id} not found`);
-        }
-        if (service.companyId.toString() !== user.company._id.toString()) {
-            throw new ForbiddenException(
-                "You don't have permission to access this service",
-            );
         }
         return service;
     }
 
-    // Perbaikan 1: Tambahkan metode findAllByCompanyId untuk mengambil layanan publik berdasarkan companyId
-    async findAllByCompanyId(companyId: string): Promise<ServiceDocument[]> {
+    async update(serviceKey: string, dto: UpdateServiceDto, user: AuthenticatedUser): Promise<ServiceDocument> {
+        if (!user.company?._id) {
+            throw new ForbiddenException('User is not associated with any company.');
+        }
+        const latestVersion = await this.serviceModel.findOne({
+            serviceKey,
+            companyId: user.company._id
+        }).sort({ __v: -1 }).exec();
+
+        if (!latestVersion) {
+            throw new NotFoundException(`Service with key ${serviceKey} not found`);
+        }
+
+        const newVersionData = {
+            ...latestVersion.toObject(),
+            ...dto,
+            _id: undefined,
+            __v: latestVersion.__v + 1,
+        };
+
+        const newVersion = new this.serviceModel(newVersionData);
+        return newVersion.save();
+    }
+
+    // --- Client Methods ---
+    async findAllByCompanyId(companyId: string): Promise<any[]> {
         if (!Types.ObjectId.isValid(companyId)) {
             throw new NotFoundException(`Invalid company ID: ${companyId}`);
         }
-        return this.serviceModel
-            .find({ companyId: new Types.ObjectId(companyId), isActive: true, accessType: 'public' })
-            .populate('requiredStaff.position', 'name')
-            .exec();
+        const latestPublicServices = await this.serviceModel.aggregate([
+            {
+                $match: {
+                    companyId: new Types.ObjectId(companyId),
+                    isActive: true,
+                    accessType: 'public'
+                }
+            },
+            { $sort: { __v: -1 } },
+            {
+                $group: {
+                    _id: '$serviceKey',
+                    latest_doc: { $first: '$$ROOT' }
+                }
+            },
+            { $replaceRoot: { newRoot: '$latest_doc' } }
+        ]);
+
+        if (latestPublicServices.length === 0) {
+            return [];
+        }
+
+        return await this.serviceModel.populate(latestPublicServices, [
+            { path: 'requiredStaff.positionId', select: 'name' },
+            { path: 'workOrderForms.formId', select: 'title description formType' },
+            { path: 'reportForms.formId', select: 'title description formType' },
+        ]);
     }
 
-    // Perbaikan 3: Tambahkan metode findById untuk mengambil layanan publik berdasarkan ID
     async findById(id: string): Promise<ServiceDocument> {
         if (!Types.ObjectId.isValid(id)) {
             throw new NotFoundException(`Invalid service ID: ${id}`);
         }
-        const service = await this.serviceModel
-            .findById(id)
-            .populate([
-                { path: 'requiredStaff.position', select: 'name' },
-            ])
-            .exec();
+        const service = await this.serviceModel.findById(id).populate([
+            { path: 'requiredStaff.positionId', select: 'name' },
+            { path: 'workOrderForms.formId' },
+            { path: 'reportForms.formId' },
+            { path: 'workOrderForms.fillableByPositionIds', select: 'name' },
+            { path: 'workOrderForms.viewableByPositionIds', select: 'name' },
+            { path: 'reportForms.fillableByPositionIds', select: 'name' },
+            { path: 'reportForms.viewableByPositionIds', select: 'name' },
+        ]).exec();
 
         if (!service || !service.isActive || service.accessType !== 'public') {
             throw new NotFoundException(`Service with ID ${id} not found or is not public`);

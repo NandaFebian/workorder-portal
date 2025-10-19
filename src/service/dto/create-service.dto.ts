@@ -14,7 +14,7 @@ import { Type } from 'class-transformer';
 class RequiredStaffDto {
     @IsMongoId()
     @IsNotEmpty()
-    position: string;
+    positionId: string; // Mengganti 'position' menjadi 'positionId'
 
     @IsNumber()
     @IsNotEmpty()
@@ -25,7 +25,6 @@ class RequiredStaffDto {
     maximumStaff: number;
 }
 
-// DTO baru untuk merepresentasikan form dengan urutannya
 class OrderedFormDto {
     @IsNumber()
     @IsNotEmpty()
@@ -33,7 +32,23 @@ class OrderedFormDto {
 
     @IsMongoId()
     @IsNotEmpty()
-    form: string;
+    formId: string; // Mengganti 'form' menjadi 'formId'
+
+    @IsArray()
+    @IsString({ each: true })
+    fillableByRoles: string[];
+
+    @IsArray()
+    @IsString({ each: true })
+    viewableByRoles: string[];
+
+    @IsArray()
+    @IsMongoId({ each: true })
+    fillableByPositionIds: string[];
+
+    @IsArray()
+    @IsMongoId({ each: true })
+    viewableByPositionIds: string[];
 }
 
 export class CreateServiceDto {
@@ -50,7 +65,6 @@ export class CreateServiceDto {
     @Type(() => RequiredStaffDto)
     requiredStaff: RequiredStaffDto[];
 
-    // Menggunakan DTO baru untuk validasi
     @IsArray()
     @ValidateNested({ each: true })
     @Type(() => OrderedFormDto)
@@ -63,7 +77,7 @@ export class CreateServiceDto {
     @IsOptional()
     reportForms: OrderedFormDto[];
 
-    @IsEnum(['public', 'member-only', 'internal'])
+    @IsEnum(['public', 'member_only', 'internal'])
     @IsNotEmpty()
     accessType: string;
 

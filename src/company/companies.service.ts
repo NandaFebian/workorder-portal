@@ -9,6 +9,7 @@ import { InviteEmployeesDto } from './dto/invite-employees.dto';
 import { SuccessfulInvite, InviteError, InviteEmployeesResponse } from './interfaces/invitation.interface';
 import { PositionsService } from 'src/positions/positions.service';
 import { UserDocument } from 'src/users/schemas/user.schema';
+import { ServicesService } from 'src/service/services.service';
 
 @Injectable()
 export class CompaniesService {
@@ -17,6 +18,7 @@ export class CompaniesService {
         @InjectModel(Invitation.name) private invitationModel: Model<InvitationDocument>,
         private usersService: UsersService,
         private positionsService: PositionsService,
+        private servicesService: ServicesService,
     ) { }
 
     // Method untuk membuat perusahaan baru
@@ -44,16 +46,27 @@ export class CompaniesService {
     }
 
     // Method untuk mendapatkan perusahaan berdasarkan ID
-    async findById(id: string): Promise<CompanyDocument & { _id: Types.ObjectId }> {
+    async findById(id: string): Promise<any> { // <-- Ubah return type menjadi any atau DTO baru
         if (!Types.ObjectId.isValid(id)) {
             throw new NotFoundException(`Invalid company ID: ${id}`);
         }
-        // Populate ownerId untuk mendapatkan detail owner
+
         const company = await this.companyModel.findById(id).populate('ownerId', 'name email').exec();
         if (!company) {
             throw new NotFoundException(`Company with ID ${id} not found`);
         }
-        return company as CompanyDocument & { _id: Types.ObjectId };
+
+        // 3. Ambil daftar service untuk perusahaan ini
+        const services = await this.servicesService.findAllByCompanyId(id);
+
+        // 4. Gabungkan data perusahaan dengan data service
+        const companyData = company.toObject();
+        const response = {
+            ...companyData,
+            services: services, // Tambahkan properti 'services'
+        };
+
+        return response;
     }
 
     async inviteEmployees(companyId: string, inviteEmployeesDto: InviteEmployeesDto): Promise<InviteEmployeesResponse> {

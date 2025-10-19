@@ -11,8 +11,8 @@ import { RolesGuard } from "src/auth/guards/roles.guard";
 import { UsersService } from "src/users/users.service";
 import type { AuthenticatedUser } from "src/auth/interfaces/authenticated-user.interface";
 
-@Controller('companies')
-export class CompaniesController {
+@Controller('company')
+export class CompaniesInternalController {
     constructor(
         private readonly companiesService: CompaniesService,
         private readonly usersService: UsersService,

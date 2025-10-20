@@ -1,3 +1,4 @@
+// src/form/form.service.ts
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -25,7 +26,7 @@ export class FormsService {
             ...dto,
             formKey: uuidv4(),
             companyId: user.company._id,
-            __v: 0, // Versi awal adalah 0
+            __v: 0,
         });
         return newTemplate.save();
     }
@@ -35,9 +36,8 @@ export class FormsService {
             throw new ForbiddenException('User is not associated with any company.');
         }
 
-        const latestVersions = await this.formTemplateModel.aggregate([
+        return this.formTemplateModel.aggregate([
             { $match: { companyId: user.company._id } },
-            // Gunakan __v untuk mengurutkan
             { $sort: { __v: -1 } },
             {
                 $group: {
@@ -47,11 +47,9 @@ export class FormsService {
             },
             { $replaceRoot: { newRoot: '$latest_doc' } }
         ]);
-
-        return latestVersions;
     }
 
-    async findTemplateById(id: string) {
+    async findTemplateById(id: string): Promise<FormTemplateDocument> {
         const template = await this.formTemplateModel.findById(id).exec();
         if (!template) {
             throw new NotFoundException(`Form template with ID ${id} not found`);
@@ -67,7 +65,7 @@ export class FormsService {
         const latestVersion = await this.formTemplateModel.findOne({
             formKey,
             companyId: user.company._id
-        }).sort({ __v: -1 }).exec(); // Urutkan berdasarkan __v
+        }).sort({ __v: -1 }).exec();
 
         if (!latestVersion) {
             throw new NotFoundException(`Form with key ${formKey} not found`);
@@ -77,7 +75,6 @@ export class FormsService {
             ...latestVersion.toObject(),
             ...dto,
             _id: undefined,
-            // Increment __v secara manual
             __v: latestVersion.__v + 1,
         };
 
@@ -85,7 +82,7 @@ export class FormsService {
         return newVersion.save();
     }
 
-    async submitForm(user: AuthenticatedUser, dto: SubmitFormDto) {
+    async submitForm(user: AuthenticatedUser, dto: SubmitFormDto): Promise<FormSubmissionDocument> {
         const template = await this.formTemplateModel.findById(dto.formTemplateId).exec();
         if (!template) {
             throw new NotFoundException(`Form template with ID ${dto.formTemplateId} not found`);

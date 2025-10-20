@@ -1,3 +1,4 @@
+// src/service/services.controller.ts
 import {
     Controller,
     Get,
@@ -7,7 +8,6 @@ import {
     UseGuards,
     HttpCode,
     HttpStatus,
-    ForbiddenException,
     Put,
 } from '@nestjs/common';
 import { ServicesService } from './services.service';
@@ -33,7 +33,6 @@ export class ServicesController {
     ) {
         const newService = await this.servicesService.create(createServiceDto, user);
         return {
-            success: true,
             message: 'Service created successfully',
             data: newService,
         };
@@ -45,7 +44,6 @@ export class ServicesController {
     async findAll(@GetUser() user: AuthenticatedUser) {
         const services = await this.servicesService.findAll(user);
         return {
-            success: true,
             message: 'Latest services retrieved successfully',
             data: services,
         };
@@ -57,7 +55,6 @@ export class ServicesController {
     async findOne(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
         const service = await this.servicesService.findByVersionId(id, user);
         return {
-            success: true,
             message: 'Service version retrieved successfully',
             data: service,
         };
@@ -73,7 +70,6 @@ export class ServicesController {
     ) {
         const newVersion = await this.servicesService.update(serviceKey, updateServiceDto, user);
         return {
-            success: true,
             message: 'New service version created successfully',
             data: newVersion,
         };

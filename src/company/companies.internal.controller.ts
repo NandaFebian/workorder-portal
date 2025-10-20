@@ -1,11 +1,11 @@
-import { Controller, Get, HttpCode, HttpStatus, Param, Put, Body, UseGuards, Post, ForbiddenException, UnauthorizedException, Req } from "@nestjs/common";
+// src/company/companies.internal.controller.ts
+import { Controller, Get, HttpCode, HttpStatus, Param, Put, Body, UseGuards, Post, ForbiddenException } from "@nestjs/common";
 import { CompaniesService } from "./companies.service";
 import { AuthGuard } from "src/auth/guards/auth.guard";
 import { UpdateCompanyDto } from "./dto/update-company.dto";
 import { InviteEmployeesDto } from "./dto/invite-employees.dto";
 import { InviteEmployeesResponse } from "./interfaces/invitation.interface";
 import { GetUser } from '../common/decorators/get-user.decorator';
-import type { UserDocument } from '../users/schemas/user.schema';
 import { Roles } from "src/common/decorators/roles.decorator";
 import { RolesGuard } from "src/auth/guards/roles.guard";
 import { UsersService } from "src/users/users.service";
@@ -24,16 +24,10 @@ export class CompaniesInternalController {
         const companies = await this.companiesService.findAll();
         return {
             message: 'Companies retrieved successfully',
-            meta: {
-                total: companies.length,
-            },
-            data: {
-                companies: companies,
-            }
+            data: companies,
         };
     }
 
-    // Endpoint untuk mengupdate perusahaan berdasarkan ID
     @Put(':id')
     @UseGuards(AuthGuard)
     @HttpCode(HttpStatus.OK)
@@ -41,22 +35,17 @@ export class CompaniesInternalController {
         const company = await this.companiesService.update(id, updateCompanyDto);
         return {
             message: 'Company updated successfully',
-            data: {
-                company: company,
-            }
+            data: company,
         };
     }
 
-    // Endpoint untuk mendapatkan perusahaan berdasarkan ID
     @Get(':id')
     @HttpCode(HttpStatus.OK)
     async findById(@Param('id') id: string) {
         const company = await this.companiesService.findById(id);
         return {
             message: 'Company retrieved successfully',
-            data: {
-                company: company,
-            }
+            data: company,
         };
     }
 
@@ -67,11 +56,9 @@ export class CompaniesInternalController {
         @GetUser() invitingUser: AuthenticatedUser,
         @Body() inviteEmployeesDto: InviteEmployeesDto
     ): Promise<InviteEmployeesResponse> {
-
         if (!invitingUser.company?._id) {
             throw new ForbiddenException('User must belong to a company to invite employees');
         }
-
         return this.companiesService.inviteEmployees(invitingUser.company._id.toString(), inviteEmployeesDto);
     }
 

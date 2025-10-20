@@ -1,3 +1,4 @@
+// src/auth/auth.controller.ts
 import {
     Controller,
     Post,
@@ -20,11 +21,10 @@ export class AuthController {
     constructor(private readonly authService: AuthService) { }
 
     @Post('register')
-    @HttpCode(HttpStatus.OK) // Sesuai permintaan, respons sukses adalah 200 OK
+    @HttpCode(HttpStatus.OK)
     async register(@Body() registerAuthDto: RegisterAuthDto) {
         const newUser = await this.authService.register(registerAuthDto);
         return {
-            success: true,
             message: 'User registered successfully',
             data: newUser,
         };
@@ -44,21 +44,19 @@ export class AuthController {
     }
 
     @Post('login')
-    @HttpCode(HttpStatus.OK) // Set default status code 200 untuk POST
+    @HttpCode(HttpStatus.OK)
     async login(@Body() loginAuthDto: LoginAuthDto) {
         const data = await this.authService.login(loginAuthDto);
         return {
-            success: true,
             message: 'Operation successful',
             data: data,
         };
     }
 
     @Post('logout')
-    @UseGuards(AuthGuard) // Gunakan AuthGuard untuk memastikan ada token yang valid
+    @UseGuards(AuthGuard)
     @HttpCode(HttpStatus.OK)
     async logout(@Req() request: any) {
-        // Ekstrak token dari header
         const authHeader = request.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             throw new UnauthorizedException('Token not found in header');
@@ -68,7 +66,6 @@ export class AuthController {
         const data = await this.authService.logout(token);
 
         return {
-            success: true,
             message: data.message,
             data: {
                 userId: data.userId,
@@ -81,11 +78,9 @@ export class AuthController {
     @UseGuards(AuthGuard)
     getProfile(@Req() request: any) {
         const profile = request.user;
-
         delete profile.password;
 
         return {
-            success: true,
             message: 'Profile retrieved successfully',
             data: profile,
         };

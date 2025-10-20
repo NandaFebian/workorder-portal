@@ -1,3 +1,4 @@
+// src/auth/auth.service.ts
 import {
     Injectable,
     HttpException,
@@ -14,6 +15,7 @@ import { RegisterAuthDto } from './dto/register-auth.dto';
 import { RegisterCompanyDto } from './dto/register-company.dto';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
+import { Role } from '../common/enums/role.enum';
 
 @Injectable()
 export class AuthService {
@@ -23,7 +25,6 @@ export class AuthService {
         @InjectModel(ActiveToken.name) private activeTokenModel: Model<ActiveTokenDocument>,
     ) { }
 
-    // Register user biasa (bukan owner perusahaan)
     async register(registerAuthDto: RegisterAuthDto) {
         const existingUser = await this.usersService.findOneByEmail(
             registerAuthDto.email,
@@ -39,13 +40,11 @@ export class AuthService {
                 HttpStatus.BAD_REQUEST,
             );
         }
-        // Panggilan ini sekarang valid karena RegisterAuthDto cocok dengan struktur CreateUserDto
         const newUser = await this.usersService.create(registerAuthDto);
         const { password, ...result } = newUser.toObject();
         return result;
     }
 
-    // Register perusahaan beserta pembuatan data owner
     async registerCompany(registerCompanyDto: RegisterCompanyDto) {
         const {
             name,
@@ -69,7 +68,7 @@ export class AuthService {
             name,
             email,
             password,
-            role: 'owner_company',
+            role: Role.CompanyOwner,
         });
 
         const newCompany = await this.companiesService.create({
@@ -83,7 +82,6 @@ export class AuthService {
             newCompany._id as import('mongoose').Types.ObjectId
         );
 
-        // Generate token for auto-login
         const tokenString = uuidv4();
         const newToken = new this.activeTokenModel({
             token: tokenString,
@@ -91,7 +89,6 @@ export class AuthService {
         });
         await newToken.save();
 
-        // Prepare response object
         return {
             user: {
                 name: newOwner.name,
@@ -106,7 +103,6 @@ export class AuthService {
         };
     }
 
-    // Login user dan buat token aktif
     async login(loginAuthDto: LoginAuthDto) {
         const { email, password } = loginAuthDto;
         const user = await this.usersService.findOneByEmail(email);
@@ -114,10 +110,8 @@ export class AuthService {
         if (!user) {
             throw new HttpException(
                 {
-                    // Gunakan 'message' dan 'code' yang lebih umum untuk login
                     message: 'Invalid credentials',
                     code: 'AUTH_INVALID_CREDENTIALS',
-                    // Ubah format 'errors' menjadi array
                     errors: [
                         {
                             field: 'email',
@@ -125,7 +119,7 @@ export class AuthService {
                         },
                     ],
                 },
-                HttpStatus.BAD_REQUEST, // Atau HttpStatus.UNAUTHORIZED (401) lebih cocok
+                HttpStatus.BAD_REQUEST,
             );
         }
 
@@ -135,7 +129,6 @@ export class AuthService {
                 {
                     message: 'Invalid credentials',
                     code: 'AUTH_INVALID_CREDENTIALS',
-                    // Ubah format 'errors' menjadi array
                     errors: [
                         {
                             field: 'password',
@@ -143,7 +136,7 @@ export class AuthService {
                         },
                     ],
                 },
-                HttpStatus.BAD_REQUEST, // Atau HttpStatus.UNAUTHORIZED (401)
+                HttpStatus.BAD_REQUEST,
             );
         }
 
@@ -162,7 +155,7 @@ export class AuthService {
             role: user.role,
         };
 
-        if (user.role === 'staff_company') {
+        if (user.role === Role.CompanyStaff) {
             userResponse.positionId = user.positionId;
         }
 
@@ -173,10 +166,8 @@ export class AuthService {
     }
 
     async logout(token: string) {
-        // Cari dan hapus token dari database
         const deletedToken = await this.activeTokenModel.findOneAndDelete({ token: token }).exec();
 
-        // Jika token tidak ditemukan, lempar error
         if (!deletedToken) {
             throw new HttpException({
                 success: false,
@@ -186,7 +177,6 @@ export class AuthService {
             }, HttpStatus.UNAUTHORIZED);
         }
 
-        // Jika berhasil, kembalikan response sukses
         return {
             message: 'Logout successful',
             userId: deletedToken.userId,

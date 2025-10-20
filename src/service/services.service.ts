@@ -1,3 +1,4 @@
+// src/service/services.service.ts
 import {
     Injectable,
     NotFoundException,
@@ -28,7 +29,7 @@ export class ServicesService {
             ...createServiceDto,
             serviceKey: uuidv4(),
             companyId: user.company._id,
-            __v: 0, // Versi awal adalah 0
+            __v: 0,
         });
         return newService.save();
     }
@@ -37,7 +38,7 @@ export class ServicesService {
         if (!user.company?._id) {
             throw new ForbiddenException('User is not associated with any company.');
         }
-        const latestServices = await this.serviceModel.aggregate([
+        return this.serviceModel.aggregate([
             { $match: { companyId: user.company._id } },
             { $sort: { __v: -1 } },
             {
@@ -48,7 +49,6 @@ export class ServicesService {
             },
             { $replaceRoot: { newRoot: '$latest_doc' } }
         ]);
-        return latestServices;
     }
 
     async findByVersionId(id: string, user: AuthenticatedUser): Promise<ServiceDocument> {
@@ -60,8 +60,8 @@ export class ServicesService {
         }
         const service = await this.serviceModel.findById(id).populate([
             { path: 'requiredStaff.positionId', select: 'name' },
-            { path: 'workOrderForms.formId' }, // Populate form dari formId
-            { path: 'reportForms.formId' }, // Populate form dari formId
+            { path: 'workOrderForms.formId' },
+            { path: 'reportForms.formId' },
             { path: 'workOrderForms.fillableByPositionIds', select: 'name' },
             { path: 'workOrderForms.viewableByPositionIds', select: 'name' },
             { path: 'reportForms.fillableByPositionIds', select: 'name' },
@@ -125,7 +125,7 @@ export class ServicesService {
             return [];
         }
 
-        return await this.serviceModel.populate(latestPublicServices, [
+        return this.serviceModel.populate(latestPublicServices, [
             { path: 'requiredStaff.positionId', select: 'name' },
             { path: 'workOrderForms.formId', select: 'title description formType' },
             { path: 'reportForms.formId', select: 'title description formType' },

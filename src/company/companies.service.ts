@@ -1,3 +1,4 @@
+// src/company/companies.service.ts
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -10,6 +11,7 @@ import { SuccessfulInvite, InviteError, InviteEmployeesResponse } from './interf
 import { PositionsService } from 'src/positions/positions.service';
 import { UserDocument } from 'src/users/schemas/user.schema';
 import { ServicesService } from 'src/service/services.service';
+import { Role } from 'src/common/enums/role.enum';
 
 @Injectable()
 export class CompaniesService {
@@ -21,13 +23,11 @@ export class CompaniesService {
         private servicesService: ServicesService,
     ) { }
 
-    // Method untuk membuat perusahaan baru
     async create(createCompanyDto: { name: string; address: string | null; ownerId: Types.ObjectId }): Promise<CompanyDocument> {
         const newCompany = new this.companyModel(createCompanyDto);
         return newCompany.save();
     }
 
-    // Method untuk mengupdate perusahaan
     async update(id: string, updateCompanyDto: UpdateCompanyDto): Promise<CompanyDocument> {
         if (!Types.ObjectId.isValid(id)) {
             throw new NotFoundException(`Invalid company ID: ${id}`);
@@ -39,14 +39,11 @@ export class CompaniesService {
         return updatedCompany;
     }
 
-    // Method untuk mendapatkan semua perusahaan (untuk keperluan admin)
     async findAll(): Promise<CompanyDocument[]> {
-        // Populate ownerId untuk mendapatkan detail owner
         return this.companyModel.find().populate('ownerId', 'name email').exec();
     }
 
-    // Method untuk mendapatkan perusahaan berdasarkan ID
-    async findById(id: string): Promise<any> { // <-- Ubah return type menjadi any atau DTO baru
+    async findById(id: string): Promise<any> {
         if (!Types.ObjectId.isValid(id)) {
             throw new NotFoundException(`Invalid company ID: ${id}`);
         }
@@ -56,17 +53,12 @@ export class CompaniesService {
             throw new NotFoundException(`Company with ID ${id} not found`);
         }
 
-        // 3. Ambil daftar service untuk perusahaan ini
         const services = await this.servicesService.findAllByCompanyId(id);
-
-        // 4. Gabungkan data perusahaan dengan data service
         const companyData = company.toObject();
-        const response = {
+        return {
             ...companyData,
-            services: services, // Tambahkan properti 'services'
+            services,
         };
-
-        return response;
     }
 
     async inviteEmployees(companyId: string, inviteEmployeesDto: InviteEmployeesDto): Promise<InviteEmployeesResponse> {
@@ -76,7 +68,6 @@ export class CompaniesService {
 
         for (const invite of inviteEmployeesDto.invites) {
             try {
-                // Validasi Position ID dan ambil datanya terlebih dahulu
                 if (!Types.ObjectId.isValid(invite.positionId)) {
                     errors.push({
                         user: { email: invite.email },
@@ -97,21 +88,13 @@ export class CompaniesService {
                     continue;
                 }
 
-                // Helper untuk membuat objek error dengan format baru yang konsisten
                 const createError = (message: string, user?: UserDocument): InviteError => ({
-                    user: {
-                        email: invite.email,
-                        name: user?.name, // Sertakan nama jika user ditemukan
-                    },
+                    user: { email: invite.email, name: user?.name },
                     role_offered: invite.role,
-                    position_offered: {
-                        _id: position.id,
-                        name: position.name,
-                    },
+                    position_offered: { _id: position.id, name: position.name },
                     message,
                 });
 
-                // Lanjutkan validasi user
                 const user = await this.usersService.findOneByEmail(invite.email);
                 if (!user) {
                     errors.push(createError("User not found"));
@@ -124,7 +107,7 @@ export class CompaniesService {
                     continue;
                 }
 
-                if (user.role !== 'staff_unassigned') {
+                if (user.role !== Role.UnassignedStaff) {
                     errors.push(createError("User is not available for invitation", user));
                     continue;
                 }
@@ -134,7 +117,7 @@ export class CompaniesService {
                     continue;
                 }
 
-                if (!['staff_company', 'manager_company'].includes(invite.role)) {
+                if (![Role.CompanyStaff, Role.CompanyManager].includes(invite.role as Role)) {
                     errors.push(createError("Invalid role specified", user));
                     continue;
                 }
@@ -154,14 +137,10 @@ export class CompaniesService {
                 successfulInvites.push({
                     user: { name: user.name, email: user.email },
                     role_offered: invite.role,
-                    position_offered: {
-                        _id: position.id,
-                        name: position.name,
-                    }
+                    position_offered: { _id: position.id, name: position.name }
                 });
 
             } catch (error) {
-                // Fallback error jika terjadi kesalahan tak terduga
                 errors.push({
                     user: { email: invite.email },
                     role_offered: invite.role,
@@ -173,15 +152,9 @@ export class CompaniesService {
 
         return {
             message: "Invite process finished",
-            meta: {
-                successCount: successfulInvites.length,
-                errorCount: errors.length,
-            },
+            meta: { successCount: successfulInvites.length, errorCount: errors.length },
             data: {
-                company: {
-                    _id: company.id,
-                    name: company.name
-                },
+                company: { _id: company.id, name: company.name },
                 invited: successfulInvites
             },
             ...(errors.length > 0 && { errors })
@@ -198,7 +171,6 @@ export class CompaniesService {
             ])
             .exec();
 
-        // Lakukan transformasi di sini agar controller lebih bersih
         const transformedInvitations = invitations.map(inv => {
             const invObject: any = inv.toObject();
             return {
@@ -214,9 +186,7 @@ export class CompaniesService {
 
         return {
             message: "Invitations retrieved successfully",
-            data: {
-                invitations: transformedInvitations,
-            }
+            data: { invitations: transformedInvitations }
         };
     }
 }

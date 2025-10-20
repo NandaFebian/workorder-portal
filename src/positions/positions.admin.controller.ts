@@ -19,7 +19,7 @@ import { Roles } from 'src/common/decorators/roles.decorator';
 
 @Controller('positions')
 @UseGuards(AuthGuard, RolesGuard)
-@Roles('admin_app') // Only app admins can manage positions
+@Roles('admin_app')
 export class PositionsAdminController {
     constructor(private readonly positionsService: PositionsService) { }
 
@@ -28,7 +28,6 @@ export class PositionsAdminController {
     async create(@Body() createPositionDto: CreatePositionDto) {
         const position = await this.positionsService.create(createPositionDto);
         return {
-            success: true,
             message: 'Position created successfully',
             data: position,
         };
@@ -42,7 +41,6 @@ export class PositionsAdminController {
     ) {
         const position = await this.positionsService.update(id, updatePositionDto);
         return {
-            success: true,
             message: 'Position updated successfully',
             data: position,
         };
@@ -52,9 +50,6 @@ export class PositionsAdminController {
     @HttpCode(HttpStatus.OK)
     async remove(@Param('id') id: string) {
         await this.positionsService.remove(id);
-        return {
-            success: true,
-            message: 'Position deleted successfully',
-        };
+        return { message: 'Position deleted successfully' };
     }
 }

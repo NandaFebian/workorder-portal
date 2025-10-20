@@ -1,3 +1,4 @@
+// src/positions/positions.controller.ts
 import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
 import { PositionsService } from './positions.service';
 
@@ -11,9 +12,7 @@ export class PositionsController {
         const positions = await this.positionsService.findAll();
         return {
             message: 'Positions retrieved successfully',
-            data: {
-                positions: positions
-            }
+            data: positions,
         };
     }
 }

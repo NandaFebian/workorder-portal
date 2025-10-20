@@ -11,7 +11,6 @@ export class CompaniesClientController {
     async findAll() {
         const companies = await this.companiesService.findAll();
         return {
-            success: true,
             message: 'Companies retrieved successfully',
             data: companies,
         };
@@ -22,7 +21,6 @@ export class CompaniesClientController {
     async findById(@Param('id') id: string) {
         const company = await this.companiesService.findById(id);
         return {
-            success: true,
             message: 'Company retrieved successfully',
             data: company,
         };

@@ -1,3 +1,4 @@
+// src/form/form.controller.ts
 import { Controller, Post, Body, Get, Put, Param, UseGuards } from '@nestjs/common';
 import { FormsService } from './form.service';
 import { CreateFormTemplateDto } from './dto/create-form-template.dto';
@@ -34,7 +35,6 @@ export class FormsController {
         return { message: 'Form template retrieved successfully', data: template };
     }
 
-    // Endpoint diubah untuk menerima formKey
     @Put('templates/:formKey')
     @UseGuards(RolesGuard)
     @Roles('owner_company', 'manager_company')

@@ -1,4 +1,6 @@
+// src/auth/dto/register-auth.dto.ts
 import { IsEmail, IsEnum, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { Role } from '../../common/enums/role.enum';
 
 export class RegisterAuthDto {
     @IsString()
@@ -14,8 +16,7 @@ export class RegisterAuthDto {
     @MinLength(6, { message: 'Password must be at least 6 characters long' })
     password: string;
 
-    // Untuk awal, kita batasi registrasi hanya untuk role 'client'
-    @IsEnum(['client', 'staff_unassigned'], { message: 'Role must be client or staff_unassigned' })
+    @IsEnum([Role.Client, Role.UnassignedStaff], { message: 'Role must be client or staff_unassigned' })
     @IsNotEmpty()
     role: string;
 }

@@ -2,7 +2,7 @@
 import { Controller, Get, HttpCode, HttpStatus, Param } from '@nestjs/common';
 import { CompaniesService } from './companies.service';
 
-@Controller('companies')
+@Controller('public/companies')
 export class CompaniesClientController {
     constructor(private readonly companiesService: CompaniesService) { }
 

@@ -59,7 +59,9 @@ export class CreateFormTemplateDto {
     @IsOptional()
     description?: string;
 
-    @IsEnum(['work_order', 'report'])
+    @IsEnum(['work_order', 'report'], {
+        message: `formType must be one of the following values: ${['work_order', 'report'].join(', ')}`
+    })
     @IsNotEmpty()
     formType: string;
 

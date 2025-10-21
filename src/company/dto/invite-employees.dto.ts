@@ -9,7 +9,7 @@ class InviteDto {
     email: string;
 
     @IsEnum([Role.CompanyManager, Role.CompanyStaff], {
-        message: 'Role must be either manager_company or staff_company'
+        message: `role must be one of the following values: ${[Role.CompanyManager, Role.CompanyStaff].join(', ')}`
     })
     @IsNotEmpty()
     role: string;

@@ -77,7 +77,9 @@ export class CreateServiceDto {
     @IsOptional()
     reportForms: OrderedFormDto[];
 
-    @IsEnum(['public', 'member_only', 'internal'])
+    @IsEnum(['public', 'member_only', 'internal'], {
+        message: `accessType must be one of the following values: ${['public', 'member_only', 'internal'].join(', ')}`
+    })
     @IsNotEmpty()
     accessType: string;
 

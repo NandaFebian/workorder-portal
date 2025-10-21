@@ -16,7 +16,9 @@ export class RegisterAuthDto {
     @MinLength(6, { message: 'Password must be at least 6 characters long' })
     password: string;
 
-    @IsEnum([Role.Client, Role.UnassignedStaff], { message: 'Role must be client or staff_unassigned' })
+    @IsEnum([Role.Client, Role.UnassignedStaff], {
+        message: `role must be one of the following values: ${[Role.Client, Role.UnassignedStaff].join(', ')}`
+    })
     @IsNotEmpty()
     role: string;
 }

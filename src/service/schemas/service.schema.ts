@@ -1,3 +1,4 @@
+// src/service/schemas/service.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 
@@ -9,8 +10,10 @@ class OrderedForm {
     @Prop({ required: true })
     order: number;
 
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormTemplate', required: true })
-    formId: MongooseSchema.Types.ObjectId; // Mengganti 'form' menjadi 'formId'
+    // --- PERUBAHAN DI SINI ---
+    @Prop({ type: String, ref: 'FormTemplate', required: true })
+    formKey: string; // Mengganti 'formId' (ObjectId) menjadi 'formKey' (String)
+    // -------------------------
 
     @Prop({ type: [String], required: true })
     fillableByRoles: string[];
@@ -58,6 +61,9 @@ export class Service {
 
     @Prop({ type: [OrderedFormSchema], default: [] })
     reportForms: OrderedForm[];
+
+    @Prop({ type: [OrderedFormSchema], default: [] })
+    clientIntakeForms: OrderedForm[];
 
     @Prop({ required: true, enum: ['public', 'member_only', 'internal'] })
     accessType: string;

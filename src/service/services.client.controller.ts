@@ -2,7 +2,7 @@
 import { Controller, Get, HttpCode, HttpStatus, Param } from '@nestjs/common';
 import { ServicesService } from './services.service';
 
-@Controller('public/services')
+@Controller('public/services') // Pastikan prefix-nya 'public/services'
 export class ServicesClientController {
     constructor(private readonly servicesService: ServicesService) { }
 
@@ -16,13 +16,29 @@ export class ServicesClientController {
         };
     }
 
+    /**
+     * Endpoint ini sekarang mengembalikan { service, formQuantity }
+     */
     @Get(':id')
     @HttpCode(HttpStatus.OK)
     async findById(@Param('id') id: string) {
-        const service = await this.servicesService.findById(id);
+        const serviceData = await this.servicesService.findById(id);
         return {
             message: 'Service retrieved successfully',
-            data: service,
+            data: serviceData,
+        };
+    }
+
+    /**
+     * ENDPOINT BARU: Mengambil form terbaru untuk service ini
+     */
+    @Get(':id/intake-forms')
+    @HttpCode(HttpStatus.OK)
+    async getFormsForService(@Param('id') id: string) {
+        const forms = await this.servicesService.getLatestFormsForService(id);
+        return {
+            message: 'Forms for service retrieved successfully',
+            data: forms,
         };
     }
 }

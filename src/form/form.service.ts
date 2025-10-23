@@ -95,4 +95,15 @@ export class FormsService {
 
         return submission.save();
     }
+
+    async findLatestTemplateByKey(formKey: string): Promise<FormTemplateDocument> {
+        const latestTemplate = await this.formTemplateModel.findOne({
+            formKey,
+        }).sort({ __v: -1 }).exec(); // Urutkan berdasarkan versi (__v) desc
+
+        if (!latestTemplate) {
+            throw new NotFoundException(`Form template with key ${formKey} not found`);
+        }
+        return latestTemplate;
+    }
 }

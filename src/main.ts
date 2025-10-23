@@ -13,7 +13,7 @@ async function bootstrap() {
     // Bagian inilah yang menangani validasi detail
     new ValidationPipe({
       whitelist: true,              // Abaikan properti tambahan
-      forbidNonWhitelisted: true,  // Tolak request jika ada properti tambahan
+      //forbidNonWhitelisted: true,  // Tolak request jika ada properti tambahan
       transform: true,              // Otomatis transformasi DTO
 
       // Fungsi ini dijalankan ketika validasi gagal

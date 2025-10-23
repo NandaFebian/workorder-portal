@@ -15,7 +15,7 @@ import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.i
 export class FormsController {
     constructor(private readonly formsService: FormsService) { }
 
-    @Post('templates')
+    @Post('')
     @UseGuards(RolesGuard)
     @Roles('owner_company', 'manager_company')
     async createTemplate(@Body() createFormTemplateDto: CreateFormTemplateDto, @GetUser() user: AuthenticatedUser) {
@@ -23,19 +23,19 @@ export class FormsController {
         return { message: 'Form template created successfully', data: template };
     }
 
-    @Get('templates')
+    @Get('')
     async findAllTemplates(@GetUser() user: AuthenticatedUser) {
         const templates = await this.formsService.findAllTemplates(user);
         return { message: 'Latest form templates retrieved successfully', data: templates };
     }
 
-    @Get('templates/:id')
+    @Get(':id')
     async findTemplateById(@Param('id') id: string) {
         const template = await this.formsService.findTemplateById(id);
         return { message: 'Form template retrieved successfully', data: template };
     }
 
-    @Put('templates/:formKey')
+    @Put(':formKey')
     @UseGuards(RolesGuard)
     @Roles('owner_company', 'manager_company')
     async updateTemplate(

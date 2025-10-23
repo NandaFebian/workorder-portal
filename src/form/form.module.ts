@@ -1,5 +1,5 @@
 // src/forms/forms.module.ts
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { FormsController } from './form.controller';
 import { FormsService } from './form.service';
@@ -14,10 +14,11 @@ import { UsersModule } from 'src/users/users.module';
             { name: FormTemplate.name, schema: FormTemplateSchema },
             { name: FormSubmission.name, schema: FormSubmissionSchema },
         ]),
-        AuthModule,
+        forwardRef(() => AuthModule),
         UsersModule,
     ],
     controllers: [FormsController],
-    providers: [FormsService]
+    providers: [FormsService],
+    exports: [FormsService],
 })
 export class FormModule { }

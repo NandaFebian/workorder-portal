@@ -1,3 +1,4 @@
+// src/service/dto/create-service.dto.ts
 import {
     IsArray,
     IsBoolean,
@@ -14,7 +15,7 @@ import { Type } from 'class-transformer';
 class RequiredStaffDto {
     @IsMongoId()
     @IsNotEmpty()
-    positionId: string; // Mengganti 'position' menjadi 'positionId'
+    positionId: string;
 
     @IsNumber()
     @IsNotEmpty()
@@ -30,9 +31,11 @@ class OrderedFormDto {
     @IsNotEmpty()
     order: number;
 
-    @IsMongoId()
+    // --- PERUBAHAN DI SINI ---
+    @IsString()
     @IsNotEmpty()
-    formId: string; // Mengganti 'form' menjadi 'formId'
+    formKey: string; // Mengganti 'formId'
+    // -------------------------
 
     @IsArray()
     @IsString({ each: true })
@@ -50,6 +53,8 @@ class OrderedFormDto {
     @IsMongoId({ each: true })
     viewableByPositionIds: string[];
 }
+
+const allowedAccessTypes = ['public', 'member_only', 'internal'];
 
 export class CreateServiceDto {
     @IsString()
@@ -77,8 +82,8 @@ export class CreateServiceDto {
     @IsOptional()
     reportForms: OrderedFormDto[];
 
-    @IsEnum(['public', 'member_only', 'internal'], {
-        message: `accessType must be one of the following values: ${['public', 'member_only', 'internal'].join(', ')}`
+    @IsEnum(allowedAccessTypes, {
+        message: `accessType must be one of the following values: ${allowedAccessTypes.join(', ')}`,
     })
     @IsNotEmpty()
     accessType: string;
@@ -86,4 +91,10 @@ export class CreateServiceDto {
     @IsBoolean()
     @IsOptional()
     isActive: boolean;
+
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => OrderedFormDto)
+    @IsOptional()
+    clientIntakeForms: OrderedFormDto[];
 }

@@ -44,7 +44,7 @@ export class ServicesController {
     async findAll(@GetUser() user: AuthenticatedUser) {
         const services = await this.servicesService.findAll(user);
         return {
-            message: 'Latest services retrieved successfully',
+            message: 'Load data success',
             data: services,
         };
     }
@@ -55,8 +55,8 @@ export class ServicesController {
     async findOne(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
         const service = await this.servicesService.findByVersionId(id, user);
         return {
-            message: 'Service version retrieved successfully',
-            data: service,
+            message: 'Load data success',
+            data: [service], // Wrap single service in array to match expected structure
         };
     }
 

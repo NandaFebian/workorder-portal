@@ -11,7 +11,7 @@ export class ServicesClientController {
     async findAllByCompanyId(@Param('companyId') companyId: string) {
         const services = await this.servicesService.findAllByCompanyId(companyId);
         return {
-            message: 'Services for company retrieved successfully',
+            message: 'Load data success',
             data: services,
         };
     }
@@ -24,8 +24,8 @@ export class ServicesClientController {
     async findById(@Param('id') id: string) {
         const serviceData = await this.servicesService.findById(id);
         return {
-            message: 'Service retrieved successfully',
-            data: serviceData,
+            message: 'Load data success',
+            data: [serviceData.service], // Wrap in array to match structure
         };
     }
 
@@ -37,7 +37,7 @@ export class ServicesClientController {
     async getFormsForService(@Param('id') id: string) {
         const forms = await this.servicesService.getLatestFormsForService(id);
         return {
-            message: 'Forms for service retrieved successfully',
+            message: 'Load data success',
             data: forms,
         };
     }

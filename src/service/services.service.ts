@@ -20,7 +20,6 @@ export class ServicesService {
         private readonly formsService: FormsService,
     ) { }
 
-    // ... (metode create, findAll (internal), findByVersionId, update tetap sama) ...
     async create(
         createServiceDto: CreateServiceDto,
         user: AuthenticatedUser,
@@ -37,12 +36,15 @@ export class ServicesService {
         return newService.save();
     }
 
-    async findAll(user: AuthenticatedUser): Promise<ServiceDocument[]> {
-        if (!user.company?._id) {
-            throw new ForbiddenException('User is not associated with any company.');
-        }
-        return this.serviceModel.aggregate([
-            { $match: { companyId: user.company._id } },
+    /**
+     * Helper method to get services with populated positions and forms
+     */
+    private async getServicesWithPopulatedData(
+        matchQuery: any,
+        includeForms: boolean = false
+    ): Promise<any[]> {
+        const pipeline: any[] = [
+            { $match: matchQuery },
             { $sort: { __v: -1 } },
             {
                 $group: {
@@ -50,32 +52,134 @@ export class ServicesService {
                     latest_doc: { $first: '$$ROOT' }
                 }
             },
-            { $replaceRoot: { newRoot: '$latest_doc' } }
-        ]);
+            { $replaceRoot: { newRoot: '$latest_doc' } },
+            {
+                $project: {
+                    _id: 1,
+                    title: 1,
+                    description: 1,
+                    accessType: 1,
+                    isActive: 1,
+                    requiredStaff: 1,
+                    clientIntakeForms: includeForms ? 1 : 0,
+                },
+            },
+            // Populate positions
+            {
+                $lookup: {
+                    from: 'positions',
+                    localField: 'requiredStaff.positionId',
+                    foreignField: '_id',
+                    as: 'requiredStaffPositions',
+                },
+            },
+            {
+                $addFields: {
+                    requiredStaff: {
+                        $map: {
+                            input: '$requiredStaff',
+                            as: 'rs',
+                            in: {
+                                $mergeObjects: [
+                                    '$$rs',
+                                    {
+                                        position: {
+                                            $arrayElemAt: [
+                                                {
+                                                    $filter: {
+                                                        input: '$requiredStaffPositions',
+                                                        as: 'pos',
+                                                        cond: { $eq: ['$$pos._id', '$$rs.positionId'] },
+                                                    },
+                                                },
+                                                0,
+                                            ],
+                                        },
+                                    },
+                                ],
+                            },
+                        },
+                    },
+                },
+            },
+            // Clean up temporary lookup and positionId
+            {
+                $project: {
+                    requiredStaffPositions: 0,
+                    'requiredStaff.positionId': 0
+                }
+            },
+        ];
+
+        const services = await this.serviceModel.aggregate(pipeline);
+
+        // If forms are requested, populate them manually
+        if (includeForms) {
+            return Promise.all(
+                services.map(async (service) => {
+                    const populatedIntakeForms = await Promise.all(
+                        (service.clientIntakeForms || []).map(async (formInfo) => {
+                            try {
+                                const latestForm = await this.formsService.findLatestTemplateByKey(formInfo.formKey);
+                                if (!latestForm) return null;
+                                return {
+                                    order: formInfo.order,
+                                    form: {
+                                        _id: latestForm._id,
+                                        title: latestForm.title,
+                                        description: latestForm.description,
+                                        formType: latestForm.formType,
+                                    }
+                                };
+                            } catch (error) {
+                                console.error(`Error processing formKey ${formInfo.formKey}: ${error.message}`);
+                                return null;
+                            }
+                        })
+                    );
+
+                    return {
+                        ...service,
+                        clientIntakeForms: populatedIntakeForms.filter(f => f !== null),
+                    };
+                })
+            );
+        }
+
+        return services;
     }
 
-    async findByVersionId(id: string, user: AuthenticatedUser): Promise<ServiceDocument> {
+    async findAll(user: AuthenticatedUser): Promise<any[]> {
+        if (!user.company?._id) {
+            throw new ForbiddenException('User is not associated with any company.');
+        }
+        return this.getServicesWithPopulatedData(
+            { companyId: user.company._id },
+            true // Include forms for findAll
+        );
+    }
+
+    async findByVersionId(id: string, user: AuthenticatedUser): Promise<any> {
         if (!user.company?._id) {
             throw new ForbiddenException('User is not associated with any company.');
         }
         if (!Types.ObjectId.isValid(id)) {
             throw new NotFoundException(`Invalid service ID: ${id}`);
         }
-        // Hanya populate Position
-        const service = await this.serviceModel.findById(id).populate([
-            { path: 'requiredStaff.positionId', select: 'name' },
-            { path: 'workOrderForms.fillableByPositionIds', select: 'name' },
-            { path: 'workOrderForms.viewableByPositionIds', select: 'name' },
-            { path: 'reportForms.fillableByPositionIds', select: 'name' },
-            { path: 'reportForms.viewableByPositionIds', select: 'name' },
-            { path: 'clientIntakeForms.fillableByPositionIds', select: 'name' },
-            { path: 'clientIntakeForms.viewableByPositionIds', select: 'name' },
-        ]).exec();
 
-        if (!service || service.companyId.toString() !== user.company._id.toString()) {
+        const services = await this.getServicesWithPopulatedData(
+            {
+                _id: new Types.ObjectId(id),
+                companyId: user.company._id
+            },
+            true // Include forms for findByVersionId
+        );
+
+        if (services.length === 0) {
             throw new NotFoundException(`Service with ID ${id} not found`);
         }
-        return service;
+
+        return services[0];
     }
 
     async update(serviceKey: string, dto: UpdateServiceDto, user: AuthenticatedUser): Promise<ServiceDocument> {
@@ -188,15 +292,42 @@ export class ServicesService {
         );
         // -----------------------------------------------------------
 
+        // Get populated requiredStaff data
+        const populatedRequiredStaff = await Promise.all(
+            (service.requiredStaff || []).map(async (staff) => {
+                try {
+                    const position = await this.serviceModel.db.collection('positions').findOne({ _id: staff.positionId });
+                    return {
+                        position: {
+                            _id: position?._id,
+                            name: position?.name
+                        },
+                        minimumStaff: staff.minimumStaff,
+                        maximumStaff: staff.maximumStaff
+                    };
+                } catch (error) {
+                    console.error(`Error populating position ${staff.positionId}: ${error.message}`);
+                    return {
+                        position: {
+                            _id: staff.positionId,
+                            name: 'Unknown Position'
+                        },
+                        minimumStaff: staff.minimumStaff,
+                        maximumStaff: staff.maximumStaff
+                    };
+                }
+            })
+        );
+
         return {
             service: {
                 _id: service._id,
-                companyId: service.companyId,
                 title: service.title,
                 description: service.description,
                 accessType: service.accessType,
                 isActive: service.isActive,
-                clientIntakeForms: populatedIntakeForms.filter(f => f !== null), // Sertakan hasil manual populate
+                requiredStaff: populatedRequiredStaff,
+                clientIntakeForms: populatedIntakeForms.filter(f => f !== null),
             },
             formQuantity: formQuantity,
         };

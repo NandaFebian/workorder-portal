@@ -2,18 +2,18 @@ import { IsNotEmpty, IsOptional, IsString, IsBoolean } from "class-validator";
 
 export class CreateCompanyDto {
     @IsString()
-    @IsNotEmpty()
+    @IsNotEmpty({ message: 'Company name should not be empty' })
     name: string;
 
     @IsString()
     @IsOptional()
-    address: string;
+    address?: string; // Tambahkan '?' agar sesuai dengan IsOptional
 
     @IsString()
     @IsOptional()
-    description: string;
+    description?: string; // Tambahkan '?' agar sesuai dengan IsOptional
 
     @IsBoolean()
     @IsOptional()
-    isActive: boolean;
+    isActive?: boolean; // Tambahkan '?' agar sesuai dengan IsOptional
 }

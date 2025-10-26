@@ -1,9 +1,8 @@
-// src/positions/dto/create-position.dto.ts
 import { IsNotEmpty, IsString, IsOptional, IsBoolean } from 'class-validator';
 
 export class CreatePositionDto {
     @IsString()
-    @IsNotEmpty()
+    @IsNotEmpty({ message: 'Position name should not be empty' })
     name: string;
 
     @IsString()

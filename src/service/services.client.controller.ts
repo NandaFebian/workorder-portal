@@ -17,20 +17,24 @@ export class ServicesClientController {
     }
 
     /**
-     * Endpoint ini sekarang mengembalikan { service, formQuantity }
+     * Endpoint ini sekarang mengembalikan { service, formQuantity } di dalam 'data'
      */
     @Get(':id')
     @HttpCode(HttpStatus.OK)
     async findById(@Param('id') id: string) {
+        // Panggil service method yang sudah mengembalikan struktur { service, formQuantity }
         const serviceData = await this.servicesService.findById(id);
         return {
             message: 'Load data success',
-            data: [serviceData.service], // Wrap in array to match structure
+            // --- 👇 PERUBAHAN DI SINI 👇 ---
+            data: serviceData, // Langsung gunakan hasil dari service
+            // --- 👆 PERUBAHAN DI SINI 👆 ---
         };
     }
 
     /**
      * ENDPOINT BARU: Mengambil form terbaru untuk service ini
+     * (Tidak ada perubahan di sini, sudah benar)
      */
     @Get(':id/intake-forms')
     @HttpCode(HttpStatus.OK)

@@ -17,7 +17,7 @@ import { FormsService } from 'src/form/form.service';
 export class ServicesService {
     constructor(
         @InjectModel(Service.name) private serviceModel: Model<ServiceDocument>,
-        private readonly formsService: FormsService, // Pastikan FormsService di-inject
+        private readonly formsService: FormsService,
     ) { }
 
     async create(
@@ -36,9 +36,6 @@ export class ServicesService {
         return newService.save();
     }
 
-    /**
-     * Helper method to get services with populated positions and forms
-     */
     private async getServicesWithPopulatedData(
         matchQuery: any,
         includeForms: boolean = false
@@ -56,18 +53,17 @@ export class ServicesService {
             {
                 $project: {
                     _id: 1,
-                    companyId: 1, // Pastikan companyId disertakan
+                    companyId: 1,
                     title: 1,
                     description: 1,
                     accessType: 1,
                     isActive: 1,
                     requiredStaff: 1,
                     clientIntakeForms: includeForms ? 1 : 0,
-                    workOrderForms: includeForms ? 1 : 0, // Include jika perlu
-                    reportForms: includeForms ? 1 : 0,    // Include jika perlu
+                    workOrderForms: includeForms ? 1 : 0, // Ensure included
+                    reportForms: includeForms ? 1 : 0,    // Ensure included
                 },
             },
-            // Populate positions
             {
                 $lookup: {
                     from: 'positions',
@@ -105,7 +101,6 @@ export class ServicesService {
                     },
                 },
             },
-            // Clean up temporary lookup and positionId
             {
                 $project: {
                     requiredStaffPositions: 0,
@@ -116,13 +111,13 @@ export class ServicesService {
 
         const services = await this.serviceModel.aggregate(pipeline);
 
-        // If forms are requested, populate them manually
         if (includeForms) {
             return Promise.all(
                 services.map(async (service) => {
                     const populateForms = async (formInfos) => {
+                        if (!formInfos) return [];
                         return Promise.all(
-                            (formInfos || []).map(async (formInfo) => {
+                            formInfos.map(async (formInfo) => {
                                 try {
                                     const latestForm = await this.formsService.findLatestTemplateByKey(formInfo.formKey);
                                     if (!latestForm) return null;
@@ -133,30 +128,27 @@ export class ServicesService {
                                             title: latestForm.title,
                                             description: latestForm.description,
                                             formType: latestForm.formType,
-                                            // Sertakan field lain jika perlu dari FormTemplateDocument
                                         }
-                                        // Sertakan properti lain dari formInfo jika perlu (misal: fillableByRoles)
                                     };
                                 } catch (error) {
-                                    console.error(`Error processing formKey ${formInfo.formKey}: ${error.message}`);
-                                    return null; // Return null or handle error differently
+                                    console.error(`Error processing formKey ${formInfo.formKey} in service ${service._id}: ${error.message}`);
+                                    return null;
                                 }
                             })
-                        ).then(results => results.filter(f => f !== null)); // Filter out null results
+                        ).then(results => results.filter(f => f !== null));
                     };
 
                     const [populatedIntakeForms, populatedWorkOrderForms, populatedReportForms] = await Promise.all([
                         populateForms(service.clientIntakeForms),
-                        populateForms(service.workOrderForms),
-                        populateForms(service.reportForms)
+                        populateForms(service.workOrderForms), // Populate WO forms
+                        populateForms(service.reportForms)     // Populate Report forms
                     ]);
-
 
                     return {
                         ...service,
                         clientIntakeForms: populatedIntakeForms,
-                        workOrderForms: populatedWorkOrderForms,
-                        reportForms: populatedReportForms,
+                        workOrderForms: populatedWorkOrderForms, // Assign populated WO forms
+                        reportForms: populatedReportForms,       // Assign populated Report forms
                     };
                 })
             );
@@ -171,7 +163,7 @@ export class ServicesService {
         }
         return this.getServicesWithPopulatedData(
             { companyId: user.company._id },
-            true // Include forms for findAll
+            true
         );
     }
 
@@ -188,7 +180,7 @@ export class ServicesService {
                 _id: new Types.ObjectId(id),
                 companyId: user.company._id
             },
-            true // Include forms for findByVersionId
+            true
         );
 
         if (services.length === 0) {
@@ -211,20 +203,18 @@ export class ServicesService {
             throw new NotFoundException(`Service with key ${serviceKey} not found`);
         }
 
-        // Ambil data form yang ada, atau array kosong jika tidak ada
         const currentIntakeForms = latestVersion.clientIntakeForms || [];
         const currentWorkOrderForms = latestVersion.workOrderForms || [];
         const currentReportForms = latestVersion.reportForms || [];
 
         const newVersionData = {
-            ...latestVersion.toObject(), // Ambil semua field dari versi lama
-            ...dto, // Timpa dengan data dari DTO
-            // Pastikan field form tidak hilang jika tidak ada di DTO
+            ...latestVersion.toObject(),
+            ...dto,
             clientIntakeForms: dto.clientIntakeForms !== undefined ? dto.clientIntakeForms : currentIntakeForms,
             workOrderForms: dto.workOrderForms !== undefined ? dto.workOrderForms : currentWorkOrderForms,
             reportForms: dto.reportForms !== undefined ? dto.reportForms : currentReportForms,
-            _id: undefined, // Hapus _id agar Mongoose membuat _id baru
-            __v: latestVersion.__v + 1, // Tingkatkan versi
+            _id: undefined,
+            __v: latestVersion.__v + 1,
         };
 
         const newVersion = new this.serviceModel(newVersionData);
@@ -233,14 +223,10 @@ export class ServicesService {
 
     // --- Client Methods ---
 
-    /**
-     * Helper pribadi untuk mencari & memvalidasi service publik berdasarkan ID
-     */
     private async findAndValidatePublicService(id: string): Promise<ServiceDocument> {
         if (!Types.ObjectId.isValid(id)) {
             throw new NotFoundException(`Invalid service ID: ${id}`);
         }
-        // Tidak perlu populate form di sini, akan dilakukan manual di findById
         const service = await this.serviceModel.findById(id).exec();
 
         if (!service || !service.isActive || service.accessType !== 'public') {
@@ -253,36 +239,29 @@ export class ServicesService {
         if (!Types.ObjectId.isValid(companyId)) {
             throw new NotFoundException(`Invalid company ID: ${companyId}`);
         }
-        // Gunakan getServicesWithPopulatedData tanpa menyertakan form detail
         const latestPublicServices = await this.getServicesWithPopulatedData(
             {
                 companyId: new Types.ObjectId(companyId),
                 isActive: true,
                 accessType: 'public'
             },
-            false // Tidak perlu include form detail di sini
+            false // Do not include full form details here
         );
-
-        return latestPublicServices; // requiredStaff sudah di-populate oleh getServicesWithPopulatedData
+        return latestPublicServices;
     }
 
-    /**
-     * Diubah untuk endpoint: GET /public/services/{{id}}
-     */
     async findById(id: string): Promise<any> {
         const service = await this.findAndValidatePublicService(id);
 
-        // Hitung jumlah semua jenis form
         const formQuantity = (service.workOrderForms?.length || 0) +
             (service.reportForms?.length || 0) +
             (service.clientIntakeForms?.length || 0);
 
-        // --- Ambil form terbaru secara manual untuk clientIntakeForms ---
         const populatedIntakeForms = await Promise.all(
             (service.clientIntakeForms || []).map(async (formInfo) => {
                 try {
                     const latestForm = await this.formsService.findLatestTemplateByKey(formInfo.formKey);
-                    if (!latestForm) return null; // Jika form tidak ditemukan
+                    if (!latestForm) return null;
                     return {
                         order: formInfo.order,
                         form: {
@@ -290,26 +269,19 @@ export class ServicesService {
                             title: latestForm.title,
                             description: latestForm.description,
                             formType: latestForm.formType,
-                            // Tambahkan field lain jika perlu
                         }
                     };
                 } catch (error) {
-                    // Log error atau handle sesuai kebutuhan
                     console.error(`Error fetching form template with key ${formInfo.formKey}: ${error.message}`);
                     return null;
                 }
             })
-        ).then(results => results.filter(f => f !== null)); // Filter hasil null
-        // -----------------------------------------------------------
+        ).then(results => results.filter(f => f !== null));
 
-        // Populate requiredStaff (jika belum dilakukan oleh helper, atau jika perlu format berbeda)
-        // Jika getServicesWithPopulatedData sudah melakukannya, bagian ini bisa disederhanakan/dihapus
         const populatedRequiredStaff = await Promise.all(
             (service.requiredStaff || []).map(async (staff) => {
                 try {
-                    // Contoh: Menggunakan Mongoose populate jika findAndValidatePublicService tidak populate
-                    // Atau ambil manual jika struktur berbeda
-                    const position = await this.serviceModel.db.collection('positions').findOne({ _id: staff.positionId }); // Contoh manual fetch
+                    const position = await this.serviceModel.db.collection('positions').findOne({ _id: staff.positionId });
                     return {
                         position: {
                             _id: position?._id,
@@ -320,7 +292,6 @@ export class ServicesService {
                     };
                 } catch (error) {
                     console.error(`Error populating position ${staff.positionId}: ${error.message}`);
-                    // Handle error, misalnya kembalikan data default
                     return {
                         position: { _id: staff.positionId, name: 'Unknown Position' },
                         minimumStaff: staff.minimumStaff,
@@ -330,42 +301,32 @@ export class ServicesService {
             })
         );
 
-        // --- 👇 Struktur Response Sesuai Permintaan 👇 ---
         return {
             service: {
                 _id: service._id,
-                companyId: service.companyId, // <--- Penambahan companyId
+                companyId: service.companyId,
                 title: service.title,
                 description: service.description,
                 accessType: service.accessType,
                 isActive: service.isActive,
-                requiredStaff: populatedRequiredStaff, // Sertakan data staff yang sudah di-populate
-                clientIntakeForms: populatedIntakeForms, // Sertakan form intake yang sudah di-populate
-                // Anda bisa memilih untuk tidak menyertakan workOrderForms dan reportForms di sini jika tidak perlu
+                requiredStaff: populatedRequiredStaff,
+                clientIntakeForms: populatedIntakeForms,
             },
-            formQuantity: formQuantity, // Jumlah total form
+            formQuantity: formQuantity,
         };
-        // --- 👆 Struktur Response Sesuai Permintaan 👆 ---
     }
 
-
-    /**
-     * Metode untuk endpoint: GET /public/services/{{id}}/intake-forms
-     */
     async getLatestFormsForService(serviceId: string): Promise<any[]> {
         const service = await this.findAndValidatePublicService(serviceId);
 
-        // Gabungkan semua info form (work order, report, intake)
         const allFormsInfo = [
             ...(service.workOrderForms || []),
             ...(service.reportForms || []),
             ...(service.clientIntakeForms || []),
         ];
 
-        // Urutkan berdasarkan 'order'
         allFormsInfo.sort((a, b) => a.order - b.order);
 
-        // Ambil detail form terbaru untuk setiap formKey
         const populatedForms = await Promise.all(
             allFormsInfo.map(async (formInfo) => {
                 try {
@@ -373,27 +334,20 @@ export class ServicesService {
 
                     if (!latestForm) {
                         console.warn(`Form template with key ${formInfo.formKey} not found for service ${serviceId}.`);
-                        return null; // Abaikan jika form tidak ditemukan
+                        return null;
                     }
 
-                    // Kembalikan struktur yang menyertakan order dan detail form
                     return {
                         order: formInfo.order,
-                        form: latestForm, // Kembalikan seluruh objek FormTemplateDocument terbaru
-                        // Anda bisa menambahkan properti lain dari formInfo jika perlu
-                        // fillableByRoles: formInfo.fillableByRoles,
-                        // viewableByRoles: formInfo.viewableByRoles,
-                        // fillableByPositionIds: formInfo.fillableByPositionIds,
-                        // viewableByPositionIds: formInfo.viewableByPositionIds,
+                        form: latestForm,
                     };
                 } catch (error) {
                     console.error(`Error processing formKey ${formInfo.formKey} for service ${serviceId}: ${error.message}`);
-                    return null; // Abaikan jika terjadi error saat fetch form
+                    return null;
                 }
             })
         );
 
-        // Filter hasil yang null (jika ada form yang tidak ditemukan atau error)
         return populatedForms.filter(pf => pf !== null);
     }
 }

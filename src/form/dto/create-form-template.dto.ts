@@ -50,7 +50,7 @@ class FormFieldDto {
     max?: number;
 }
 
-const allowedFormTypes = ['work_order', 'report'] as const;
+const allowedFormTypes = ['work_order', 'report', 'intake'] as const;
 
 export class CreateFormTemplateDto {
     @IsString()
@@ -61,7 +61,7 @@ export class CreateFormTemplateDto {
     @IsOptional()
     description?: string;
 
-    @IsEnum(['work_order', 'report'], {
+    @IsEnum(['work_order', 'report', 'intake'], {
         message: `formType must be one of the following values: ${allowedFormTypes.join(', ')}`,
     })
     @IsNotEmpty()

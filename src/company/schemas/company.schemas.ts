@@ -1,9 +1,10 @@
+// src/company/schemas/company.schemas.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 
 export type CompanyDocument = Company & Document;
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true }) // Dibiarkan default, __v akan otomatis aktif
 export class Company {
     @Prop({ required: true })
     name: string;

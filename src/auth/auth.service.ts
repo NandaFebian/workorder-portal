@@ -9,7 +9,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ActiveToken, ActiveTokenDocument } from './schemas/active-token.schema';
 import { UsersService } from '../users/users.service';
-import { CompaniesService } from '../company/companies.service';
+import { CompaniesService } from '../company/companies.internal.service';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { RegisterAuthDto } from './dto/register-auth.dto';
 import { RegisterCompanyDto } from './dto/register-company.dto';

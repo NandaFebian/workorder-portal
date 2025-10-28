@@ -1,3 +1,4 @@
+// src/service/dto/create-service.dto.ts
 import {
     IsArray,
     IsBoolean,
@@ -8,42 +9,42 @@ import {
     IsOptional,
     IsString,
     ValidateNested,
-    Min, // Import Min jika perlu validasi angka minimum
-    ArrayMinSize // Import ArrayMinSize jika perlu validasi jumlah elemen array
+    Min,
+    ArrayMinSize
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
+// DTO untuk Staff (Tetap sama)
 class RequiredStaffDto {
     @IsMongoId({ message: 'positionId must be a valid MongoDB ObjectId' })
     @IsNotEmpty()
     positionId: string;
 
     @IsNumber()
-    @Min(0, { message: 'Minimum staff must be 0 or greater' }) // Contoh validasi tambahan
+    @Min(0, { message: 'Minimum staff must be 0 or greater' })
     @IsNotEmpty()
     minimumStaff: number;
 
     @IsNumber()
-    @Min(1, { message: 'Maximum staff must be at least 1' }) // Contoh validasi tambahan
+    @Min(1, { message: 'Maximum staff must be at least 1' })
     @IsNotEmpty()
     maximumStaff: number;
-
-    // Bisa ditambahkan validasi custom: maximumStaff >= minimumStaff jika perlu
 }
 
-class OrderedFormDto {
+// DTO untuk Work Order & Report Forms (Dengan role/position)
+class OrderedFormWithAccessDto {
     @IsNumber()
     @Min(1, { message: 'Order must be 1 or greater' })
     @IsNotEmpty()
     order: number;
 
-    @IsString()
-    @IsNotEmpty({ message: 'formKey should not be empty' })
-    formKey: string;
+    @IsMongoId({ message: 'formId must be a valid MongoDB ObjectId' })
+    @IsNotEmpty({ message: 'formId should not be empty' })
+    formId: string;
 
     @IsArray()
     @IsString({ each: true })
-    @IsOptional() // Mungkin bisa opsional atau wajib tergantung kebutuhan
+    @IsOptional()
     fillableByRoles?: string[];
 
     @IsArray()
@@ -62,6 +63,17 @@ class OrderedFormDto {
     viewableByPositionIds?: string[];
 }
 
+export class ClientIntakeFormDto {
+    @IsNumber()
+    @Min(1, { message: 'Order must be 1 or greater' })
+    @IsNotEmpty()
+    order: number;
+
+    @IsMongoId({ message: 'formId must be a valid MongoDB ObjectId' })
+    @IsNotEmpty({ message: 'formId should not be empty' })
+    formId: string;
+}
+
 const allowedAccessTypes = ['public', 'member_only', 'internal'];
 
 export class CreateServiceDto {
@@ -76,20 +88,22 @@ export class CreateServiceDto {
     @IsArray()
     @ValidateNested({ each: true })
     @Type(() => RequiredStaffDto)
-    @ArrayMinSize(1, { message: 'At least one required staff must be specified' }) // Contoh: Minimal 1 staff
+    @ArrayMinSize(1, { message: 'At least one required staff must be specified' })
     requiredStaff: RequiredStaffDto[];
 
+    // Gunakan DTO dengan akses kontrol
     @IsArray()
     @ValidateNested({ each: true })
-    @Type(() => OrderedFormDto)
+    @Type(() => OrderedFormWithAccessDto)
     @IsOptional()
-    workOrderForms?: OrderedFormDto[];
+    workOrderForms?: OrderedFormWithAccessDto[];
 
+    // Gunakan DTO dengan akses kontrol
     @IsArray()
     @ValidateNested({ each: true })
-    @Type(() => OrderedFormDto)
+    @Type(() => OrderedFormWithAccessDto)
     @IsOptional()
-    reportForms?: OrderedFormDto[];
+    reportForms?: OrderedFormWithAccessDto[];
 
     @IsEnum(allowedAccessTypes, {
         message: `accessType must be one of the following values: ${allowedAccessTypes.join(', ')}`,
@@ -103,7 +117,7 @@ export class CreateServiceDto {
 
     @IsArray()
     @ValidateNested({ each: true })
-    @Type(() => OrderedFormDto)
+    @Type(() => ClientIntakeFormDto)
     @IsOptional()
-    clientIntakeForms?: OrderedFormDto[];
+    clientIntakeForms?: ClientIntakeFormDto[];
 }

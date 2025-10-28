@@ -3,6 +3,7 @@ import {
     Injectable,
     NotFoundException,
     ForbiddenException,
+    BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -12,6 +13,9 @@ import { UpdateServiceDto } from './dto/update-service.dto';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { v4 as uuidv4 } from 'uuid';
 import { FormsService } from 'src/form/form.service';
+import { FormTemplateDocument } from 'src/form/schemas/form-template.schema';
+import { IOrderedForm, AnyOrderedFormInputDto, OrderedFormInputDto } from './types/service-form.types'; // Sesuaikan path jika perlu
+import { getServicesWithAggregation } from './helpers/service-aggregation.helper'; // Sesuaikan path jika perlu
 
 @Injectable()
 export class ServicesService {
@@ -20,148 +24,142 @@ export class ServicesService {
         private readonly formsService: FormsService,
     ) { }
 
+    private async transformFormIdToKeyArray(formDtos: AnyOrderedFormInputDto[] | undefined): Promise<IOrderedForm[]> {
+        if (!formDtos || formDtos.length === 0) {
+            return [];
+        }
+
+        const transformedForms = await Promise.all(
+            formDtos.map(async (dto: AnyOrderedFormInputDto): Promise<IOrderedForm> => {
+                let formTemplate: FormTemplateDocument;
+                try {
+                    formTemplate = await this.formsService.findTemplateById(dto.formId);
+                } catch (error) {
+                    if (error instanceof NotFoundException) {
+                        throw new BadRequestException(`Form template with ID ${dto.formId} not found.`);
+                    }
+                    throw error;
+                }
+
+                const hasAccessControl = 'fillableByRoles' in dto || 'fillableByPositionIds' in dto;
+                const dtoWithAccess = hasAccessControl ? (dto as OrderedFormInputDto) : null;
+
+                return {
+                    order: dto.order,
+                    formKey: formTemplate.formKey,
+                    fillableByRoles: dtoWithAccess?.fillableByRoles || [],
+                    viewableByRoles: dtoWithAccess?.viewableByRoles || [],
+                    fillableByPositionIds: (dtoWithAccess?.fillableByPositionIds || []).map(id => new Types.ObjectId(id)),
+                    viewableByPositionIds: (dtoWithAccess?.viewableByPositionIds || []).map(id => new Types.ObjectId(id)),
+                };
+            })
+        );
+        return transformedForms;
+    }
+
     async create(
         createServiceDto: CreateServiceDto,
         user: AuthenticatedUser,
-    ): Promise<ServiceDocument> {
+    ): Promise<any> { // Return type diubah
         if (!user.company?._id) {
             throw new ForbiddenException('User is not associated with any company.');
         }
-        const newService = new this.serviceModel({
+
+        const workOrderFormsWithKeys = await this.transformFormIdToKeyArray(createServiceDto.workOrderForms);
+        const reportFormsWithKeys = await this.transformFormIdToKeyArray(createServiceDto.reportForms);
+        const clientIntakeFormsWithKeys = await this.transformFormIdToKeyArray(createServiceDto.clientIntakeForms);
+
+        const serviceToSave = new this.serviceModel({
             ...createServiceDto,
+            workOrderForms: workOrderFormsWithKeys,
+            reportForms: reportFormsWithKeys,
+            clientIntakeForms: clientIntakeFormsWithKeys,
             serviceKey: uuidv4(),
             companyId: user.company._id,
             __v: 0,
         });
-        return newService.save();
+
+        const savedService = await serviceToSave.save();
+
+        const populatedServices = await getServicesWithAggregation(
+            this.serviceModel,
+            this.formsService,
+            { _id: savedService._id },
+            true
+        );
+
+        if (populatedServices.length > 0) {
+            return populatedServices[0];
+        } else {
+            throw new NotFoundException(`Failed to retrieve the created service with ID ${savedService._id}`);
+        }
     }
 
-    private async getServicesWithPopulatedData(
-        matchQuery: any,
-        includeForms: boolean = false
-    ): Promise<any[]> {
-        const pipeline: any[] = [
-            { $match: matchQuery },
-            { $sort: { __v: -1 } },
-            {
-                $group: {
-                    _id: '$serviceKey',
-                    latest_doc: { $first: '$$ROOT' }
-                }
-            },
-            { $replaceRoot: { newRoot: '$latest_doc' } },
-            {
-                $project: {
-                    _id: 1,
-                    companyId: 1,
-                    title: 1,
-                    description: 1,
-                    accessType: 1,
-                    isActive: 1,
-                    requiredStaff: 1,
-                    clientIntakeForms: includeForms ? 1 : 0,
-                    workOrderForms: includeForms ? 1 : 0, // Ensure included
-                    reportForms: includeForms ? 1 : 0,    // Ensure included
-                },
-            },
-            {
-                $lookup: {
-                    from: 'positions',
-                    localField: 'requiredStaff.positionId',
-                    foreignField: '_id',
-                    as: 'requiredStaffPositions',
-                },
-            },
-            {
-                $addFields: {
-                    requiredStaff: {
-                        $map: {
-                            input: '$requiredStaff',
-                            as: 'rs',
-                            in: {
-                                $mergeObjects: [
-                                    '$$rs',
-                                    {
-                                        position: {
-                                            $arrayElemAt: [
-                                                {
-                                                    $filter: {
-                                                        input: '$requiredStaffPositions',
-                                                        as: 'pos',
-                                                        cond: { $eq: ['$$pos._id', '$$rs.positionId'] },
-                                                    },
-                                                },
-                                                0,
-                                            ],
-                                        },
-                                    },
-                                ],
-                            },
-                        },
-                    },
-                },
-            },
-            {
-                $project: {
-                    requiredStaffPositions: 0,
-                    'requiredStaff.positionId': 0
-                }
-            },
-        ];
+    // --- 👇 PERUBAHAN DI METODE INI 👇 ---
+    async update(serviceKey: string, dto: UpdateServiceDto, user: AuthenticatedUser): Promise<any> { // Ubah return type
+        if (!user.company?._id) {
+            throw new ForbiddenException('User is not associated with any company.');
+        }
+        const latestVersion = await this.serviceModel.findOne({
+            serviceKey,
+            companyId: user.company._id
+        }).sort({ __v: -1 }).exec();
 
-        const services = await this.serviceModel.aggregate(pipeline);
-
-        if (includeForms) {
-            return Promise.all(
-                services.map(async (service) => {
-                    const populateForms = async (formInfos) => {
-                        if (!formInfos) return [];
-                        return Promise.all(
-                            formInfos.map(async (formInfo) => {
-                                try {
-                                    const latestForm = await this.formsService.findLatestTemplateByKey(formInfo.formKey);
-                                    if (!latestForm) return null;
-                                    return {
-                                        order: formInfo.order,
-                                        form: {
-                                            _id: latestForm._id,
-                                            title: latestForm.title,
-                                            description: latestForm.description,
-                                            formType: latestForm.formType,
-                                        }
-                                    };
-                                } catch (error) {
-                                    console.error(`Error processing formKey ${formInfo.formKey} in service ${service._id}: ${error.message}`);
-                                    return null;
-                                }
-                            })
-                        ).then(results => results.filter(f => f !== null));
-                    };
-
-                    const [populatedIntakeForms, populatedWorkOrderForms, populatedReportForms] = await Promise.all([
-                        populateForms(service.clientIntakeForms),
-                        populateForms(service.workOrderForms), // Populate WO forms
-                        populateForms(service.reportForms)     // Populate Report forms
-                    ]);
-
-                    return {
-                        ...service,
-                        clientIntakeForms: populatedIntakeForms,
-                        workOrderForms: populatedWorkOrderForms, // Assign populated WO forms
-                        reportForms: populatedReportForms,       // Assign populated Report forms
-                    };
-                })
-            );
+        if (!latestVersion) {
+            throw new NotFoundException(`Service with key ${serviceKey} not found`);
         }
 
-        return services;
+        const currentIntakeForms: IOrderedForm[] = (latestVersion.clientIntakeForms as unknown as IOrderedForm[]) || [];
+        const currentWorkOrderForms: IOrderedForm[] = (latestVersion.workOrderForms as unknown as IOrderedForm[]) || [];
+        const currentReportForms: IOrderedForm[] = (latestVersion.reportForms as unknown as IOrderedForm[]) || [];
+
+        const clientIntakeFormsData = dto.clientIntakeForms
+            ? await this.transformFormIdToKeyArray(dto.clientIntakeForms)
+            : currentIntakeForms;
+        const workOrderFormsData = dto.workOrderForms
+            ? await this.transformFormIdToKeyArray(dto.workOrderForms)
+            : currentWorkOrderForms;
+        const reportFormsData = dto.reportForms
+            ? await this.transformFormIdToKeyArray(dto.reportForms)
+            : currentReportForms;
+
+        const newVersionData = {
+            ...latestVersion.toObject(),
+            ...dto,
+            clientIntakeForms: clientIntakeFormsData,
+            workOrderForms: workOrderFormsData,
+            reportForms: reportFormsData,
+            _id: undefined,
+            __v: latestVersion.__v + 1,
+        };
+
+        const newVersion = new this.serviceModel(newVersionData);
+        const savedNewVersion = await newVersion.save(); // Simpan versi baru
+
+        // Ambil kembali data service yang sudah dipopulasi
+        const populatedServices = await getServicesWithAggregation(
+            this.serviceModel,
+            this.formsService,
+            { _id: savedNewVersion._id }, // Gunakan ID dari versi baru
+            true
+        );
+
+        if (populatedServices.length > 0) {
+            return populatedServices[0]; // Kembalikan service yang sudah dipopulasi
+        } else {
+            throw new NotFoundException(`Failed to retrieve the updated service with ID ${savedNewVersion._id}`);
+        }
     }
+    // --- 👆 PERUBAHAN DI METODE INI 👆 ---
+
 
     async findAll(user: AuthenticatedUser): Promise<any[]> {
         if (!user.company?._id) {
             throw new ForbiddenException('User is not associated with any company.');
         }
-        return this.getServicesWithPopulatedData(
+        return getServicesWithAggregation(
+            this.serviceModel,
+            this.formsService,
             { companyId: user.company._id },
             true
         );
@@ -174,8 +172,9 @@ export class ServicesService {
         if (!Types.ObjectId.isValid(id)) {
             throw new NotFoundException(`Invalid service ID: ${id}`);
         }
-
-        const services = await this.getServicesWithPopulatedData(
+        const services = await getServicesWithAggregation(
+            this.serviceModel,
+            this.formsService,
             {
                 _id: new Types.ObjectId(id),
                 companyId: user.company._id
@@ -189,39 +188,6 @@ export class ServicesService {
 
         return services[0];
     }
-
-    async update(serviceKey: string, dto: UpdateServiceDto, user: AuthenticatedUser): Promise<ServiceDocument> {
-        if (!user.company?._id) {
-            throw new ForbiddenException('User is not associated with any company.');
-        }
-        const latestVersion = await this.serviceModel.findOne({
-            serviceKey,
-            companyId: user.company._id
-        }).sort({ __v: -1 }).exec();
-
-        if (!latestVersion) {
-            throw new NotFoundException(`Service with key ${serviceKey} not found`);
-        }
-
-        const currentIntakeForms = latestVersion.clientIntakeForms || [];
-        const currentWorkOrderForms = latestVersion.workOrderForms || [];
-        const currentReportForms = latestVersion.reportForms || [];
-
-        const newVersionData = {
-            ...latestVersion.toObject(),
-            ...dto,
-            clientIntakeForms: dto.clientIntakeForms !== undefined ? dto.clientIntakeForms : currentIntakeForms,
-            workOrderForms: dto.workOrderForms !== undefined ? dto.workOrderForms : currentWorkOrderForms,
-            reportForms: dto.reportForms !== undefined ? dto.reportForms : currentReportForms,
-            _id: undefined,
-            __v: latestVersion.__v + 1,
-        };
-
-        const newVersion = new this.serviceModel(newVersionData);
-        return newVersion.save();
-    }
-
-    // --- Client Methods ---
 
     private async findAndValidatePublicService(id: string): Promise<ServiceDocument> {
         if (!Types.ObjectId.isValid(id)) {
@@ -239,13 +205,15 @@ export class ServicesService {
         if (!Types.ObjectId.isValid(companyId)) {
             throw new NotFoundException(`Invalid company ID: ${companyId}`);
         }
-        const latestPublicServices = await this.getServicesWithPopulatedData(
+        const latestPublicServices = await getServicesWithAggregation(
+            this.serviceModel,
+            this.formsService,
             {
                 companyId: new Types.ObjectId(companyId),
                 isActive: true,
                 accessType: 'public'
             },
-            false // Do not include full form details here
+            false
         );
         return latestPublicServices;
     }
@@ -331,12 +299,10 @@ export class ServicesService {
             allFormsInfo.map(async (formInfo) => {
                 try {
                     const latestForm = await this.formsService.findLatestTemplateByKey(formInfo.formKey);
-
                     if (!latestForm) {
                         console.warn(`Form template with key ${formInfo.formKey} not found for service ${serviceId}.`);
                         return null;
                     }
-
                     return {
                         order: formInfo.order,
                         form: latestForm,

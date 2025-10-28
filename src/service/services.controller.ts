@@ -31,10 +31,10 @@ export class ServicesController {
         @Body() createServiceDto: CreateServiceDto,
         @GetUser() user: AuthenticatedUser,
     ) {
-        const newService = await this.servicesService.create(createServiceDto, user);
+        const populatedService = await this.servicesService.create(createServiceDto, user);
         return {
             message: 'Service created successfully',
-            data: newService,
+            data: populatedService,
         };
     }
 
@@ -56,7 +56,7 @@ export class ServicesController {
         const service = await this.servicesService.findByVersionId(id, user);
         return {
             message: 'Load data success',
-            data: [service], // Wrap single service in array to match expected structure
+            data: service, // Kembalikan objek tunggal
         };
     }
 
@@ -68,10 +68,11 @@ export class ServicesController {
         @Body() updateServiceDto: UpdateServiceDto,
         @GetUser() user: AuthenticatedUser,
     ) {
-        const newVersion = await this.servicesService.update(serviceKey, updateServiceDto, user);
+        // Panggil service.update yang sekarang mengembalikan data terpopulasi
+        const populatedUpdatedService = await this.servicesService.update(serviceKey, updateServiceDto, user);
         return {
             message: 'New service version created successfully',
-            data: newVersion,
+            data: populatedUpdatedService, // Kembalikan data yang sudah dipopulasi
         };
     }
 }

@@ -27,7 +27,7 @@ class OrderedForm {
     @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Position' }], required: true })
     viewableByPositionIds: MongooseSchema.Types.ObjectId[];
 }
-const OrderedFormSchema = SchemaFactory.createForClass(OrderedForm);
+export const OrderedFormSchema = SchemaFactory.createForClass(OrderedForm);
 
 @Schema({ timestamps: true, versionKey: false })
 export class Service {

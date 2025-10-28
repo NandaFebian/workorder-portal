@@ -10,7 +10,8 @@ import {
     HttpStatus,
     Put,
 } from '@nestjs/common';
-import { ServicesService } from './services.service';
+// Import Service Internal
+import { ServicesInternalService } from './services.internal.service';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
 import { AuthGuard } from '../auth/guards/auth.guard';
@@ -22,7 +23,8 @@ import { Roles } from 'src/common/decorators/roles.decorator';
 @Controller('services')
 @UseGuards(AuthGuard, RolesGuard)
 export class ServicesController {
-    constructor(private readonly servicesService: ServicesService) { }
+    // Inject service internal
+    constructor(private readonly internalService: ServicesInternalService) { }
 
     @Post()
     @HttpCode(HttpStatus.CREATED)
@@ -31,7 +33,7 @@ export class ServicesController {
         @Body() createServiceDto: CreateServiceDto,
         @GetUser() user: AuthenticatedUser,
     ) {
-        const populatedService = await this.servicesService.create(createServiceDto, user);
+        const populatedService = await this.internalService.create(createServiceDto, user);
         return {
             message: 'Service created successfully',
             data: populatedService,
@@ -42,7 +44,7 @@ export class ServicesController {
     @HttpCode(HttpStatus.OK)
     @Roles('owner_company', 'manager_company')
     async findAll(@GetUser() user: AuthenticatedUser) {
-        const services = await this.servicesService.findAll(user);
+        const services = await this.internalService.findAll(user);
         return {
             message: 'Load data success',
             data: services,
@@ -53,7 +55,7 @@ export class ServicesController {
     @HttpCode(HttpStatus.OK)
     @Roles('owner_company', 'manager_company')
     async findOne(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-        const service = await this.servicesService.findByVersionId(id, user);
+        const service = await this.internalService.findByVersionId(id, user);
         return {
             message: 'Load data success',
             data: service, // Kembalikan objek tunggal
@@ -68,11 +70,10 @@ export class ServicesController {
         @Body() updateServiceDto: UpdateServiceDto,
         @GetUser() user: AuthenticatedUser,
     ) {
-        // Panggil service.update yang sekarang mengembalikan data terpopulasi
-        const populatedUpdatedService = await this.servicesService.update(serviceKey, updateServiceDto, user);
+        const populatedUpdatedService = await this.internalService.update(serviceKey, updateServiceDto, user);
         return {
             message: 'New service version created successfully',
-            data: populatedUpdatedService, // Kembalikan data yang sudah dipopulasi
+            data: populatedUpdatedService,
         };
     }
 }

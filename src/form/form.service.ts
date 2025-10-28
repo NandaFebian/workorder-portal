@@ -1,7 +1,7 @@
 // src/form/form.service.ts
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { FormTemplate, FormTemplateDocument } from './schemas/form-template.schema';
 import { FormSubmission, FormSubmissionDocument } from './schemas/form-submissions.schema';
 import { CreateFormTemplateDto } from './dto/create-form-template.dto';
@@ -93,6 +93,21 @@ export class FormsService {
             submittedById: user._id,
         });
 
+        return submission.save();
+    }
+
+    async submitPublicForm(dto: SubmitFormDto, serviceId: string): Promise<FormSubmissionDocument> {
+        const template = await this.formTemplateModel.findById(dto.formTemplateId).exec();
+        if (!template) {
+            throw new NotFoundException(`Form template with ID ${dto.formTemplateId} not found`);
+        }
+        const submission = new this.formSubmissionModel({
+            formTemplateId: dto.formTemplateId,
+            answers: dto.answers,
+            submittedById: null, // null untuk user publik
+            relatedServiceId: serviceId ? new Types.ObjectId(serviceId) : undefined,
+            companyId: template.companyId, // Ambil companyId dari template
+        });
         return submission.save();
     }
 

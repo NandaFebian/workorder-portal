@@ -1,6 +1,7 @@
 // src/service/types/service-form.types.ts
-import { Types } from 'mongoose'; // Pastikan Types diimpor dari mongoose
+import { Types } from 'mongoose';
 
+// Tipe untuk DTO input (menerima formId dengan akses kontrol)
 export type OrderedFormInputDto = {
     order: number;
     formId: string;
@@ -10,7 +11,7 @@ export type OrderedFormInputDto = {
     viewableByPositionIds?: string[];
 };
 
-// Tipe DTO input khusus untuk Client Intake Form
+// Tipe DTO input khusus untuk Client Intake Form (tanpa akses kontrol)
 export type ClientIntakeFormInputDto = {
     order: number;
     formId: string;
@@ -20,12 +21,12 @@ export type ClientIntakeFormInputDto = {
 export type AnyOrderedFormInputDto = OrderedFormInputDto | ClientIntakeFormInputDto;
 
 
-// Interface untuk struktur data form yang disimpan di DB
+// Interface untuk struktur data form yang disimpan di DB (menggunakan formKey)
 export interface IOrderedForm {
     order: number;
     formKey: string;
     fillableByRoles: string[];
     viewableByRoles: string[];
-    fillableByPositionIds: Types.ObjectId[]; // Gunakan Types.ObjectId
-    viewableByPositionIds: Types.ObjectId[]; // Gunakan Types.ObjectId
+    fillableByPositionIds: Types.ObjectId[];
+    viewableByPositionIds: Types.ObjectId[];
 }

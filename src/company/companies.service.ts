@@ -10,7 +10,7 @@ import { InviteEmployeesDto } from './dto/invite-employees.dto';
 import { SuccessfulInvite, InviteError, InviteEmployeesResponse } from './interfaces/invitation.interface';
 import { PositionsService } from 'src/positions/positions.service';
 import { UserDocument } from 'src/users/schemas/user.schema';
-import { ServicesService } from 'src/service/services.service';
+import { ServicesClientService } from 'src/service/services.client.service';
 import { Role } from 'src/common/enums/role.enum';
 
 @Injectable()
@@ -20,7 +20,7 @@ export class CompaniesService {
         @InjectModel(Invitation.name) private invitationModel: Model<InvitationDocument>,
         private usersService: UsersService,
         private positionsService: PositionsService,
-        private servicesService: ServicesService,
+        private servicesClientService: ServicesClientService,
     ) { }
 
     async create(createCompanyDto: { name: string; address: string | null; ownerId: Types.ObjectId }): Promise<CompanyDocument> {
@@ -53,7 +53,7 @@ export class CompaniesService {
             throw new NotFoundException(`Company with ID ${id} not found`);
         }
 
-        const services = await this.servicesService.findAllByCompanyId(id);
+        const services = await this.servicesClientService.findAllByCompanyId(id);
         const companyData = company.toObject();
         return {
             ...companyData,

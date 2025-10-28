@@ -1,13 +1,18 @@
 // src/service/services.module.ts
 import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ServicesService } from './services.service';
-import { ServicesController } from './services.controller';
-import { ServicesClientController } from './services.client.controller';
 import { Service, ServiceSchema } from './schemas/service.schema';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
 import { FormModule } from 'src/form/form.module';
+
+// Import Controller
+import { ServicesController } from './services.internal.controller';
+import { ServicesClientController } from './services.client.controller';
+
+// Import Service Baru
+import { ServicesInternalService } from './services.internal.service';
+import { ServicesClientService } from './services.client.service';
 
 @Module({
     imports: [
@@ -20,7 +25,13 @@ import { FormModule } from 'src/form/form.module';
         ServicesController,
         ServicesClientController
     ],
-    providers: [ServicesService],
-    exports: [ServicesService],
+    providers: [
+        ServicesInternalService, // Provide service internal
+        ServicesClientService    // Provide service client
+    ],
+    exports: [
+        ServicesInternalService, // Export service internal
+        ServicesClientService    // Export service client
+    ],
 })
 export class ServicesModule { }

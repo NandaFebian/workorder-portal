@@ -18,81 +18,58 @@
     <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
   <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
 </p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
 
-## Description
+# Work Order Portal - Backend
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Ini adalah backend untuk aplikasi **Work Order Portal** yang dibangun menggunakan framework **NestJS**. Aplikasi ini dirancang untuk mengelola perusahaan, pengguna, layanan, formulir, dan alur kerja terkait.
 
-## Project setup
+---
 
-```bash
-$ npm install
-```
+## ✨ Fitur Utama
 
-## Compile and run the project
+* **Autentikasi & Otorisasi:** Registrasi pengguna (Client, Staff), registrasi perusahaan beserta pemiliknya, login, logout, pengambilan profil pengguna. Menggunakan token-based authentication dan role-based access control (RBAC).
+* **Manajemen Perusahaan:** Pembuatan perusahaan baru, update informasi perusahaan, pengelolaan karyawan (undangan, daftar karyawan), endpoint publik untuk melihat perusahaan dan layanannya.
+* **Manajemen Pengguna & Role:** Pengelolaan pengguna dengan role berbeda (Client, App Admin, Company Owner, Company Manager, Company Staff, Unassigned Staff).
+* **Manajemen Posisi:** Pembuatan, pembaruan, penghapusan, dan pengambilan daftar posisi (global dan spesifik perusahaan). Seeder untuk posisi default.
+* **Manajemen Layanan (Services):**
+    * Pembuatan dan pembaruan layanan dengan sistem versi (`__v`).
+    * Asosiasi formulir (Intake, Work Order, Report) ke layanan dengan urutan dan kontrol akses berbasis role/posisi.
+    * Pengelolaan staf yang dibutuhkan untuk setiap layanan.
+    * Endpoint internal untuk manajemen layanan (CRUD) dan endpoint publik untuk melihat detail layanan dan formulir intake.
+    * Helper agregasi MongoDB untuk pengambilan data layanan yang efisien dan terstruktur.
+* **Manajemen Formulir (Forms):**
+    * Pembuatan template formulir dinamis (Intake, Work Order, Report) dengan berbagai tipe field (teks, angka, pilihan, dll.).
+    * Pembaruan template formulir dengan sistem versi menggunakan `formKey` dan `__v`.
+    * Pengajuan (submission) formulir oleh pengguna terautentikasi dan pengguna publik (untuk intake form).
+* **Struktur Respons Standar:** Menggunakan Interceptor untuk format respons sukses yang konsisten dan Filter untuk menangani exception dan format respons error (termasuk validasi).
+* **Validasi Input:** Menggunakan `class-validator` dan `ValidationPipe` global untuk memastikan integritas data DTO.
+* **Konfigurasi:** Menggunakan `@nestjs/config` untuk manajemen variabel lingkungan.
 
-```bash
-# development
-$ npm run start
+---
 
-# watch mode
-$ npm run start:dev
+## 🛠️ Tech Stack
 
-# production mode
-$ npm run start:prod
-```
+* **Framework:** NestJS ([@nestjs/core](https://github.com/nestjs/nest))
+* **Bahasa:** TypeScript
+* **Database:** MongoDB
+* **ODM:** Mongoose ([@nestjs/mongoose](https://github.com/nestjs/mongoose))
+* **Validasi:** class-validator, class-transformer
+* **Autentikasi:** bcrypt (hashing password), token-based (custom implementation using UUID)
+* **Linting/Formatting:** ESLint, Prettier
 
-## Run tests
+---
 
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## 🚀 Instalasi & Setup Proyek
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+# Clone repositori
+git clone <URL_REPOSITORI_ANDA>
+cd workorder-portal-backend # atau nama direktori Anda
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+# Install dependensi
+npm install
 
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+# Setup variabel lingkungan
+# Buat file .env di root proyek dan tambahkan variabel yang dibutuhkan, contohnya:
+# MONGO_URI=mongodb://username:password@host:port/database_name
+# PORT=3000 # Opsional, default 3000

@@ -10,6 +10,7 @@ import { CompaniesModule } from './company/companies.module';
 import { PositionsModule } from './positions/positions.module';
 import { FormModule } from './form/form.module';
 import { ServicesModule } from './service/services.module';
+import { InvitationsModule } from './invitations/invitations.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { ServicesModule } from './service/services.module';
     PositionsModule,
     FormModule,
     ServicesModule,
+    InvitationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

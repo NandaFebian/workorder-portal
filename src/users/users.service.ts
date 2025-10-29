@@ -1,3 +1,4 @@
+// src/users/users.service.ts
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -23,12 +24,25 @@ export class UsersService {
     }
     // Method untuk mencari user berdasarkan ID
     findById(id: any) {
+        // Note: Sesuaikan populate jika diperlukan di guard atau tempat lain
         return this.userModel.findById(id);
     }
-    // Method untuk mendapatkan semua user berdasarkan companyId
-    async findAllByCompanyId(companyId: Types.ObjectId): Promise<UserDocument[]> {
-        return this.userModel.find({ companyId })
+
+    // Method untuk mendapatkan semua user berdasarkan companyId dengan filter role
+    async findAllByCompanyId(
+        companyId: Types.ObjectId,
+        rolesToInclude?: string[] // Tambahkan parameter opsional untuk filter role
+    ): Promise<UserDocument[]> {
+        const query: any = { companyId };
+
+        // Jika rolesToInclude diberikan dan tidak kosong, tambahkan filter $in
+        if (rolesToInclude && rolesToInclude.length > 0) {
+            query.role = { $in: rolesToInclude };
+        }
+
+        return this.userModel.find(query)
             .populate('positionId', 'name') // Populate posisi agar lebih informatif
+            .select('-password') // Jangan sertakan password secara default
             .exec();
     }
 }

@@ -5,7 +5,6 @@ import { Position, PositionSchema } from './schemas/position.schema';
 import { PositionsController } from './positions.controller';
 import { PositionsAdminController } from './positions.admin.controller';
 import { PositionsService } from './positions.service';
-import { PositionsSeeder } from './positions.seeder';
 import { AuthModule } from 'src/auth/auth.module';
 import { UsersModule } from 'src/users/users.module';
 
@@ -20,8 +19,7 @@ import { UsersModule } from 'src/users/users.module';
         PositionsAdminController
     ],
     providers: [
-        PositionsService,
-        PositionsSeeder
+        PositionsService
     ],
     exports: [PositionsService],
 })

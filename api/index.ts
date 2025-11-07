@@ -1,7 +1,7 @@
 // api/index.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../src/app.module';
-import serverlessExpress from '@vendia/serverless-express';
+import serverlessExpress from '@codegenie/serverless-express';
 import { Callback, Context, Handler } from 'aws-lambda';
 import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { ValidationError } from 'class-validator';

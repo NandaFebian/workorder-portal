@@ -8,9 +8,7 @@ import { CompaniesClientController } from './companies.client.controller';
 import { AuthModule } from 'src/auth/auth.module';
 import { UsersModule } from 'src/users/users.module';
 import { PositionsModule } from 'src/positions/positions.module';
-import { ServicesModule } from 'src/service/services.module'; // Import ServicesModule
-
-// Import service baru
+import { ServicesModule } from 'src/service/services.module';
 import { CompaniesInternalService } from './companies.internal.service';
 import { CompaniesClientService } from './companies.client.service';
 
@@ -23,7 +21,7 @@ import { CompaniesClientService } from './companies.client.service';
         UsersModule,
         forwardRef(() => AuthModule),
         PositionsModule,
-        ServicesModule, // Pastikan ServicesModule diimpor (sudah mengekspor ServicesClientService)
+        ServicesModule,
     ],
     controllers: [
         CompaniesInternalController,

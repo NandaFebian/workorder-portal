@@ -1,7 +1,7 @@
 import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
 
 export class LoginAuthDto {
-    @IsEmail({}, { message: 'Email must be a valid email address' }) // Pesan error bisa ditambahkan
+    @IsEmail({}, { message: 'Email must be a valid email address' })
     @IsNotEmpty({ message: 'Email should not be empty' })
     email: string;
 

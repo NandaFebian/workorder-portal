@@ -1,6 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsArray, IsEmail, IsEnum, IsMongoId, IsNotEmpty, ValidateNested } from 'class-validator';
-import { Role } from 'src/common/enums/role.enum'; // Pastikan path enum benar
+import { Role } from 'src/common/enums/role.enum';
 
 // Validasi untuk setiap objek dalam array invites
 class InviteDto {
@@ -24,6 +24,6 @@ export class InviteEmployeesDto {
     @IsArray()
     @ValidateNested({ each: true }) // Validasi setiap elemen dalam array
     @Type(() => InviteDto) // Beri tahu class-validator tipe elemen array
-    @IsNotEmpty({ message: 'Invites array should not be empty' }) // Pastikan array tidak kosong
+    @IsNotEmpty({ message: 'Invites array should not be empty' })
     invites: InviteDto[];
 }

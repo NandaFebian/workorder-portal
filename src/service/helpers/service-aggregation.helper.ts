@@ -1,5 +1,5 @@
 // src/service/helpers/service-aggregation.helper.ts
-import { Model, PipelineStage, Types } from 'mongoose'; // Import Types
+import { Model, PipelineStage, Types } from 'mongoose';
 import { ServiceDocument } from '../schemas/service.schema';
 import { FormsService } from 'src/form/form.service';
 
@@ -9,6 +9,24 @@ export async function getServicesWithAggregation(
     matchQuery: any,
     includeForms: boolean = false
 ): Promise<any[]> {
+
+    const projectStage: any = {
+        _id: 1,
+        companyId: 1,
+        title: 1,
+        description: 1,
+        accessType: 1,
+        isActive: 1,
+        requiredStaff: 1,
+        serviceKey: 1,
+    };
+
+    if (includeForms) {
+        projectStage.clientIntakeForms = 1;
+        projectStage.workOrderForms = 1;
+        projectStage.reportForms = 1;
+    }
+
     const pipeline: PipelineStage[] = [
         { $match: matchQuery },
         { $sort: { __v: -1 } },
@@ -19,22 +37,7 @@ export async function getServicesWithAggregation(
             }
         },
         { $replaceRoot: { newRoot: '$latest_doc' } },
-        {
-            $project: {
-                _id: 1,
-                companyId: 1,
-                title: 1,
-                description: 1,
-                accessType: 1,
-                isActive: 1,
-                requiredStaff: 1,
-                // Pastikan SEMUA array form diambil jika includeForms=true
-                // karena kita butuh data akses kontrolnya nanti
-                clientIntakeForms: includeForms ? 1 : 0,
-                workOrderForms: includeForms ? 1 : 0,
-                reportForms: includeForms ? 1 : 0,
-            },
-        },
+        { $project: projectStage },
         {
             $lookup: {
                 from: 'positions',
@@ -85,8 +88,7 @@ export async function getServicesWithAggregation(
     if (includeForms) {
         return Promise.all(
             services.map(async (service) => {
-                // Helper untuk populate detail form saja
-                const populateFormDetail = async (formInfo) => {
+                const populateFormDetail = async (formInfo: any) => {
                     try {
                         const latestForm = await formsService.findLatestTemplateByKey(formInfo.formKey);
                         if (!latestForm) return null;
@@ -96,13 +98,12 @@ export async function getServicesWithAggregation(
                             description: latestForm.description,
                             formType: latestForm.formType,
                         };
-                    } catch (error) {
+                    } catch (error: any) {
                         console.error(`Error processing formKey ${formInfo.formKey} in service ${service._id}: ${error.message}`);
                         return null;
                     }
                 };
 
-                // Helper untuk memproses array form (Intake: detail saja, Lainnya: detail + akses kontrol)
                 const processFormArray = async (formInfos: any[] | undefined, includeAccessControl: boolean) => {
                     if (!formInfos) return [];
                     const results = await Promise.all(
@@ -115,7 +116,6 @@ export async function getServicesWithAggregation(
                                 form: formDetail,
                             };
 
-                            // Jika perlu menyertakan akses kontrol, ambil dari data asli (formInfo)
                             if (includeAccessControl) {
                                 return {
                                     ...baseResult,
@@ -125,26 +125,24 @@ export async function getServicesWithAggregation(
                                     viewableByPositionIds: formInfo.viewableByPositionIds,
                                 };
                             }
-                            return baseResult; // Hanya order dan form untuk Intake
+                            return baseResult;
                         })
                     );
                     return results.filter(f => f !== null);
                 };
 
-                // Proses setiap jenis form dengan flag akses kontrol yang sesuai
                 const [processedIntakeForms, processedWorkOrderForms, processedReportForms] = await Promise.all([
-                    processFormArray(service.clientIntakeForms, false), // Intake -> false
-                    processFormArray(service.workOrderForms, true),    // WO -> true
-                    processFormArray(service.reportForms, true)       // Report -> true
+                    processFormArray(service.clientIntakeForms, false),
+                    processFormArray(service.workOrderForms, true),
+                    processFormArray(service.reportForms, true)
                 ]);
 
-                // Hapus array form asli dari hasil agregasi sebelum mengembalikan
                 delete service.clientIntakeForms;
                 delete service.workOrderForms;
                 delete service.reportForms;
 
                 return {
-                    ...service, // _id, title, description, accessType, isActive, requiredStaff (populated)
+                    ...service,
                     clientIntakeForms: processedIntakeForms,
                     workOrderForms: processedWorkOrderForms,
                     reportForms: processedReportForms,
@@ -152,12 +150,5 @@ export async function getServicesWithAggregation(
             })
         );
     }
-
-    // Jika includeForms false, hapus field form mentah sebelum dikembalikan
-    return services.map(service => {
-        delete service.clientIntakeForms;
-        delete service.workOrderForms;
-        delete service.reportForms;
-        return service;
-    });
+    return services;
 }

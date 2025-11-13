@@ -7,13 +7,13 @@ export class CreateCompanyDto {
 
     @IsString()
     @IsOptional()
-    address?: string; // Tambahkan '?' agar sesuai dengan IsOptional
+    address?: string;
 
     @IsString()
     @IsOptional()
-    description?: string; // Tambahkan '?' agar sesuai dengan IsOptional
+    description?: string;
 
     @IsBoolean()
     @IsOptional()
-    isActive?: boolean; // Tambahkan '?' agar sesuai dengan IsOptional
+    isActive?: boolean;
 }

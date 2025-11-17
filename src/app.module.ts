@@ -11,6 +11,7 @@ import { PositionsModule } from './positions/positions.module';
 import { FormModule } from './form/form.module';
 import { ServicesModule } from './service/services.module';
 import { InvitationsModule } from './invitations/invitations.module';
+import { ServiceRequestsModule } from './service-request/service-requests.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { InvitationsModule } from './invitations/invitations.module';
     FormModule,
     ServicesModule,
     InvitationsModule,
+    ServiceRequestsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

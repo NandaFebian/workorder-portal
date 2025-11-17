@@ -5,14 +5,11 @@ import { Service, ServiceSchema } from './schemas/service.schema';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
 import { FormModule } from 'src/form/form.module';
-
-// Import Controller
 import { ServicesController } from './services.internal.controller';
 import { ServicesClientController } from './services.client.controller';
-
-// Import Service Baru
 import { ServicesInternalService } from './services.internal.service';
 import { ServicesClientService } from './services.client.service';
+import { ServiceRequestsModule } from 'src/service-request/service-requests.module';
 
 @Module({
     imports: [
@@ -20,6 +17,7 @@ import { ServicesClientService } from './services.client.service';
         forwardRef(() => AuthModule),
         UsersModule,
         forwardRef(() => FormModule),
+        forwardRef(() => ServiceRequestsModule),
     ],
     controllers: [
         ServicesController,

@@ -1,14 +1,26 @@
 // src/service/services.client.controller.ts
-import { Controller, Get, HttpCode, HttpStatus, Param, Post, Body } from '@nestjs/common';
-import { ServicesClientService } from './services.client.service'; // Import service client
+import {
+    Controller, Get, HttpCode, HttpStatus, Param, Post, Body,
+    UseGuards
+} from '@nestjs/common';
+import { ServicesClientService } from './services.client.service';
 import { FormsService } from 'src/form/form.service';
-import { SubmitFormDto } from 'src/form/dto/submit-form.dto';
+import { ServiceRequestsService } from 'src/service-request/service-requests.service';
+import { IntakeSubmissionDto } from 'src/service-request/dto/intake-submission.dto';
+import { AuthGuard } from 'src/auth/guards/auth.guard';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { GetUser } from 'src/common/decorators/get-user.decorator';
+import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
+import { Role } from 'src/common/enums/role.enum';
 
 @Controller('public/services')
 export class ServicesClientController {
     constructor(
-        private readonly clientService: ServicesClientService, // Inject service client
-        private readonly formsService: FormsService
+        private readonly clientService: ServicesClientService,
+        private readonly formsService: FormsService,
+        private readonly requestsService: ServiceRequestsService,
+
     ) { }
 
     @Get('company/:companyId')
@@ -42,17 +54,26 @@ export class ServicesClientController {
         };
     }
 
-    @Post(':id/intake-forms') // :id di sini adalah serviceId
+    @Post(':id/intake-forms') // :id adalah serviceId
+    @UseGuards(AuthGuard, RolesGuard) // <-- 6. Lindungi endpoint
+    @Roles(Role.Client) // <-- 7. Hanya untuk Klien
     @HttpCode(HttpStatus.CREATED)
     async submitIntakeForm(
         @Param('id') serviceId: string,
-        @Body() submitFormDto: SubmitFormDto
+        // 8. Terima ARRAY dari DTO baru, sesuai gambar 'image_fee401.png'
+        @Body() intakeSubmissions: IntakeSubmissionDto[],
+        @GetUser() user: AuthenticatedUser, // <-- 9. Dapatkan user
     ) {
-        // Panggil metode submitForm publik dari FormsService
-        const submission = await this.formsService.submitPublicForm(submitFormDto, serviceId);
+        // 10. Panggil ServiceRequestService
+        const request = await this.requestsService.create(
+            serviceId,
+            intakeSubmissions,
+            user,
+        );
+
         return {
-            message: 'Intake form submitted successfully',
-            data: submission,
+            message: 'Service request submitted successfully',
+            data: request,
         };
     }
 }

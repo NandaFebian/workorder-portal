@@ -34,9 +34,9 @@ export async function createApp() {
   );
 
   app.enableCors({
-    origin: ["http://localhost:3000", "https://work-order-service.vercel.app/"],
+    origin: "*",
     methods: "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-    credentials: true,
+    credentials: false,
   });
 
   app.useGlobalInterceptors(new ResponseInterceptor());

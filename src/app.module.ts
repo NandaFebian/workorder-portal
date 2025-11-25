@@ -12,6 +12,7 @@ import { FormModule } from './form/form.module';
 import { ServicesModule } from './service/services.module';
 import { InvitationsModule } from './invitations/invitations.module';
 import { ServiceRequestsModule } from './service-request/service-requests.module';
+import { ClientServiceRequestModule } from './client-service-request/client-service-request.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { ServiceRequestsModule } from './service-request/service-requests.module
     ServicesModule,
     InvitationsModule,
     ServiceRequestsModule,
+    ClientServiceRequestModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,0 +1,45 @@
+import { Controller, Get, Put, Param, UseGuards, HttpCode, HttpStatus, ForbiddenException } from '@nestjs/common';
+import { ClientServiceRequestService } from './client-service-request.service';
+import { AuthGuard } from 'src/auth/guards/auth.guard';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { GetUser } from 'src/common/decorators/get-user.decorator';
+import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
+
+@Controller('client-service-request')
+@UseGuards(AuthGuard, RolesGuard)
+@Roles('owner_company', 'manager_company', 'staff_company')
+export class ClientServiceRequestInternalController {
+    constructor(private readonly csrService: ClientServiceRequestService) { }
+
+    @Get()
+    @HttpCode(HttpStatus.OK)
+    async findAll(@GetUser() user: AuthenticatedUser) {
+        if (!user.company?._id) throw new ForbiddenException('No company associated');
+        const data = await this.csrService.findAllByCompanyId(user.company._id.toString());
+        return { message: 'Data retrieved successfully', data };
+    }
+
+    @Get(':id')
+    @HttpCode(HttpStatus.OK)
+    async findOne(@Param('id') id: string) {
+        const data = await this.csrService.findOneInternal(id);
+        return { message: 'Data retrieved successfully', data };
+    }
+
+    @Put(':id/approve')
+    @Roles('owner_company', 'manager_company') // Hanya manager/owner yg bisa approve
+    @HttpCode(HttpStatus.OK)
+    async approve(@Param('id') id: string) {
+        const data = await this.csrService.updateStatus(id, 'approved');
+        return { message: 'Request approved successfully', data };
+    }
+
+    @Put(':id/reject')
+    @Roles('owner_company', 'manager_company')
+    @HttpCode(HttpStatus.OK)
+    async reject(@Param('id') id: string) {
+        const data = await this.csrService.updateStatus(id, 'rejected');
+        return { message: 'Request rejected successfully', data };
+    }
+}

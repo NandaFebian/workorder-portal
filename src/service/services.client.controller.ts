@@ -1,49 +1,30 @@
 // src/service/services.client.controller.ts
-import {
-    Controller, Get, HttpCode, HttpStatus, Param, Post, Body,
-    UseGuards
-} from '@nestjs/common';
+import { Controller, Get, HttpCode, HttpStatus, Param, Post, Body, UseGuards, ParseArrayPipe } from '@nestjs/common';
 import { ServicesClientService } from './services.client.service';
-import { FormsService } from 'src/form/form.service';
-import { ServiceRequestsService } from 'src/service-request/service-requests.service';
-import { IntakeSubmissionDto } from 'src/service-request/dto/intake-submission.dto';
+import { SubmitIntakeFormItemDto } from './dto/submit-intake-forms.dto'; // Import DTO Baru
 import { AuthGuard } from 'src/auth/guards/auth.guard';
-import { RolesGuard } from 'src/auth/guards/roles.guard';
-import { Roles } from 'src/common/decorators/roles.decorator';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
-import { Role } from 'src/common/enums/role.enum';
 
 @Controller('public/services')
 export class ServicesClientController {
     constructor(
         private readonly clientService: ServicesClientService,
-        private readonly formsService: FormsService,
-        private readonly requestsService: ServiceRequestsService,
-
     ) { }
 
-    @Get('company/:companyId')
-    @HttpCode(HttpStatus.OK)
-    async findAllByCompanyId(@Param('companyId') companyId: string) {
-        const services = await this.clientService.findAllByCompanyId(companyId);
-        return {
-            message: 'Load data success',
-            data: services,
-        };
-    }
-
+    // GET Detail Service (sesuai mock router.get("/:id"))
     @Get(':id')
     @HttpCode(HttpStatus.OK)
     async findById(@Param('id') id: string) {
-        // Panggil metode detail service yang baru
-        const serviceData = await this.clientService.findServiceDetailById(id);
+        const data = await this.clientService.findServiceDetailById(id);
+        // Mock response structure: { message, data: { service: ..., formQuantity: ... } }
         return {
             message: 'Load data success',
-            data: serviceData,
+            data: data,
         };
     }
 
+    // GET Intake Forms (sesuai mock router.get("/:id/intake-forms"))
     @Get(':id/intake-forms')
     @HttpCode(HttpStatus.OK)
     async getClientIntakeForms(@Param('id') id: string) {
@@ -54,26 +35,32 @@ export class ServicesClientController {
         };
     }
 
-    @Post(':id/intake-forms') // :id adalah serviceId
-    @UseGuards(AuthGuard, RolesGuard) // <-- 6. Lindungi endpoint
-    @Roles(Role.Client) // <-- 7. Hanya untuk Klien
+    // POST Submit Intake (sesuai mock router.post("/:id/intake-forms"))
+    @Post(':id/intake-forms')
+    @UseGuards(AuthGuard)
     @HttpCode(HttpStatus.CREATED)
     async submitIntakeForm(
         @Param('id') serviceId: string,
-        // 8. Terima ARRAY dari DTO baru, sesuai gambar 'image_fee401.png'
-        @Body() intakeSubmissions: IntakeSubmissionDto[],
-        @GetUser() user: AuthenticatedUser, // <-- 9. Dapatkan user
+        // Pastikan nama variabel di sini 'submissions' (array) bukan 'submitFormDto'
+        @Body(new ParseArrayPipe({ items: SubmitIntakeFormItemDto })) submissions: SubmitIntakeFormItemDto[],
+        @GetUser() user: AuthenticatedUser
     ) {
-        // 10. Panggil ServiceRequestService
-        const request = await this.requestsService.create(
-            serviceId,
-            intakeSubmissions,
-            user,
-        );
+        // Perbaikan: Kirim variabel 'submissions' ke service
+        const result = await this.clientService.processIntakeSubmission(serviceId, user, submissions);
 
         return {
-            message: 'Service request submitted successfully',
-            data: request,
+            message: 'Work order created successfully',
+            data: result,
+        };
+    }
+
+    @Get('company/:companyId')
+    @HttpCode(HttpStatus.OK)
+    async findAllByCompanyId(@Param('companyId') companyId: string) {
+        const services = await this.clientService.findAllByCompanyId(companyId);
+        return {
+            message: 'Load data success',
+            data: services,
         };
     }
 }

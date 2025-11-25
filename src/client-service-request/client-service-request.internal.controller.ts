@@ -28,18 +28,18 @@ export class ClientServiceRequestInternalController {
     }
 
     @Put(':id/approve')
-    @Roles('owner_company', 'manager_company') // Hanya manager/owner yg bisa approve
+    @Roles('owner_company', 'manager_company')
     @HttpCode(HttpStatus.OK)
-    async approve(@Param('id') id: string) {
-        const data = await this.csrService.updateStatus(id, 'approved');
-        return { message: 'Request approved successfully', data };
+    async approve(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+        // Pass user ke service
+        return await this.csrService.updateStatus(id, 'approved', user);
     }
 
     @Put(':id/reject')
     @Roles('owner_company', 'manager_company')
     @HttpCode(HttpStatus.OK)
-    async reject(@Param('id') id: string) {
-        const data = await this.csrService.updateStatus(id, 'rejected');
-        return { message: 'Request rejected successfully', data };
+    async reject(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+        // Pass user ke service
+        return await this.csrService.updateStatus(id, 'rejected', user);
     }
 }

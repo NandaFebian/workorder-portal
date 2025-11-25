@@ -1,5 +1,3 @@
-import express from 'express';
-import { ExpressAdapter } from '@nestjs/platform-express';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, BadRequestException } from '@nestjs/common';
@@ -7,10 +5,8 @@ import { ValidationError } from 'class-validator';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
-const expressApp = express();
-
-export async function createApp() {
-  const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp));
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -33,15 +29,14 @@ export async function createApp() {
     }),
   );
 
-  app.enableCors({
-    origin: "*",
-    methods: "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-    credentials: false,
-  });
-
   app.useGlobalInterceptors(new ResponseInterceptor());
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  await app.init();
-  return expressApp;
+  // Hanya jalankan app.listen() di sini
+  // Port bisa diambil dari environment variable jika perlu
+  await app.listen(process.env.PORT || 3000);
+  console.log(`Application is running on: ${await app.getUrl()}`);
 }
+
+// Hanya panggil bootstrap
+bootstrap();

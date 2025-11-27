@@ -1,16 +1,47 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Report, ReportDocument } from './schemas/work-report.schema';
+import { Model, Types } from 'mongoose';
+import { WorkReport, WorkReportDocument } from './schemas/work-report.schema';
+import { CreateWorkReportDto } from './dto/create-work-report.dto';
+import { UpdateWorkReportDto } from './dto/update-work-report.dto';
 
 @Injectable()
 export class WorkReportService {
     constructor(
-        @InjectModel(Report.name) private reportModel: Model<ReportDocument>,
+        @InjectModel(WorkReport.name) private workReportModel: Model<WorkReportDocument>,
     ) { }
 
-    async create(data: any): Promise<ReportDocument> {
-        const newReport = new this.reportModel(data);
+    async create(createDto: CreateWorkReportDto): Promise<WorkReportDocument> {
+        const newReport = new this.workReportModel({
+            ...createDto,
+            status: createDto.status || 'in_progress', // Default sesuai request
+        });
         return newReport.save();
+    }
+
+    async findAll(): Promise<WorkReportDocument[]> {
+        return this.workReportModel.find().exec();
+    }
+
+    async findOne(id: string): Promise<WorkReportDocument> {
+        if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Invalid ID');
+        const report = await this.workReportModel.findById(id)
+            .populate('workOrderId')
+            .exec();
+        if (!report) throw new NotFoundException('Work Report not found');
+        return report;
+    }
+
+    async update(id: string, updateDto: UpdateWorkReportDto): Promise<WorkReportDocument> {
+        if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Invalid ID');
+
+        const updatedReport = await this.workReportModel.findByIdAndUpdate(
+            id,
+            updateDto,
+            { new: true }
+        ).exec();
+
+        if (!updatedReport) throw new NotFoundException('Work Report not found');
+        return updatedReport;
     }
 }

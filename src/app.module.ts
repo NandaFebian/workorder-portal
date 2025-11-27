@@ -13,6 +13,7 @@ import { ServicesModule } from './service/services.module';
 import { InvitationsModule } from './invitations/invitations.module';
 import { ClientServiceRequestModule } from './client-service-request/client-service-request.module';
 import { WorkOrderModule } from './work-order/work-order.module';
+import { WorkReportModule } from './work-report/work-report.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { WorkOrderModule } from './work-order/work-order.module';
     InvitationsModule,
     ClientServiceRequestModule,
     WorkOrderModule,
+    WorkReportModule,
   ],
   controllers: [AppController],
   providers: [AppService],

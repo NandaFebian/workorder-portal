@@ -1,13 +1,19 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Report, ReportSchema } from './schemas/work-report.schema';
+import { WorkReport, WorkReportSchema } from './schemas/work-report.schema';
 import { WorkReportService } from './work-report.service';
+import { WorkReportController } from './work-report.controller';
+import { AuthModule } from 'src/auth/auth.module';
+import { UsersModule } from 'src/users/users.module';
 
 @Module({
     imports: [
-        MongooseModule.forFeature([{ name: Report.name, schema: ReportSchema }]),
+        MongooseModule.forFeature([{ name: WorkReport.name, schema: WorkReportSchema }]),
+        forwardRef(() => AuthModule),
+        UsersModule,
     ],
+    controllers: [WorkReportController],
     providers: [WorkReportService],
-    exports: [WorkReportService], // Export agar bisa dipakai CSR Service
+    exports: [WorkReportService], // PENTING: Export service agar bisa dipakai di CSR Module
 })
-export class ReportModule { }
+export class WorkReportModule { }

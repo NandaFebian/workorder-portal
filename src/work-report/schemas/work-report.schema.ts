@@ -1,9 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 
-export type ReportDocument = Report & Document;
+export type WorkReportDocument = WorkReport & Document;
 
-// Re-use schema snapshot form yang sama logic-nya dengan WO/CSR
+// Re-use schema snapshot untuk form (sama seperti di WorkOrder/CSR)
 @Schema({ _id: false })
 export class FormSnapshot {
     @Prop({ type: MongooseSchema.Types.ObjectId })
@@ -43,17 +43,22 @@ export class ReportFormSnapshot {
 const ReportFormSnapshotSchema = SchemaFactory.createForClass(ReportFormSnapshot);
 
 @Schema({ timestamps: true })
-export class Report {
+export class WorkReport {
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'WorkOrder', required: true })
     workOrderId: MongooseSchema.Types.ObjectId;
 
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Company', required: true })
     companyId: MongooseSchema.Types.ObjectId;
 
+    // Menyimpan daftar form yang harus diisi (Snapshot dari Service.reportForms)
     @Prop({ type: [ReportFormSnapshotSchema], default: [] })
-    reportForms: ReportFormSnapshot[];
+    reportForms: ReportFormSnapshot[]; // Representasi "formsId" dengan detail snapshot
 
-    @Prop({ default: 'unstarted' })
+    @Prop({
+        required: true,
+        enum: ['in_progress', 'completed', 'cancelled', 'rejected'],
+        default: 'in_progress'
+    })
     status: string;
 
     @Prop({ default: null })
@@ -63,4 +68,4 @@ export class Report {
     completedAt: Date;
 }
 
-export const ReportSchema = SchemaFactory.createForClass(Report);
+export const WorkReportSchema = SchemaFactory.createForClass(WorkReport);

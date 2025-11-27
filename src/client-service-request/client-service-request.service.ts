@@ -8,6 +8,7 @@ import { WorkOrderService } from 'src/work-order/work-order.service';
 import { ServicesInternalService } from 'src/service/services.internal.service';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { WorkOrderDocument } from 'src/work-order/schemas/work-order.schema';
+import { WorkReportService } from 'src/work-report/work-report.service';
 
 @Injectable()
 export class ClientServiceRequestService {
@@ -18,6 +19,7 @@ export class ClientServiceRequestService {
         private readonly workOrderService: WorkOrderService, // Inject WO Service
         @Inject(forwardRef(() => ServicesInternalService)) // Inject Internal Service untuk ambil data raw service
         private readonly servicesInternalService: ServicesInternalService,
+        private readonly workReportService: WorkReportService, // Inject Work Report Service
     ) { }
 
     async create(data: any): Promise<ClientServiceRequestDocument> {
@@ -123,42 +125,34 @@ export class ClientServiceRequestService {
         if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
 
         const csr = await this.csrModel.findByIdAndUpdate(
-            id,
-            { status },
-            { new: true }
+            id, { status }, { new: true }
         ).exec();
 
         if (!csr) throw new NotFoundException('Service Request not found');
 
         let createdWorkOrder: WorkOrderDocument | null = null;
+        let createdReport: any = null;
 
         if (status === 'approved') {
-            // Ambil data service (Forms sudah ter-populate oleh helper aggregation)
             const serviceData = await this.servicesInternalService.findByVersionId(csr.serviceId.toString(), user);
 
-            // Debug: Pastikan serviceData memiliki workOrderForms
-            if (!serviceData.workOrderForms || serviceData.workOrderForms.length === 0) {
-                console.warn('Warning: No Work Order Forms found in Service Definition');
-            }
-
+            // 1. Prepare Work Order Forms
             const workOrderForms = serviceData.workOrderForms || [];
+            const validWOForms = workOrderForms.map((item) => ({
+                order: item.order,
+                fillableByRoles: item.fillableByRoles || [],
+                viewableByRoles: item.viewableByRoles || [],
+                fillableByPositionIds: item.fillableByPositionIds || [],
+                viewableByPositionIds: item.viewableByPositionIds || [],
+                form: {
+                    _id: item.form._id,
+                    title: item.form.title,
+                    description: item.form.description,
+                    formType: item.form.formType
+                }
+            }));
 
-            const validWOForms = workOrderForms.map((item) => {
-                return {
-                    order: item.order,
-                    fillableByRoles: item.fillableByRoles || [],
-                    viewableByRoles: item.viewableByRoles || [],
-                    fillableByPositionIds: item.fillableByPositionIds || [],
-                    viewableByPositionIds: item.viewableByPositionIds || [],
-                    form: {
-                        _id: item.form._id,
-                        title: item.form.title,
-                        description: item.form.description,
-                        formType: item.form.formType
-                    }
-                };
-            });
-
+            // 2. Create Work Order
             createdWorkOrder = await this.workOrderService.create({
                 clientServiceRequestId: csr._id,
                 createdBy: user._id,
@@ -166,16 +160,43 @@ export class ClientServiceRequestService {
                 companyId: csr.companyId,
                 relatedWorkOrderId: null,
                 assignedStaff: [],
-                workOrderForms: validWOForms, // Data ini harus sesuai dengan WorkOrderFormSnapshotSchema
+                workOrderForms: validWOForms,
                 status: 'drafted',
             });
+
+            // 3. Prepare Report Forms (Snapshot from Service)
+            const reportForms = serviceData.reportForms || [];
+            const validReportForms = reportForms.map((item) => ({
+                order: item.order,
+                fillableByRoles: item.fillableByRoles || [],
+                viewableByRoles: item.viewableByRoles || [],
+                fillableByPositionIds: item.fillableByPositionIds || [],
+                viewableByPositionIds: item.viewableByPositionIds || [],
+                form: {
+                    _id: item.form._id,
+                    title: item.form.title,
+                    description: item.form.description,
+                    formType: item.form.formType
+                }
+            }));
+
+            // 4. Create Work Report (AUTO CREATE)
+            if (createdWorkOrder && createdWorkOrder._id) {
+                createdReport = await this.workReportService.create({
+                    workOrderId: createdWorkOrder._id.toString(),
+                    companyId: csr.companyId.toString(),
+                    reportForms: validReportForms, // Simpan snapshot form laporan
+                    status: 'in_progress' // Status default sesuai request
+                });
+            }
         }
 
         return {
             message: `Request ${status} successfully`,
             data: {
                 request: csr,
-                workOrder: createdWorkOrder
+                workOrder: createdWorkOrder,
+                workReport: createdReport // Sertakan di response
             }
         };
     }

@@ -11,6 +11,7 @@ import { FormModule } from 'src/form/form.module';
 import { FormSubmission, FormSubmissionSchema } from 'src/form/schemas/form-submissions.schema';
 import { WorkOrderModule } from 'src/work-order/work-order.module';
 import { ServicesModule } from 'src/service/services.module';
+import { ReportModule } from 'src/work-report/work-report.module';
 
 @Module({
     imports: [
@@ -23,6 +24,7 @@ import { ServicesModule } from 'src/service/services.module';
         FormModule,
         WorkOrderModule,
         forwardRef(() => ServicesModule),
+        ReportModule,
     ],
     controllers: [ClientServiceRequestPublicController, ClientServiceRequestInternalController],
     providers: [ClientServiceRequestService],

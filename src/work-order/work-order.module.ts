@@ -1,8 +1,9 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { WorkOrder, WorkOrderSchema } from './schemas/work-order.schema';
+import { WorkOrderInternalController } from './work-order.internal.controller';
+import { WorkOrderStaffController } from './work-order.staff.controller';
 import { WorkOrderService } from './work-order.service';
-import { WorkOrderController } from './work-order.controller';
 import { FormModule } from 'src/form/form.module';
 import { AuthModule } from 'src/auth/auth.module';
 import { UsersModule } from 'src/users/users.module';
@@ -14,7 +15,7 @@ import { UsersModule } from 'src/users/users.module';
         forwardRef(() => AuthModule),
         UsersModule,
     ],
-    controllers: [WorkOrderController],
+    controllers: [WorkOrderInternalController, WorkOrderStaffController],
     providers: [WorkOrderService],
     exports: [WorkOrderService],
 })

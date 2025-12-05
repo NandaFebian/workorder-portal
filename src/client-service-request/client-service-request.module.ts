@@ -1,4 +1,3 @@
-// src/client-service-request/client-service-request.module.ts
 import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ClientServiceRequest, ClientServiceRequestSchema } from './schemas/client-service-request.schema';
@@ -22,7 +21,7 @@ import { WorkReportModule } from 'src/work-report/work-report.module';
         forwardRef(() => AuthModule),
         UsersModule,
         FormModule,
-        WorkOrderModule,
+        forwardRef(() => WorkOrderModule),
         forwardRef(() => ServicesModule),
         WorkReportModule,
     ],

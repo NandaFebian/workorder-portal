@@ -146,25 +146,34 @@ export class ClientServiceRequestService {
                 viewableByPositionIds: item.viewableByPositionIds || [],
                 form: {
                     _id: item.form._id,
-                    title: item.form.title,
-                    description: item.form.description,
-                    formType: item.form.formType
+                    fillableByRoles: item.fillableByRoles || [],
+                    viewableByRoles: item.viewableByRoles || [],
+                    fillableByPositionIds: item.fillableByPositionIds || [],
+                    viewableByPositionIds: item.viewableByPositionIds || [],
+                    form: {
+                        _id: item.form._id,
+                        title: item.form.title,
+                        description: item.form.description,
+                        formType: item.form.formType
+                    }
                 }
             }));
 
             // 2. Create Work Order
-            createdWorkOrder = await this.workOrderService.create({
-                clientServiceRequestId: csr._id,
-                createdBy: user._id,
-                serviceId: csr.serviceId,
+            const createWorkOrderData = {
                 companyId: csr.companyId,
-                relatedWorkOrderId: null,
-                assignedStaff: [],
-                workOrderForms: validWOForms,
+                serviceId: csr.serviceId,
+                clientServiceRequestId: csr._id,
+                clientId: csr.clientId,
+                priority: 'medium', // Default priority
                 status: 'drafted',
-            });
+                workOrderForms: validWOForms,
+                createdBy: user._id
+            };
 
-            // 3. Prepare Report Forms (Snapshot from Service)
+            createdWorkOrder = await this.workOrderService.createInternal(createWorkOrderData);
+
+            // 3. Prepare Work Report Forms
             const reportForms = serviceData.reportForms || [];
             const validReportForms = reportForms.map((item) => ({
                 order: item.order,
@@ -174,9 +183,16 @@ export class ClientServiceRequestService {
                 viewableByPositionIds: item.viewableByPositionIds || [],
                 form: {
                     _id: item.form._id,
-                    title: item.form.title,
-                    description: item.form.description,
-                    formType: item.form.formType
+                    fillableByRoles: item.fillableByRoles || [],
+                    viewableByRoles: item.viewableByRoles || [],
+                    fillableByPositionIds: item.fillableByPositionIds || [],
+                    viewableByPositionIds: item.viewableByPositionIds || [],
+                    form: {
+                        _id: item.form._id,
+                        title: item.form.title,
+                        description: item.form.description,
+                        formType: item.form.formType
+                    }
                 }
             }));
 
@@ -200,4 +216,4 @@ export class ClientServiceRequestService {
             }
         };
     }
-}   
+}

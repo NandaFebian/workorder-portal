@@ -20,7 +20,7 @@ export class WorkReportService {
     }
 
     async findAll(): Promise<WorkReportDocument[]> {
-        return this.workReportModel.find().exec();
+        return this.workReportModel.find().sort({ createdAt: -1 }).exec();
     }
 
     async findOne(id: string): Promise<WorkReportDocument> {

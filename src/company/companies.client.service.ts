@@ -15,6 +15,7 @@ export class CompaniesClientService {
     async findAllPublic(): Promise<CompanyDocument[]> {
         return this.companyModel.find({ isActive: true })
             .populate('ownerId', 'name email')
+            .sort({ createdAt: -1 })
             .exec();
     }
 

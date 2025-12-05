@@ -42,7 +42,7 @@ export class CompaniesInternalService {
 
     async findAllInternal(): Promise<CompanyDocument[]> {
         // Logika internal, bisa mengambil semua (termasuk yang tidak aktif)
-        return this.companyModel.find().populate('ownerId', 'name email').exec();
+        return this.companyModel.find().populate('ownerId', 'name email').sort({ createdAt: -1 }).exec();
     }
 
     async findInternalById(id: string): Promise<CompanyDocument> {
@@ -126,9 +126,9 @@ export class CompaniesInternalService {
         };
     }
 
-    async getInvitationHistory(userId: string) {
+    async getInvitationHistory(companyId: string) {
         const invitations = await this.invitationModel
-            .find({ userId: new Types.ObjectId(userId) })
+            .find({ companyId: new Types.ObjectId(companyId) })
             .populate([
                 { path: 'companyId', select: 'name' },
                 { path: 'positionId', select: 'name' },

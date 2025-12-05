@@ -8,19 +8,19 @@ import { ServicesController } from './services.internal.controller';
 import { ServicesClientController } from './services.client.controller';
 import { ServicesInternalService } from './services.internal.service';
 import { ServicesClientService } from './services.client.service';
-import { ClientServiceRequestModule } from 'src/client-service-request/client-service-request.module'; // Import baru
-import { FormSubmission, FormSubmissionSchema } from 'src/form/schemas/form-submissions.schema'; // Import schema untuk injeksi manual di service
+import { ClientServiceRequestModule } from 'src/client-service-request/client-service-request.module';
+import { FormSubmission, FormSubmissionSchema } from 'src/form/schemas/form-submissions.schema';
 
 @Module({
     imports: [
         MongooseModule.forFeature([
             { name: Service.name, schema: ServiceSchema },
-            { name: FormSubmission.name, schema: FormSubmissionSchema } // Register model disini jika diinjeksi langsung
+            { name: FormSubmission.name, schema: FormSubmissionSchema }
         ]),
         forwardRef(() => AuthModule),
         UsersModule,
         forwardRef(() => FormModule),
-        ClientServiceRequestModule, // Import Module CSR
+        forwardRef(() => ClientServiceRequestModule),
     ],
     controllers: [
         ServicesController,

@@ -1,82 +1,223 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { WorkOrder, WorkOrderDocument } from './schemas/work-order.schema';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { FormsService } from 'src/form/form.service';
+import { UsersService } from 'src/users/users.service';
+import { Role } from 'src/common/enums/role.enum';
+import { CreateWorkOrderDto } from './dto/create-work-order.dto';
+import { UpdateWorkOrderDto } from './dto/update-work-order.dto';
+import { UpdateWorkOrderStatusDto } from './dto/update-work-order-status.dto';
+import { AssignStaffDto } from './dto/assign-staff.dto';
+import { WorkOrderFilterDto } from './dto/work-order-filter.dto';
 
 @Injectable()
 export class WorkOrderService {
     constructor(
         @InjectModel(WorkOrder.name) private workOrderModel: Model<WorkOrderDocument>,
         private readonly formsService: FormsService,
+        private readonly usersService: UsersService,
     ) { }
 
-    async create(data: any): Promise<WorkOrderDocument> {
+    async create(createWorkOrderDto: CreateWorkOrderDto, user: AuthenticatedUser): Promise<WorkOrderDocument> {
+        if (!user.company || !user.company._id) {
+            throw new BadRequestException('User company information is missing');
+        }
+
+        const newWorkOrder = new this.workOrderModel({
+            ...createWorkOrderDto,
+            companyId: user.company._id,
+            createdBy: user._id,
+            status: 'drafted', // Default status
+        });
+        return newWorkOrder.save();
+    }
+
+    async createInternal(data: any): Promise<WorkOrderDocument> {
         const newWorkOrder = new this.workOrderModel(data);
         return newWorkOrder.save();
     }
 
     // GET All Work Orders (Internal Company)
-    async findAll(user: AuthenticatedUser): Promise<any[]> {
+    async findAllInternal(user: AuthenticatedUser, filterDto: WorkOrderFilterDto): Promise<any[]> {
         if (!user.company || !user.company._id) {
             throw new BadRequestException('User company information is missing');
         }
 
+        const query: any = { companyId: user.company._id };
+
+        if (filterDto.status) {
+            query.status = filterDto.status;
+        }
+        if (filterDto.priority) {
+            query.priority = filterDto.priority;
+        }
+        if (filterDto.assignedStaffId) {
+            query.assignedStaff = new Types.ObjectId(filterDto.assignedStaffId);
+        }
+        if (filterDto.clientId) {
+            // Assuming we can filter by client via clientServiceRequestId population or if we store clientId directly
+        }
+        if (filterDto.startDate && filterDto.endDate) {
+            query.createdAt = {
+                $gte: new Date(filterDto.startDate),
+                $lte: new Date(filterDto.endDate),
+            };
+        }
+
         const workOrders = await this.workOrderModel
-            .find({ companyId: new Types.ObjectId(user.company._id) })
-            .populate('createdBy', 'name email role positionId') // Populate User
-            .populate('serviceId', 'companyId title description accessType isActive') // Populate Service
+            .find(query)
+            .populate('createdBy', 'name email role positionId')
+            .populate('serviceId', 'companyId title description accessType isActive')
+            .populate('assignedStaff', 'name email')
             .sort({ createdAt: -1 })
             .exec();
 
-        // Transformasi Data
-        return workOrders.map(wo => {
-            const doc = wo.toObject() as any;
-            return {
-                _id: doc._id,
-                clientServiceRequestId: doc.clientServiceRequestId,
-                companyId: doc.companyId,
-                relatedWorkOrderId: doc.relatedWorkOrderId,
-                assignedStaff: doc.assignedStaff,
-                status: doc.status,
-                createdAt: doc.createdAt,
-                updatedAt: doc.updatedAt,
-                startedAt: doc.startedAt,
-                completedAt: doc.completedAt,
-                createdBy: doc.createdBy, // Sudah ter-populate
-                service: doc.serviceId,   // Rename serviceId -> service
-                // Note: Untuk list, biasanya form detail tidak perlu di-hydrate lengkap agar ringan,
-                // tapi jika perlu, bisa disesuaikan. Di sini kita biarkan snapshot asli.
-            };
-        });
+        return workOrders.map(doc => this.transformWorkOrder(doc));
     }
 
-    // GET Detail Work Order
-    async findOne(id: string, user: AuthenticatedUser): Promise<any> {
+    // GET All Work Orders (Staff Assigned)
+    async findAllAssigned(user: AuthenticatedUser): Promise<any[]> {
+        return this.workOrderModel.find({ assignedStaff: user._id })
+            .populate('serviceId', 'title description')
+            .sort({ createdAt: -1 })
+            .exec();
+    }
+
+    // GET Detail Work Order (Internal)
+    async findOneInternal(id: string, user: AuthenticatedUser): Promise<any> {
         if (!Types.ObjectId.isValid(id)) {
             throw new BadRequestException('Invalid Work Order ID');
-        }
-
-        if (!user.company) {
-            throw new BadRequestException('User company information is missing');
         }
 
         const wo = await this.workOrderModel
             .findOne({
                 _id: id,
-                companyId: new Types.ObjectId(user.company._id) // Security check
+                companyId: user.company!._id
             })
             .populate('createdBy', 'name email role positionId')
             .populate('serviceId', 'companyId title description accessType isActive')
+            .populate('assignedStaff', 'name email')
             .exec();
 
         if (!wo) {
             throw new NotFoundException('Work Order not found');
         }
 
-        // Hydrate Forms (Ambil fields terbaru dari Template)
-        // Karena snapshot di WO biasanya tidak menyimpan 'fields', kita ambil dari master form
+        return this.hydrateWorkOrderForms(wo);
+    }
+
+    // GET Detail Work Order (Staff Assigned)
+    async findOneAssigned(id: string, user: AuthenticatedUser): Promise<any> {
+        if (!Types.ObjectId.isValid(id)) {
+            throw new BadRequestException('Invalid Work Order ID');
+        }
+
+        const wo = await this.workOrderModel
+            .findOne({
+                _id: id,
+                assignedStaff: user._id // Ensure assignment
+            })
+            .populate('serviceId', 'title description')
+            .exec();
+
+        if (!wo) {
+            throw new NotFoundException('Work Order not found');
+        }
+
+        return this.hydrateWorkOrderForms(wo);
+    }
+
+    async update(id: string, updateWorkOrderDto: UpdateWorkOrderDto, user: AuthenticatedUser): Promise<WorkOrderDocument> {
+        if (!user.company || !user.company._id) {
+            throw new BadRequestException('User company information is missing');
+        }
+        const wo = await this.workOrderModel.findOne({ _id: id, companyId: user.company._id });
+        if (!wo) throw new NotFoundException('Work Order not found');
+
+        Object.assign(wo, updateWorkOrderDto);
+        return wo.save();
+    }
+
+    async updateStatus(id: string, updateStatusDto: UpdateWorkOrderStatusDto, user: AuthenticatedUser): Promise<WorkOrderDocument> {
+        if (!user.company || !user.company._id) {
+            throw new BadRequestException('User company information is missing');
+        }
+        const wo = await this.workOrderModel.findOne({ _id: id, companyId: user.company._id });
+        if (!wo) throw new NotFoundException('Work Order not found');
+
+        wo.status = updateStatusDto.status;
+
+        if (updateStatusDto.status === 'in_progress' && !wo.startedAt) {
+            wo.startedAt = new Date();
+        } else if (updateStatusDto.status === 'completed' && !wo.completedAt) {
+            wo.completedAt = new Date();
+        }
+
+        return wo.save();
+    }
+
+    async assignStaff(id: string, assignStaffDto: AssignStaffDto, user: AuthenticatedUser): Promise<WorkOrderDocument> {
+        if (!user.company || !user.company._id) {
+            throw new BadRequestException('User company information is missing');
+        }
+        const wo = await this.workOrderModel.findOne({ _id: id, companyId: user.company._id });
+        if (!wo) throw new NotFoundException('Work Order not found');
+
+        const staffIds: Types.ObjectId[] = [];
+        const errors: string[] = [];
+
+        // Ensure staffEmail is treated as an array (though DTO validation should handle this)
+        const emails = Array.isArray(assignStaffDto.staffEmail)
+            ? assignStaffDto.staffEmail
+            : [assignStaffDto.staffEmail];
+
+        for (const email of emails) {
+            const staff = await this.usersService.findOneByEmail(email);
+            if (!staff) {
+                errors.push(`Staff with email ${email} not found`);
+                continue;
+            }
+            // Check if staff belongs to the same company
+            if (staff.companyId && staff.companyId.toString() !== user.company._id.toString()) {
+                errors.push(`Staff with email ${email} does not belong to your company`);
+                continue;
+            }
+
+            staffIds.push(staff._id as unknown as Types.ObjectId);
+        }
+
+        if (errors.length > 0) {
+            throw new BadRequestException(errors.join(', '));
+        }
+
+        wo.assignedStaff = staffIds as any;
+        return wo.save();
+    }
+
+    // Helper to transform WO doc to response object
+    private transformWorkOrder(doc: any) {
+        const wo = doc.toObject ? doc.toObject() : doc;
+        return {
+            _id: wo._id,
+            clientServiceRequestId: wo.clientServiceRequestId,
+            companyId: wo.companyId,
+            relatedWorkOrderId: wo.relatedWorkOrderId,
+            assignedStaff: wo.assignedStaff,
+            status: wo.status,
+            priority: wo.priority,
+            createdAt: wo.createdAt,
+            updatedAt: wo.updatedAt,
+            startedAt: wo.startedAt,
+            completedAt: wo.completedAt,
+            createdBy: wo.createdBy,
+            service: wo.serviceId,
+        };
+    }
+
+    // Helper to hydrate forms
+    private async hydrateWorkOrderForms(wo: any) {
         const workOrderFormsWithFields = await Promise.all(
             wo.workOrderForms.map(async (item) => {
                 const snapshotForm = item.form;
@@ -92,35 +233,21 @@ export class WorkOrderService {
 
                 return {
                     order: item.order,
-                    // Sertakan detail snapshot
-                    // fillableByRoles, dll jika perlu
                     form: {
                         _id: snapshotForm._id,
                         title: snapshotForm.title,
                         formType: snapshotForm.formType,
                         description: snapshotForm.description,
-                        fields: fields // Inject fields
+                        fields: fields
                     }
                 };
             })
         );
 
-        const doc = wo.toObject() as any;
-
+        const doc = wo.toObject ? wo.toObject() : wo;
         return {
-            _id: doc._id,
-            clientServiceRequestId: doc.clientServiceRequestId,
-            companyId: doc.companyId,
-            relatedWorkOrderId: doc.relatedWorkOrderId,
-            assignedStaff: doc.assignedStaff,
-            status: doc.status,
-            createdAt: doc.createdAt,
-            updatedAt: doc.updatedAt,
-            startedAt: doc.startedAt,
-            completedAt: doc.completedAt,
-            createdBy: doc.createdBy,
-            service: doc.serviceId, // Rename serviceId -> service
-            workorderForms: workOrderFormsWithFields // Rename workOrderForms -> workorderForms (sesuai JSON Anda)
+            ...this.transformWorkOrder(doc),
+            workorderForms: workOrderFormsWithFields
         };
     }
 }

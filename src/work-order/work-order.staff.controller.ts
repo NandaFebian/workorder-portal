@@ -7,30 +7,29 @@ import { Role } from 'src/common/enums/role.enum';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 
-@Controller('workorders')
+@Controller('staff/work-orders')
 @UseGuards(AuthGuard, RolesGuard)
-export class WorkOrderController {
+@Roles(Role.CompanyStaff, Role.CompanyManager)
+export class WorkOrderStaffController {
     constructor(private readonly workOrderService: WorkOrderService) { }
 
     @Get()
-    @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff) // Akses Internal
     @HttpCode(HttpStatus.OK)
     async findAll(@GetUser() user: AuthenticatedUser) {
-        const data = await this.workOrderService.findAll(user);
+        const data = await this.workOrderService.findAllAssigned(user);
         return {
             message: 'Load data success',
-            data: data,
+            data,
         };
     }
 
     @Get(':id')
-    @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff) // Akses Internal
     @HttpCode(HttpStatus.OK)
     async findOne(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-        const data = await this.workOrderService.findOne(id, user);
+        const data = await this.workOrderService.findOneAssigned(id, user);
         return {
             message: 'Load data success',
-            data: data,
+            data,
         };
     }
 }

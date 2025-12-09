@@ -1,47 +1,15 @@
-import express from 'express';
-import { ExpressAdapter } from '@nestjs/platform-express';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe, BadRequestException } from '@nestjs/common';
-import { ValidationError } from 'class-validator';
-import { ResponseInterceptor } from './common/interceptors/response.interceptor';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { setupApp } from './app-setup';
 
-const expressApp = express();
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
 
-export async function createApp() {
-  const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp));
+  // Apply shared configuration
+  setupApp(app);
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-      exceptionFactory: (errors: ValidationError[]) => {
-        const formattedErrors = errors.map((error) => ({
-          field: error.property,
-          message: error.constraints
-            ? Object.values(error.constraints)[0]
-            : 'Unknown validation error',
-        }));
-
-        return new BadRequestException({
-          message: 'Validation failed',
-          code: 'VALIDATION_ERROR',
-          errors: formattedErrors,
-        });
-      },
-    }),
-  );
-
-  app.enableCors({
-    origin: "*",
-    methods: "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-    credentials: false,
-  });
-
-  app.useGlobalInterceptors(new ResponseInterceptor());
-  app.useGlobalFilters(new HttpExceptionFilter());
-
-  await app.init();
-  return expressApp;
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
+  console.log(`Application is running on: ${await app.getUrl()}`);
 }
+bootstrap();

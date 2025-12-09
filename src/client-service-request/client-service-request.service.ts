@@ -9,6 +9,7 @@ import { ServicesInternalService } from 'src/service/services.internal.service';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { WorkOrderDocument } from 'src/work-order/schemas/work-order.schema';
 import { WorkReportService } from 'src/work-report/work-report.service';
+import { CsrResponseUtil } from './utils/csr-response.util';
 
 @Injectable()
 export class ClientServiceRequestService {
@@ -34,18 +35,7 @@ export class ClientServiceRequestService {
             .sort({ createdAt: -1 })
             .exec();
 
-        return requests.map(request => {
-            const doc = request.toObject() as any;
-            return {
-                _id: doc._id,
-                status: doc.status,
-                createdAt: doc.createdAt,
-                updatedAt: doc.updatedAt,
-                companyId: doc.companyId,
-                client: doc.clientId,
-                service: doc.serviceId,
-            };
-        });
+        return Promise.all(requests.map(request => this._enrichAndFormat(request)));
     }
 
     async findOneForClient(id: string, userId: string): Promise<any> {
@@ -61,6 +51,10 @@ export class ClientServiceRequestService {
 
         if (!csr) throw new NotFoundException('Service Request not found');
 
+        return this._enrichAndFormat(csr);
+    }
+
+    private async _enrichAndFormat(csr: any): Promise<any> {
         const submissions = await this.submissionModel.find({ ownerId: csr._id }).exec();
 
         const clientIntakeFormsWithFields = await Promise.all(
@@ -88,37 +82,28 @@ export class ClientServiceRequestService {
             })
         );
 
-        const doc = csr.toObject() as any;
-
-        return {
-            _id: doc._id,
-            status: doc.status,
-            createdAt: doc.createdAt,
-            updatedAt: doc.updatedAt,
-            companyId: doc.companyId,
-            client: doc.clientId,
-            service: doc.serviceId,
-            clientIntakeForms: clientIntakeFormsWithFields,
-            submissions: submissions
-        };
+        const doc = csr.toObject ? csr.toObject() : csr;
+        return CsrResponseUtil.formatOne(doc, clientIntakeFormsWithFields, submissions);
     }
 
-    async findAllByCompanyId(companyId: string): Promise<ClientServiceRequestDocument[]> {
-        return this.csrModel.find({ companyId: new Types.ObjectId(companyId) })
-            .populate('serviceId', 'title')
-            .populate('clientId', 'name email')
+    async findAllByCompanyId(companyId: string): Promise<any[]> {
+        const requests = await this.csrModel.find({ companyId: new Types.ObjectId(companyId) })
+            .populate('serviceId', 'companyId title description accessType isActive')
+            .populate('clientId', 'name email role positionId')
             .sort({ createdAt: -1 })
             .exec();
+
+        return Promise.all(requests.map(request => this._enrichAndFormat(request)));
     }
 
-    async findOneInternal(id: string): Promise<ClientServiceRequestDocument> {
+    async findOneInternal(id: string): Promise<any> {
         if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
         const csr = await this.csrModel.findById(id)
-            .populate('serviceId')
-            .populate('clientId', 'name email')
+            .populate('serviceId', 'companyId title description accessType isActive')
+            .populate('clientId', 'name email role positionId')
             .exec();
         if (!csr) throw new NotFoundException('Service Request not found');
-        return csr;
+        return this._enrichAndFormat(csr);
     }
 
     async updateStatus(id: string, status: 'approved' | 'rejected', user: AuthenticatedUser): Promise<any> {

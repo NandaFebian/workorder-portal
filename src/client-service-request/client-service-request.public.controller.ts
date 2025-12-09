@@ -7,19 +7,19 @@ import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interf
 @Controller('public/client-service-request')
 @UseGuards(AuthGuard) // Client harus login
 export class ClientServiceRequestPublicController {
-    constructor(private readonly csrService: ClientServiceRequestService) {}
+    constructor(private readonly csrService: ClientServiceRequestService) { }
 
     @Get()
     @HttpCode(HttpStatus.OK)
     async findAll(@GetUser() user: AuthenticatedUser) {
         const data = await this.csrService.findAllByClientId(user._id.toString());
-        return { message: 'Data retrieved successfully', data };
+        return { success: true, message: 'Load data success', data };
     }
 
     @Get(':id')
     @HttpCode(HttpStatus.OK)
     async findOne(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
         const data = await this.csrService.findOneForClient(id, user._id.toString());
-        return { message: 'Data retrieved successfully', data };
+        return { success: true, message: 'Load data success', data };
     }
 }

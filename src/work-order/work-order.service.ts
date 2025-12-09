@@ -11,11 +11,14 @@ import { UpdateWorkOrderDto } from './dto/update-work-order.dto';
 import { UpdateWorkOrderStatusDto } from './dto/update-work-order-status.dto';
 import { AssignStaffDto } from './dto/assign-staff.dto';
 import { WorkOrderFilterDto } from './dto/work-order-filter.dto';
+import { CreateSubmissionsDto } from './dto/create-submissions.dto';
+import { FormSubmission, FormSubmissionDocument } from 'src/form/schemas/form-submissions.schema';
 
 @Injectable()
 export class WorkOrderService {
     constructor(
         @InjectModel(WorkOrder.name) private workOrderModel: Model<WorkOrderDocument>,
+        @InjectModel(FormSubmission.name) private submissionModel: Model<FormSubmissionDocument>,
         private readonly formsService: FormsService,
         private readonly usersService: UsersService,
     ) { }
@@ -69,7 +72,7 @@ export class WorkOrderService {
         const workOrders = await this.workOrderModel
             .find(query)
             .populate('createdBy', 'name email role positionId')
-            .populate('serviceId', 'companyId title description accessType isActive')
+            .populate('serviceId', 'companyId title description accessType isActive requiredStaff')
             .populate('assignedStaff', 'name email')
             .sort({ createdAt: -1 })
             .exec();
@@ -97,7 +100,7 @@ export class WorkOrderService {
                 companyId: user.company!._id
             })
             .populate('createdBy', 'name email role positionId')
-            .populate('serviceId', 'companyId title description accessType isActive')
+            .populate('serviceId', 'companyId title description accessType isActive requiredStaff')
             .populate('assignedStaff', 'name email')
             .exec();
 
@@ -249,5 +252,65 @@ export class WorkOrderService {
             ...this.transformWorkOrder(doc),
             workorderForms: workOrderFormsWithFields
         };
+    }
+
+    async createSubmissions(id: string, createSubmissionsDto: CreateSubmissionsDto, user: AuthenticatedUser): Promise<any> {
+        if (!Types.ObjectId.isValid(id)) {
+            throw new BadRequestException('Invalid Work Order ID');
+        }
+
+        // Verify work order exists and user has access
+        const wo = await this.workOrderModel.findOne({
+            _id: id,
+            companyId: user.company!._id
+        });
+
+        if (!wo) {
+            throw new NotFoundException('Work Order not found');
+        }
+
+        const savedSubmissions: FormSubmissionDocument[] = [];
+
+        for (const submission of createSubmissionsDto.submissions) {
+            const submissionData = {
+                submissionType: submission.submissionType,
+                ownerId: new Types.ObjectId(submission.ownerId),
+                formId: new Types.ObjectId(submission.formId),
+                submittedBy: new Types.ObjectId(submission.submittedBy),
+                fieldsData: submission.fieldsData.map(field => ({
+                    order: parseInt(field.order),
+                    value: field.value
+                })),
+                status: submission.status,
+                submittedAt: submission.submittedAt ? new Date(submission.submittedAt) : new Date()
+            };
+
+            const newSubmission = new this.submissionModel(submissionData);
+            const saved = await newSubmission.save();
+            savedSubmissions.push(saved);
+        }
+
+        return {
+            workOrderId: id,
+            submissions: savedSubmissions
+        };
+    }
+
+    async markAsReady(id: string, user: AuthenticatedUser): Promise<WorkOrderDocument> {
+        if (!user.company || !user.company._id) {
+            throw new BadRequestException('User company information is missing');
+        }
+
+        const wo = await this.workOrderModel.findOne({
+            _id: id,
+            companyId: user.company._id
+        });
+
+        if (!wo) {
+            throw new NotFoundException('Work Order not found');
+        }
+
+        wo.status = 'ready';
+        return wo.save();
     }
 }

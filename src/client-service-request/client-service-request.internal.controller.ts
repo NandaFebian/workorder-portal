@@ -17,14 +17,14 @@ export class ClientServiceRequestInternalController {
     async findAll(@GetUser() user: AuthenticatedUser) {
         if (!user.company?._id) throw new ForbiddenException('No company associated');
         const data = await this.csrService.findAllByCompanyId(user.company._id.toString());
-        return { message: 'Data retrieved successfully', data };
+        return { success: true, message: 'Load data success', data };
     }
 
     @Get(':id')
     @HttpCode(HttpStatus.OK)
     async findOne(@Param('id') id: string) {
         const data = await this.csrService.findOneInternal(id);
-        return { message: 'Data retrieved successfully', data };
+        return { success: true, message: 'Load data success', data };
     }
 
     @Put(':id/approve')

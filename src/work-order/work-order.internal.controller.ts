@@ -11,6 +11,7 @@ import { UpdateWorkOrderDto } from './dto/update-work-order.dto';
 import { UpdateWorkOrderStatusDto } from './dto/update-work-order-status.dto';
 import { AssignStaffDto } from './dto/assign-staff.dto';
 import { WorkOrderFilterDto } from './dto/work-order-filter.dto';
+import { CreateSubmissionsDto } from './dto/create-submissions.dto';
 
 @Controller('workorders')
 @UseGuards(AuthGuard, RolesGuard)
@@ -68,12 +69,33 @@ export class WorkOrderInternalController {
         };
     }
 
+
     @Put(':id/assign-staffs')
     @HttpCode(HttpStatus.OK)
     async assignStaff(@Param('id') id: string, @Body() assignStaffDto: AssignStaffDto, @GetUser() user: AuthenticatedUser) {
         const data = await this.workOrderService.assignStaff(id, assignStaffDto, user);
         return {
             message: 'Staff assigned successfully',
+            data,
+        };
+    }
+
+    @Put(':id/submissions')
+    @HttpCode(HttpStatus.OK)
+    async createSubmissions(@Param('id') id: string, @Body() createSubmissionsDto: CreateSubmissionsDto, @GetUser() user: AuthenticatedUser) {
+        const data = await this.workOrderService.createSubmissions(id, createSubmissionsDto, user);
+        return {
+            message: 'Submissions saved successfully',
+            data,
+        };
+    }
+
+    @Put(':id/ready')
+    @HttpCode(HttpStatus.OK)
+    async markAsReady(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+        const data = await this.workOrderService.markAsReady(id, user);
+        return {
+            message: 'Work Order marked as ready',
             data,
         };
     }

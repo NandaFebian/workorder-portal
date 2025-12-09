@@ -7,10 +7,14 @@ import { WorkOrderService } from './work-order.service';
 import { FormModule } from 'src/form/form.module';
 import { AuthModule } from 'src/auth/auth.module';
 import { UsersModule } from 'src/users/users.module';
+import { FormSubmission, FormSubmissionSchema } from 'src/form/schemas/form-submissions.schema';
 
 @Module({
     imports: [
-        MongooseModule.forFeature([{ name: WorkOrder.name, schema: WorkOrderSchema }]),
+        MongooseModule.forFeature([
+            { name: WorkOrder.name, schema: WorkOrderSchema },
+            { name: FormSubmission.name, schema: FormSubmissionSchema }
+        ]),
         FormModule,
         forwardRef(() => AuthModule),
         UsersModule,

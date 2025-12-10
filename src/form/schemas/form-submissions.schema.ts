@@ -9,6 +9,7 @@ class FieldData {
     @Prop({ type: MongooseSchema.Types.Mixed })
     value: any;
 }
+const FieldDataSchema = SchemaFactory.createForClass(FieldData);
 
 export type FormSubmissionDocument = FormSubmission & Document;
 
@@ -27,7 +28,7 @@ export class FormSubmission {
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: false, default: null })
     submittedBy: MongooseSchema.Types.ObjectId | null;
 
-    @Prop({ type: [FieldData] })
+    @Prop({ type: [FieldDataSchema] })
     fieldsData: FieldData[]; // Ubah dari answers ke fieldsData agar sesuai JSON
 
     @Prop({ default: 'submitted' })

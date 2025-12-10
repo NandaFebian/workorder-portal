@@ -65,7 +65,7 @@ export class WorkOrder {
     relatedWorkOrderId: MongooseSchema.Types.ObjectId;
 
     @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'User' }], default: [] })
-    assignedStaff: MongooseSchema.Types.ObjectId[];
+    assignedStaffs: MongooseSchema.Types.ObjectId[];
 
     // Gunakan schema factory yang valid
     @Prop({ type: [WorkOrderFormSnapshotSchema], default: [] })

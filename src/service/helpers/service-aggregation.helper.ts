@@ -17,7 +17,7 @@ export async function getServicesWithAggregation(
         description: 1,
         accessType: 1,
         isActive: 1,
-        requiredStaff: 1,
+        requiredStaffs: 1,
         serviceKey: 1,
     };
 
@@ -41,16 +41,16 @@ export async function getServicesWithAggregation(
         {
             $lookup: {
                 from: 'positions',
-                localField: 'requiredStaff.positionId',
+                localField: 'requiredStaffs.positionId',
                 foreignField: '_id',
-                as: 'requiredStaffPositions',
+                as: 'requiredStaffsPositions',
             },
         },
         {
             $addFields: {
-                requiredStaff: {
+                requiredStaffs: {
                     $map: {
-                        input: '$requiredStaff',
+                        input: '$requiredStaffs',
                         as: 'rs',
                         in: {
                             $mergeObjects: [
@@ -60,7 +60,7 @@ export async function getServicesWithAggregation(
                                         $arrayElemAt: [
                                             {
                                                 $filter: {
-                                                    input: '$requiredStaffPositions',
+                                                    input: '$requiredStaffsPositions',
                                                     as: 'pos',
                                                     cond: { $eq: ['$$pos._id', '$$rs.positionId'] },
                                                 },
@@ -77,8 +77,8 @@ export async function getServicesWithAggregation(
         },
         {
             $project: {
-                requiredStaffPositions: 0,
-                'requiredStaff.positionId': 0
+                requiredStaffsPositions: 0,
+                'requiredStaffs.positionId': 0
             }
         },
     ];

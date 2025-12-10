@@ -92,10 +92,22 @@ export class WorkOrderInternalController {
 
     @Put(':id/ready')
     @HttpCode(HttpStatus.OK)
+    @Roles(Role.CompanyOwner, Role.CompanyManager)
     async markAsReady(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
         const data = await this.workOrderService.markAsReady(id, user);
         return {
             message: 'Work Order marked as ready',
+            data,
+        };
+    }
+
+    @Put(':id/in-progress')
+    @HttpCode(HttpStatus.OK)
+    @Roles(Role.CompanyOwner, Role.CompanyManager)
+    async markAsInProgress(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+        const data = await this.workOrderService.markAsInProgress(id, user);
+        return {
+            message: 'Work Order started',
             data,
         };
     }

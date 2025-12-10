@@ -50,7 +50,7 @@ export class Service {
             maximumStaff: { type: Number, required: true },
         },
     ])
-    requiredStaff: {
+    requiredStaffs: {
         positionId: MongooseSchema.Types.ObjectId;
         minimumStaff: number;
         maximumStaff: number;

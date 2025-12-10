@@ -6,6 +6,7 @@ class FieldDataDto {
     @IsNotEmpty()
     order: string;
 
+    @IsNotEmpty()
     value: any;
 }
 

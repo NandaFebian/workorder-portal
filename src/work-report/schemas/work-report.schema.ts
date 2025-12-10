@@ -6,8 +6,8 @@ export type WorkReportDocument = WorkReport & Document;
 // Re-use schema snapshot untuk form (sama seperti di WorkOrder/CSR)
 @Schema({ _id: false })
 export class FormSnapshot {
-    @Prop({ type: MongooseSchema.Types.ObjectId })
-    _id: MongooseSchema.Types.ObjectId;
+    @Prop({ type: String })
+    _id: string;
 
     @Prop()
     title: string;

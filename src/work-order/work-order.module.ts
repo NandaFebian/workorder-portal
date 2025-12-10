@@ -8,6 +8,7 @@ import { FormModule } from 'src/form/form.module';
 import { AuthModule } from 'src/auth/auth.module';
 import { UsersModule } from 'src/users/users.module';
 import { FormSubmission, FormSubmissionSchema } from 'src/form/schemas/form-submissions.schema';
+import { WorkReportModule } from 'src/work-report/work-report.module';
 
 @Module({
     imports: [
@@ -18,6 +19,7 @@ import { FormSubmission, FormSubmissionSchema } from 'src/form/schemas/form-subm
         FormModule,
         forwardRef(() => AuthModule),
         UsersModule,
+        WorkReportModule,
     ],
     controllers: [WorkOrderInternalController, WorkOrderStaffController],
     providers: [WorkOrderService],

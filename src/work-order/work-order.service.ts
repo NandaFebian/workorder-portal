@@ -13,6 +13,7 @@ import { AssignStaffDto } from './dto/assign-staff.dto';
 import { WorkOrderFilterDto } from './dto/work-order-filter.dto';
 import { CreateSubmissionsDto } from './dto/create-submissions.dto';
 import { FormSubmission, FormSubmissionDocument } from 'src/form/schemas/form-submissions.schema';
+import { WorkReportService } from 'src/work-report/work-report.service';
 
 @Injectable()
 export class WorkOrderService {
@@ -21,6 +22,7 @@ export class WorkOrderService {
         @InjectModel(FormSubmission.name) private submissionModel: Model<FormSubmissionDocument>,
         private readonly formsService: FormsService,
         private readonly usersService: UsersService,
+        private readonly workReportService: WorkReportService,
     ) { }
 
     async create(createWorkOrderDto: CreateWorkOrderDto, user: AuthenticatedUser): Promise<WorkOrderDocument> {
@@ -57,7 +59,7 @@ export class WorkOrderService {
             query.priority = filterDto.priority;
         }
         if (filterDto.assignedStaffId) {
-            query.assignedStaff = new Types.ObjectId(filterDto.assignedStaffId);
+            query.assignedStaffs = new Types.ObjectId(filterDto.assignedStaffId);
         }
         if (filterDto.clientId) {
             // Assuming we can filter by client via clientServiceRequestId population or if we store clientId directly
@@ -72,8 +74,16 @@ export class WorkOrderService {
         const workOrders = await this.workOrderModel
             .find(query)
             .populate('createdBy', 'name email role positionId')
-            .populate('serviceId', 'companyId title description accessType isActive requiredStaff')
-            .populate('assignedStaff', 'name email')
+            .populate({
+                path: 'serviceId',
+                select: 'companyId title description accessType isActive requiredStaffs',
+                populate: {
+                    path: 'requiredStaffs.positionId',
+                    model: 'Position',
+                    select: 'name description isActive companyId'
+                }
+            })
+            .populate('assignedStaffs', 'name email')
             .sort({ createdAt: -1 })
             .exec();
 
@@ -82,7 +92,7 @@ export class WorkOrderService {
 
     // GET All Work Orders (Staff Assigned)
     async findAllAssigned(user: AuthenticatedUser): Promise<any[]> {
-        return this.workOrderModel.find({ assignedStaff: user._id })
+        return this.workOrderModel.find({ assignedStaffs: user._id })
             .populate('serviceId', 'title description')
             .sort({ createdAt: -1 })
             .exec();
@@ -100,8 +110,24 @@ export class WorkOrderService {
                 companyId: user.company!._id
             })
             .populate('createdBy', 'name email role positionId')
-            .populate('serviceId', 'companyId title description accessType isActive requiredStaff')
-            .populate('assignedStaff', 'name email')
+            .populate({
+                path: 'serviceId',
+                select: 'companyId title description accessType isActive requiredStaffs',
+                populate: {
+                    path: 'requiredStaffs.positionId',
+                    model: 'Position',
+                    select: '_id name'
+                }
+            })
+            .populate({
+                path: 'assignedStaffs',
+                select: 'name email role companyId positionId',
+                populate: {
+                    path: 'positionId',
+                    model: 'Position',
+                    select: '_id name companyId createdAt updatedAt'
+                }
+            })
             .exec();
 
         if (!wo) {
@@ -120,7 +146,7 @@ export class WorkOrderService {
         const wo = await this.workOrderModel
             .findOne({
                 _id: id,
-                assignedStaff: user._id // Ensure assignment
+                assignedStaffs: user._id // Ensure assignment
             })
             .populate('serviceId', 'title description')
             .exec();
@@ -195,19 +221,30 @@ export class WorkOrderService {
             throw new BadRequestException(errors.join(', '));
         }
 
-        wo.assignedStaff = staffIds as any;
+        wo.assignedStaffs = staffIds as any;
         return wo.save();
     }
 
     // Helper to transform WO doc to response object
     private transformWorkOrder(doc: any) {
         const wo = doc.toObject ? doc.toObject() : doc;
+
+        // Transform requiredStaffs with positions array
+        let requiredStaffs = [];
+        if (wo.serviceId?.requiredStaffs) {
+            requiredStaffs = wo.serviceId.requiredStaffs.map((req: any) => ({
+                minimumStaff: req.minimumStaff,
+                maximumStaff: req.maximumStaff,
+                positions: req.positionId ? [req.positionId] : []
+            }));
+        }
+
         return {
             _id: wo._id,
             clientServiceRequestId: wo.clientServiceRequestId,
             companyId: wo.companyId,
             relatedWorkOrderId: wo.relatedWorkOrderId,
-            assignedStaff: wo.assignedStaff,
+            requiredStaffs: requiredStaffs,
             status: wo.status,
             priority: wo.priority,
             createdAt: wo.createdAt,
@@ -247,10 +284,37 @@ export class WorkOrderService {
             })
         );
 
+        // Fetch submissions for this work order
+        const submissions = await this.submissionModel
+            .find({
+                ownerId: wo._id,
+                submissionType: 'work_order'
+            })
+            .exec();
+
         const doc = wo.toObject ? wo.toObject() : wo;
+
+        // Transform assignedStaffs to include position as nested object
+        const transformedAssignedStaffs = doc.assignedStaffs?.map((staff: any) => ({
+            _id: staff._id,
+            name: staff.name,
+            email: staff.email,
+            role: staff.role,
+            position: staff.positionId ? {
+                _id: staff.positionId._id,
+                name: staff.positionId.name,
+                companyId: staff.positionId.companyId,
+                createdAt: staff.positionId.createdAt,
+                updatedAt: staff.positionId.updatedAt
+            } : null,
+            companyId: staff.companyId
+        })) || [];
+
         return {
             ...this.transformWorkOrder(doc),
-            workorderForms: workOrderFormsWithFields
+            assignedStaffs: transformedAssignedStaffs,
+            workorderForms: workOrderFormsWithFields,
+            submissions: submissions
         };
     }
 
@@ -304,13 +368,83 @@ export class WorkOrderService {
         const wo = await this.workOrderModel.findOne({
             _id: id,
             companyId: user.company._id
-        });
+        }).populate('serviceId');
 
         if (!wo) {
             throw new NotFoundException('Work Order not found');
         }
 
+        // Check if all required work order forms have submissions
+        if (wo.workOrderForms && wo.workOrderForms.length > 0) {
+            const submissions = await this.submissionModel
+                .find({
+                    ownerId: wo._id,
+                    submissionType: 'work_order'
+                })
+                .exec();
+
+            const submittedFormIds = submissions.map(sub => sub.formId.toString());
+            const requiredFormIds = wo.workOrderForms.map(form => form.form._id.toString());
+
+            const missingForms = requiredFormIds.filter(formId => !submittedFormIds.includes(formId));
+
+            if (missingForms.length > 0) {
+                throw new BadRequestException('All required work order forms must be submitted before marking as ready');
+            }
+        }
+
         wo.status = 'ready';
         return wo.save();
+    }
+
+    async markAsInProgress(id: string, user: AuthenticatedUser): Promise<WorkOrderDocument> {
+        if (!user.company || !user.company._id) {
+            throw new BadRequestException('User company information is missing');
+        }
+
+        const wo = await this.workOrderModel.findOne({
+            _id: id,
+            companyId: user.company._id
+        }).populate('serviceId');
+
+        if (!wo) {
+            throw new NotFoundException('Work Order not found');
+        }
+
+        // Validate work order is ready
+        if (wo.status !== 'ready') {
+            throw new BadRequestException('Work Order must be in ready status before starting');
+        }
+
+        wo.status = 'in_progress';
+        if (!wo.startedAt) {
+            wo.startedAt = new Date();
+        }
+        const savedWo = await wo.save();
+
+        // Automatically create work report
+        const service: any = wo.serviceId;
+        const reportForms = service?.reportForms || [];
+
+        await this.workReportService.create({
+            workOrderId: (savedWo._id as any).toString(),
+            companyId: user.company._id.toString(),
+            reportForms: reportForms.map((form: any) => ({
+                order: form.order,
+                fillableByRoles: form.fillableByRoles || [],
+                viewableByRoles: form.viewableByRoles || [],
+                fillableByPositionIds: form.fillableByPositionIds?.map((id: any) => id.toString()) || [],
+                viewableByPositionIds: form.viewableByPositionIds?.map((id: any) => id.toString()) || [],
+                form: {
+                    _id: form.formKey,
+                    title: '',
+                    description: '',
+                    formType: 'report'
+                }
+            })),
+            status: 'in_progress'
+        });
+
+        return savedWo;
     }
 }

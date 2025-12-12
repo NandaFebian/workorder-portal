@@ -15,6 +15,7 @@ import { AuthService } from './auth.service';
 import { RegisterAuthDto } from './dto/register-auth.dto';
 import { RegisterCompanyDto } from './dto/register-company.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
+import { ResponseUtil } from 'src/common/utils/response.util';
 
 @Controller('auth')
 export class AuthController {
@@ -24,33 +25,21 @@ export class AuthController {
     @HttpCode(HttpStatus.OK)
     async register(@Body() registerAuthDto: RegisterAuthDto) {
         const newUser = await this.authService.register(registerAuthDto);
-        return {
-            message: 'User registered successfully',
-            data: newUser,
-        };
+        return ResponseUtil.success('User registered successfully', newUser);
     }
 
     @Post('register-company')
     @HttpCode(HttpStatus.OK)
     async registerCompany(@Body() registerCompanyDto: RegisterCompanyDto) {
         const data = await this.authService.registerCompany(registerCompanyDto);
-        return {
-            message: 'Company and owner registered successfully',
-            meta: {
-                welcome: true,
-            },
-            data: data,
-        };
+        return ResponseUtil.success('Company and owner registered successfully', data, { welcome: true });
     }
 
     @Post('login')
     @HttpCode(HttpStatus.OK)
     async login(@Body() loginAuthDto: LoginAuthDto) {
         const data = await this.authService.login(loginAuthDto);
-        return {
-            message: 'Operation successful',
-            data: data,
-        };
+        return ResponseUtil.success('Operation successful', data);
     }
 
     @Post('logout')
@@ -65,13 +54,10 @@ export class AuthController {
 
         const data = await this.authService.logout(token);
 
-        return {
-            message: data.message,
-            data: {
-                userId: data.userId,
-                timestamp: data.timestamp,
-            },
-        };
+        return ResponseUtil.success(data.message, {
+            userId: data.userId,
+            timestamp: data.timestamp,
+        });
     }
 
     @Get('profile')
@@ -80,9 +66,6 @@ export class AuthController {
         const profile = request.user;
         delete profile.password;
 
-        return {
-            message: 'Profile retrieved successfully',
-            data: profile,
-        };
+        return ResponseUtil.success('Profile retrieved successfully', profile);
     }
 }

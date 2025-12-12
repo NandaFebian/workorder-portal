@@ -5,6 +5,7 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
+import { ResponseUtil } from 'src/common/utils/response.util';
 
 @Controller('client-service-request')
 @UseGuards(AuthGuard, RolesGuard)
@@ -17,14 +18,14 @@ export class ClientServiceRequestInternalController {
     async findAll(@GetUser() user: AuthenticatedUser) {
         if (!user.company?._id) throw new ForbiddenException('No company associated');
         const data = await this.csrService.findAllByCompanyId(user.company._id.toString());
-        return { success: true, message: 'Load data success', data };
+        return ResponseUtil.success('Load data success', data);
     }
 
     @Get(':id')
     @HttpCode(HttpStatus.OK)
     async findOne(@Param('id') id: string) {
         const data = await this.csrService.findOneInternal(id);
-        return { success: true, message: 'Load data success', data };
+        return ResponseUtil.success('Load data success', data);
     }
 
     @Put(':id/approve')

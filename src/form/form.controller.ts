@@ -9,6 +9,7 @@ import { Roles } from 'src/common/decorators/roles.decorator';
 import { SubmitFormDto } from './dto/submit-form.dto';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
+import { ResponseUtil } from 'src/common/utils/response.util';
 
 @UseGuards(AuthGuard)
 @Controller('forms')
@@ -20,19 +21,19 @@ export class FormsController {
     @Roles('owner_company', 'manager_company')
     async createTemplate(@Body() createFormTemplateDto: CreateFormTemplateDto, @GetUser() user: AuthenticatedUser) {
         const template = await this.formsService.createTemplate(createFormTemplateDto, user);
-        return { message: 'Form template created successfully', data: template };
+        return ResponseUtil.success('Form template created successfully', template);
     }
 
     @Get('')
     async findAllTemplates(@GetUser() user: AuthenticatedUser) {
         const templates = await this.formsService.findAllTemplates(user);
-        return { message: 'Latest form templates retrieved successfully', data: templates };
+        return ResponseUtil.success('Latest form templates retrieved successfully', templates);
     }
 
     @Get(':id')
     async findTemplateById(@Param('id') id: string) {
         const template = await this.formsService.findTemplateById(id);
-        return { message: 'Form template retrieved successfully', data: template };
+        return ResponseUtil.success('Form template retrieved successfully', template);
     }
 
     @Put(':formKey')
@@ -44,12 +45,12 @@ export class FormsController {
         @GetUser() user: AuthenticatedUser,
     ) {
         const newVersion = await this.formsService.updateTemplate(formKey, updateFormTemplateDto, user);
-        return { message: 'New form version created successfully', data: newVersion };
+        return ResponseUtil.success('New form version created successfully', newVersion);
     }
 
     @Post('submissions')
     async submitForm(@GetUser() user: AuthenticatedUser, @Body() submitFormDto: SubmitFormDto) {
         const submission = await this.formsService.submitForm(user, submitFormDto);
-        return { message: 'Form submitted successfully', data: submission };
+        return ResponseUtil.success('Form submitted successfully', submission);
     }
 }

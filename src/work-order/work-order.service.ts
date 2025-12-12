@@ -14,6 +14,7 @@ import { WorkOrderFilterDto } from './dto/work-order-filter.dto';
 import { CreateSubmissionsDto } from './dto/create-submissions.dto';
 import { FormSubmission, FormSubmissionDocument } from 'src/form/schemas/form-submissions.schema';
 import { WorkReportService } from 'src/work-report/work-report.service';
+import { WorkOrderResource } from './resources/work-order.resource';
 
 @Injectable()
 export class WorkOrderService {
@@ -87,7 +88,7 @@ export class WorkOrderService {
             .sort({ createdAt: -1 })
             .exec();
 
-        return workOrders.map(doc => this.transformWorkOrder(doc));
+        return workOrders.map(doc => WorkOrderResource.transformWorkOrder(doc));
     }
 
     // GET All Work Orders (Staff Assigned)
@@ -225,37 +226,6 @@ export class WorkOrderService {
         return wo.save();
     }
 
-    // Helper to transform WO doc to response object
-    private transformWorkOrder(doc: any) {
-        const wo = doc.toObject ? doc.toObject() : doc;
-
-        // Transform requiredStaffs with positions array
-        let requiredStaffs = [];
-        if (wo.serviceId?.requiredStaffs) {
-            requiredStaffs = wo.serviceId.requiredStaffs.map((req: any) => ({
-                minimumStaff: req.minimumStaff,
-                maximumStaff: req.maximumStaff,
-                positions: req.positionId ? [req.positionId] : []
-            }));
-        }
-
-        return {
-            _id: wo._id,
-            clientServiceRequestId: wo.clientServiceRequestId,
-            companyId: wo.companyId,
-            relatedWorkOrderId: wo.relatedWorkOrderId,
-            requiredStaffs: requiredStaffs,
-            status: wo.status,
-            priority: wo.priority,
-            createdAt: wo.createdAt,
-            updatedAt: wo.updatedAt,
-            startedAt: wo.startedAt,
-            completedAt: wo.completedAt,
-            createdBy: wo.createdBy,
-            service: wo.serviceId,
-        };
-    }
-
     // Helper to hydrate forms
     private async hydrateWorkOrderForms(wo: any) {
         const workOrderFormsWithFields = await Promise.all(
@@ -292,30 +262,11 @@ export class WorkOrderService {
             })
             .exec();
 
-        const doc = wo.toObject ? wo.toObject() : wo;
-
-        // Transform assignedStaffs to include position as nested object
-        const transformedAssignedStaffs = doc.assignedStaffs?.map((staff: any) => ({
-            _id: staff._id,
-            name: staff.name,
-            email: staff.email,
-            role: staff.role,
-            position: staff.positionId ? {
-                _id: staff.positionId._id,
-                name: staff.positionId.name,
-                companyId: staff.positionId.companyId,
-                createdAt: staff.positionId.createdAt,
-                updatedAt: staff.positionId.updatedAt
-            } : null,
-            companyId: staff.companyId
-        })) || [];
-
-        return {
-            ...this.transformWorkOrder(doc),
-            assignedStaffs: transformedAssignedStaffs,
-            workorderForms: workOrderFormsWithFields,
-            submissions: submissions
-        };
+        return WorkOrderResource.transformWorkOrderDetail(
+            wo,
+            workOrderFormsWithFields,
+            submissions
+        );
     }
 
     async createSubmissions(id: string, createSubmissionsDto: CreateSubmissionsDto, user: AuthenticatedUser): Promise<any> {

@@ -6,6 +6,7 @@ import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from 'src/common/enums/role.enum';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
+import { ResponseUtil } from 'src/common/utils/response.util';
 
 @Controller('staff/work-orders')
 @UseGuards(AuthGuard, RolesGuard)
@@ -17,19 +18,13 @@ export class WorkOrderStaffController {
     @HttpCode(HttpStatus.OK)
     async findAll(@GetUser() user: AuthenticatedUser) {
         const data = await this.workOrderService.findAllAssigned(user);
-        return {
-            message: 'Load data success',
-            data,
-        };
+        return ResponseUtil.success('Load data success', data);
     }
 
     @Get(':id')
     @HttpCode(HttpStatus.OK)
     async findOne(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
         const data = await this.workOrderService.findOneAssigned(id, user);
-        return {
-            message: 'Load data success',
-            data,
-        };
+        return ResponseUtil.success('Load data success', data);
     }
 }

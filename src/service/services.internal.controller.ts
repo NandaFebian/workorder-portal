@@ -19,6 +19,7 @@ import { GetUser } from '../common/decorators/get-user.decorator';
 import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
+import { ResponseUtil } from 'src/common/utils/response.util';
 
 @Controller('services')
 @UseGuards(AuthGuard, RolesGuard)
@@ -34,10 +35,7 @@ export class ServicesController {
         @GetUser() user: AuthenticatedUser,
     ) {
         const populatedService = await this.internalService.create(createServiceDto, user);
-        return {
-            message: 'Service created successfully',
-            data: populatedService,
-        };
+        return ResponseUtil.success('Service created successfully', populatedService);
     }
 
     @Get()
@@ -45,10 +43,7 @@ export class ServicesController {
     @Roles('owner_company', 'manager_company')
     async findAll(@GetUser() user: AuthenticatedUser) {
         const services = await this.internalService.findAll(user);
-        return {
-            message: 'Load data success',
-            data: services,
-        };
+        return ResponseUtil.success('Load data success', services);
     }
 
     @Get(':id')
@@ -56,10 +51,7 @@ export class ServicesController {
     @Roles('owner_company', 'manager_company')
     async findOne(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
         const service = await this.internalService.findByVersionId(id, user);
-        return {
-            message: 'Load data success',
-            data: service, // Kembalikan objek tunggal
-        };
+        return ResponseUtil.success('Load data success', service);
     }
 
     @Put(':serviceKey')
@@ -71,9 +63,6 @@ export class ServicesController {
         @GetUser() user: AuthenticatedUser,
     ) {
         const populatedUpdatedService = await this.internalService.update(serviceKey, updateServiceDto, user);
-        return {
-            message: 'New service version created successfully',
-            data: populatedUpdatedService,
-        };
+        return ResponseUtil.success('New service version created successfully', populatedUpdatedService);
     }
 }

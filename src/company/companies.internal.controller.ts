@@ -11,6 +11,8 @@ import { RolesGuard } from "src/auth/guards/roles.guard";
 import { UsersService } from "src/users/users.service";
 import type { AuthenticatedUser } from "src/auth/interfaces/authenticated-user.interface";
 import { Role } from "src/common/enums/role.enum";
+import { ResponseUtil } from "src/common/utils/response.util";
+import { CompanyResource } from "./resources/company.resource";
 
 @Controller('company')
 export class CompaniesInternalController {
@@ -24,10 +26,7 @@ export class CompaniesInternalController {
     // Sebaiknya endpoint ini diamankan (misal: @Roles('admin_app'))
     async findAll() {
         const companies = await this.companiesInternalService.findAllInternal();
-        return {
-            message: 'Companies retrieved successfully',
-            data: companies,
-        };
+        return ResponseUtil.success('Companies retrieved successfully', companies);
     }
 
     @Post('invite')
@@ -77,22 +76,10 @@ export class CompaniesInternalController {
             allowedRoles // Teruskan filter peran
         );
 
-        // Transformasi data
-        const transformedEmployees = employees.map(emp => {
-            const empObject: any = emp.toObject();
-            // Tidak perlu menghapus password karena sudah dikecualikan di query service
-            // delete empObject.password;
-            if (empObject.positionId) {
-                empObject.position = empObject.positionId;
-                delete empObject.positionId;
-            }
-            return empObject;
-        });
+        // Transformasi data menggunakan resource
+        const transformedEmployees = employees.map(emp => CompanyResource.transformEmployee(emp));
 
-        return {
-            message: 'Employees retrieved successfully',
-            data: transformedEmployees,
-        };
+        return ResponseUtil.success('Employees retrieved successfully', transformedEmployees);
     }
 
     @Put(':id')
@@ -102,10 +89,7 @@ export class CompaniesInternalController {
     async update(@Param('id') id: string, @Body() updateCompanyDto: UpdateCompanyDto) {
         // TODO: Tambahkan logika di service untuk cek otorisasi (apa user ini boleh update company dg id tsb)
         const company = await this.companiesInternalService.update(id, updateCompanyDto);
-        return {
-            message: 'Company updated successfully',
-            data: company,
-        };
+        return ResponseUtil.success('Company updated successfully', company);
     }
 
     @Get(':id')
@@ -113,9 +97,6 @@ export class CompaniesInternalController {
     // Sebaiknya endpoint ini diamankan
     async findById(@Param('id') id: string) {
         const company = await this.companiesInternalService.findInternalById(id);
-        return {
-            message: 'Company retrieved successfully',
-            data: company,
-        };
+        return ResponseUtil.success('Company retrieved successfully', company);
     }
 }

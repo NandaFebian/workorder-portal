@@ -3,6 +3,7 @@ import { WorkReportService } from './work-report.service';
 import { CreateWorkReportDto } from './dto/create-work-report.dto';
 import { UpdateWorkReportDto } from './dto/update-work-report.dto';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
+import { ResponseUtil } from 'src/common/utils/response.util';
 // import { RolesGuard } from 'src/auth/guards/roles.guard'; // Jika perlu role specific
 
 @Controller('workreports')

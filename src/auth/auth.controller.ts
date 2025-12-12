@@ -55,7 +55,6 @@ export class AuthController {
         const data = await this.authService.logout(token);
 
         return ResponseUtil.success(data.message, {
-            userId: data.userId,
             timestamp: data.timestamp,
         });
     }

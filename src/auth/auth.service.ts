@@ -5,16 +5,14 @@ import {
     HttpStatus,
     BadRequestException,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { ActiveToken, ActiveTokenDocument } from './schemas/active-token.schema';
+import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { CompaniesInternalService } from '../company/companies.internal.service';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { RegisterAuthDto } from './dto/register-auth.dto';
 import { RegisterCompanyDto } from './dto/register-company.dto';
+import { JwtPayload } from './interfaces/jwt-payload.interface';
 import * as bcrypt from 'bcrypt';
-import { v4 as uuidv4 } from 'uuid';
 import { Role } from '../common/enums/role.enum';
 
 @Injectable()
@@ -22,7 +20,7 @@ export class AuthService {
     constructor(
         private usersService: UsersService,
         private companiesService: CompaniesInternalService,
-        @InjectModel(ActiveToken.name) private activeTokenModel: Model<ActiveTokenDocument>,
+        private jwtService: JwtService,
     ) { }
 
     async register(registerAuthDto: RegisterAuthDto) {
@@ -82,12 +80,15 @@ export class AuthService {
             newCompany._id as import('mongoose').Types.ObjectId
         );
 
-        const tokenString = uuidv4();
-        const newToken = new this.activeTokenModel({
-            token: tokenString,
-            userId: newOwner._id,
-        });
-        await newToken.save();
+        // Generate JWT token
+        const payload: JwtPayload = {
+            userId: (newOwner._id as any).toString(),
+            email: newOwner.email,
+            role: newOwner.role,
+            companyId: (newCompany._id as any).toString(),
+        };
+
+        const token = this.jwtService.sign(payload);
 
         return {
             user: {
@@ -99,7 +100,7 @@ export class AuthService {
                     name: newCompany.name,
                 }
             },
-            token: `Bearer ${tokenString}`,
+            token: `Bearer ${token}`,
         };
     }
 
@@ -140,14 +141,25 @@ export class AuthService {
             );
         }
 
-        const tokenString = uuidv4();
+        // Build JWT payload
+        const payload: JwtPayload = {
+            userId: (user._id as any).toString(),
+            email: user.email,
+            role: user.role,
+        };
 
-        const newToken = new this.activeTokenModel({
-            token: tokenString,
-            userId: user._id,
-        });
-        await newToken.save();
+        // Add optional fields if they exist
+        if (user.companyId) {
+            payload.companyId = (user.companyId as any).toString();
+        }
+        if (user.positionId) {
+            payload.positionId = (user.positionId as any).toString();
+        }
 
+        // Generate JWT token
+        const token = this.jwtService.sign(payload);
+
+        // Build user response
         const userResponse: any = {
             _id: user._id,
             name: user.name,
@@ -161,25 +173,23 @@ export class AuthService {
 
         return {
             user: userResponse,
-            token: `Bearer ${tokenString}`,
+            token: `Bearer ${token}`,
         };
     }
 
+    /**
+     * Logout (Client-side)
+     * With JWT, logout is handled client-side by discarding the token.
+     * This endpoint is kept for API compatibility but doesn't need to do anything server-side.
+     * 
+     * Optional: Implement token blacklist using Redis for additional security.
+     */
     async logout(token: string) {
-        const deletedToken = await this.activeTokenModel.findOneAndDelete({ token: token }).exec();
-
-        if (!deletedToken) {
-            throw new HttpException({
-                success: false,
-                message: 'Invalid or expired token',
-                errors: { token: 'The provided token is not valid or has already been invalidated' },
-                code: 'AUTH_TOKEN_INVALID'
-            }, HttpStatus.UNAUTHORIZED);
-        }
+        // Client-side logout: Just return success
+        // The client should discard the JWT token
 
         return {
-            message: 'Logout successful',
-            userId: deletedToken.userId,
+            message: 'Logout successful. Please discard your token.',
             timestamp: new Date(),
         };
     }

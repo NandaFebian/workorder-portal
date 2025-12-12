@@ -1,59 +1,19 @@
 // src/auth/guards/auth.guard.ts
-import {
-    CanActivate,
-    ExecutionContext,
-    Injectable,
-    UnauthorizedException,
-} from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { ActiveToken, ActiveTokenDocument } from '../schemas/active-token.schema';
-import { UsersService } from 'src/users/users.service';
+import { Injectable } from '@nestjs/common';
+import { AuthGuard as PassportAuthGuard } from '@nestjs/passport';
 
+/**
+ * JWT Authentication Guard
+ * Extends Passport's JWT strategy guard
+ * 
+ * This guard:
+ * 1. Extracts JWT from Authorization header (Bearer <token>)
+ * 2. Verifies JWT signature and expiration
+ * 3. Calls JwtStrategy.validate() to get user
+ * 4. Attaches user to request.user
+ */
 @Injectable()
-export class AuthGuard implements CanActivate {
-    constructor(
-        @InjectModel(ActiveToken.name) private activeTokenModel: Model<ActiveTokenDocument>,
-        private usersService: UsersService,
-    ) { }
-
-    async canActivate(context: ExecutionContext): Promise<boolean> {
-        const request = context.switchToHttp().getRequest();
-        const token = this.extractTokenFromHeader(request);
-
-        if (!token) {
-            throw new UnauthorizedException('Token not found');
-        }
-
-        const activeToken = await this.activeTokenModel.findOne({ token }).exec();
-        if (!activeToken) {
-            throw new UnauthorizedException('Invalid or expired token');
-        }
-        const user = await this.usersService.findById(activeToken.userId).populate([
-            { path: 'companyId', select: 'name address description' },
-            { path: 'positionId', select: 'name description' },
-        ]).exec();
-
-        if (!user) {
-            throw new UnauthorizedException('User not found');
-        }
-        const userObject: any = user.toObject();
-
-        if (userObject.companyId) {
-            userObject.company = userObject.companyId;
-            delete userObject.companyId;
-        }
-        if (userObject.positionId) {
-            userObject.position = userObject.positionId;
-            delete userObject.positionId;
-        }
-        request['user'] = userObject;
-
-        return true;
-    }
-
-    private extractTokenFromHeader(request: any): string | undefined {
-        const [type, token] = request.headers.authorization?.split(' ') ?? [];
-        return type === 'Bearer' ? token : undefined;
-    }
+export class AuthGuard extends PassportAuthGuard('jwt') {
+    // Passport handles all the validation automatically
+    // No need for custom logic - JwtStrategy does the work
 }

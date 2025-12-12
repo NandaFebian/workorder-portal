@@ -336,15 +336,34 @@ export class WorkOrderService {
         const savedSubmissions: FormSubmissionDocument[] = [];
 
         for (const submission of createSubmissionsDto.submissions) {
+            // Fetch FormTemplate to get the correct field order
+            const formTemplate = await this.formsService.findTemplateById(submission.formId);
+
+            if (!formTemplate) {
+                throw new NotFoundException(`Form template with ID ${submission.formId} not found`);
+            }
+
+            // Map fieldsData using order from FormTemplate
+            const fieldsData = submission.fieldsData.map(field => {
+                // Find matching field in template by order
+                const templateField = formTemplate.fields.find(f => f.order === parseInt(field.order));
+
+                if (!templateField) {
+                    throw new BadRequestException(`Field with order ${field.order} not found in form template`);
+                }
+
+                return {
+                    order: templateField.order,
+                    value: field.value
+                };
+            });
+
             const submissionData = {
                 submissionType: submission.submissionType,
                 ownerId: new Types.ObjectId(submission.ownerId),
                 formId: new Types.ObjectId(submission.formId),
                 submittedBy: new Types.ObjectId(submission.submittedBy),
-                fieldsData: submission.fieldsData.map(field => ({
-                    order: parseInt(field.order),
-                    value: field.value
-                })),
+                fieldsData: fieldsData,
                 status: submission.status,
                 submittedAt: submission.submittedAt ? new Date(submission.submittedAt) : new Date()
             };

@@ -5,7 +5,7 @@ import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
 import { CompaniesModule } from '../company/companies.module';
 import { ActiveToken, ActiveTokenSchema } from './schemas/active-token.schema';
-import { AuthGuard } from './guards/auth.guard'; // <-- 1. Impor Guard
+import { AuthGuard } from './guards/auth.guard';
 
 @Module({
     imports: [
@@ -16,10 +16,10 @@ import { AuthGuard } from './guards/auth.guard'; // <-- 1. Impor Guard
     controllers: [AuthController],
     providers: [
         AuthService,
-        AuthGuard // <-- 2. Daftarkan sebagai provider
+        AuthGuard
     ],
     exports: [
-        AuthGuard, // <-- 3. Ekspor agar bisa dipakai modul lain
+        AuthGuard,
         MongooseModule.forFeature([{ name: ActiveToken.name, schema: ActiveTokenSchema }])
     ]
 })

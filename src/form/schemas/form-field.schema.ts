@@ -8,10 +8,10 @@ export class FormField {
     order: number;
 
     @Prop({ required: true })
-    label: string; // "name" di contoh Anda sekarang menjadi "label"
+    label: string;
 
     @Prop({ required: true })
-    type: string; // Menggantikan 'fieldType'
+    type: string;
 
     @Prop({ required: true, default: false })
     required: boolean;
@@ -20,7 +20,7 @@ export class FormField {
     placeholder: string;
 
     @Prop({ type: [Option], required: false, default: undefined })
-    options?: Option[]; // Menggunakan skema Option yang baru
+    options?: Option[];
 
     @Prop({ required: false })
     min?: number;

@@ -1,22 +1,19 @@
+import { VercelRequest, VercelResponse } from '@vercel/node';
 import { NestFactory } from '@nestjs/core';
+import { ExpressAdapter } from '@nestjs/platform-express';
+import express from 'express';
 import { AppModule } from '../src/app.module';
-import serverlessExpress from '@vendia/serverless-express';
-import { Callback, Context, Handler } from 'aws-lambda';
+import { setupApp } from '../src/app-setup';
 
-let server: Handler;
+let cachedServer: any;
 
-async function bootstrap() {
-    const app = await NestFactory.create(AppModule);
-    await app.init();
-    const expressApp = app.getHttpAdapter().getInstance();
-    return serverlessExpress({ app: expressApp });
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+    if (!cachedServer) {
+        const expressApp = express();
+        const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp));
+        setupApp(app);
+        await app.init();
+        cachedServer = expressApp;
+    }
+    return cachedServer(req, res);
 }
-
-export const handler: Handler = async (
-    event: any,
-    context: Context,
-    callback: Callback,
-) => {
-    server = server ?? (await bootstrap());
-    return server(event, context, callback);
-};

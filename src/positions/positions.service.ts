@@ -24,9 +24,9 @@ export class PositionsService {
                     { companyId: user.company._id },
                     { companyId: null } // Global positions
                 ]
-            }).exec();
+            }).sort({ createdAt: -1 }).exec();
         }
-        return this.positionModel.find({ isActive: true }).exec();
+        return this.positionModel.find({ isActive: true }).sort({ createdAt: -1 }).exec();
     }
 
     async findById(id: string): Promise<PositionDocument> {

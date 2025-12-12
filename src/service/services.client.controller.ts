@@ -1,37 +1,30 @@
 // src/service/services.client.controller.ts
-import { Controller, Get, HttpCode, HttpStatus, Param, Post, Body } from '@nestjs/common';
-import { ServicesClientService } from './services.client.service'; // Import service client
-import { FormsService } from 'src/form/form.service';
-import { SubmitFormDto } from 'src/form/dto/submit-form.dto';
+import { Controller, Get, HttpCode, HttpStatus, Param, Post, Body, UseGuards, ParseArrayPipe } from '@nestjs/common';
+import { ServicesClientService } from './services.client.service';
+import { SubmitIntakeFormItemDto } from './dto/submit-intake-forms.dto'; // Import DTO Baru
+import { AuthGuard } from 'src/auth/guards/auth.guard';
+import { GetUser } from 'src/common/decorators/get-user.decorator';
+import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 
 @Controller('public/services')
 export class ServicesClientController {
     constructor(
-        private readonly clientService: ServicesClientService, // Inject service client
-        private readonly formsService: FormsService
+        private readonly clientService: ServicesClientService,
     ) { }
 
-    @Get('company/:companyId')
-    @HttpCode(HttpStatus.OK)
-    async findAllByCompanyId(@Param('companyId') companyId: string) {
-        const services = await this.clientService.findAllByCompanyId(companyId);
-        return {
-            message: 'Load data success',
-            data: services,
-        };
-    }
-
+    // GET Detail Service (sesuai mock router.get("/:id"))
     @Get(':id')
     @HttpCode(HttpStatus.OK)
     async findById(@Param('id') id: string) {
-        // Panggil metode detail service yang baru
-        const serviceData = await this.clientService.findServiceDetailById(id);
+        const data = await this.clientService.findServiceDetailById(id);
+        // Mock response structure: { message, data: { service: ..., formQuantity: ... } }
         return {
             message: 'Load data success',
-            data: serviceData,
+            data: data,
         };
     }
 
+    // GET Intake Forms (sesuai mock router.get("/:id/intake-forms"))
     @Get(':id/intake-forms')
     @HttpCode(HttpStatus.OK)
     async getClientIntakeForms(@Param('id') id: string) {
@@ -42,17 +35,32 @@ export class ServicesClientController {
         };
     }
 
-    @Post(':id/intake-forms') // :id di sini adalah serviceId
+    // POST Submit Intake (sesuai mock router.post("/:id/intake-forms"))
+    @Post(':id/intake-forms')
+    @UseGuards(AuthGuard)
     @HttpCode(HttpStatus.CREATED)
     async submitIntakeForm(
         @Param('id') serviceId: string,
-        @Body() submitFormDto: SubmitFormDto
+        // Pastikan nama variabel di sini 'submissions' (array) bukan 'submitFormDto'
+        @Body(new ParseArrayPipe({ items: SubmitIntakeFormItemDto })) submissions: SubmitIntakeFormItemDto[],
+        @GetUser() user: AuthenticatedUser
     ) {
-        // Panggil metode submitForm publik dari FormsService
-        const submission = await this.formsService.submitPublicForm(submitFormDto, serviceId);
+        // Perbaikan: Kirim variabel 'submissions' ke service
+        const result = await this.clientService.processIntakeSubmission(serviceId, user, submissions);
+
         return {
-            message: 'Intake form submitted successfully',
-            data: submission,
+            message: 'Work order created successfully',
+            data: result,
+        };
+    }
+
+    @Get('company/:companyId')
+    @HttpCode(HttpStatus.OK)
+    async findAllByCompanyId(@Param('companyId') companyId: string) {
+        const services = await this.clientService.findAllByCompanyId(companyId);
+        return {
+            message: 'Load data success',
+            data: services,
         };
     }
 }

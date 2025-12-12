@@ -16,5 +16,4 @@ export interface AuthenticatedUser {
     role: string;
     company?: PopulatedField;
     position?: PopulatedField;
-    // Tambahkan properti lain dari UserDocument jika diperlukan, kecuali companyId dan positionId
 }

@@ -1,0 +1,111 @@
+﻿node.exe : FAIL test/
+repro-issue.e2e-spec.
+ts (5.189 s)
+At C:\Program Files\n
+odejs\npx.ps1:29 
+char:3
++   & $NODE_EXE 
+$NPX_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (FAIL te   
+ st/repro...ec.ts    
+ (5.189 s):Strin    
+g) [], RemoteExc    
+eption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+  Global Exception 
+Handling (e2e)
+    ├ù should return 
+400 (not 500) for 
+invalid ObjectId (28 
+ms)
+
+  ΓùÅ Global 
+Exception Handling 
+(e2e) ΓÇ║ should 
+return 400 (not 500) 
+for invalid ObjectId
+
+    expected 400 
+"Bad Request", got 
+401 "Unauthorized"
+
+    [0m [90m 26 
+|[39m         
+[36mreturn[39m requ
+est(app[33m.[39mget
+HttpServer())
+     [90m 27 |[39m 
+            [33m.[3
+9m[36mget[39m([32m
+`/forms/${invalidId}`
+[39m)
+    [31m[1m>[22m[
+39m[90m 28 |[39m   
+          [33m.[39m
+expect([35m400[39m)
+     [90m    |[39m 
+             
+[31m[1m^[22m[39m
+     [90m 29 |[39m 
+            [33m.[3
+9mexpect((res) 
+[33m=>[39m {
+     [90m 30 |[39m 
+                expec
+t(res[33m.[39mbody)
+[33m.[39mtoEqual(ex
+pect[33m.[39mobject
+Containing({
+     [90m 31 |[39m 
+                    
+code[33m:[39m expec
+t[33m.[39many([33m
+String[39m)[0m
+
+      at 
+Object.<anonymous> (t
+est/repro-issue.e2e-s
+pec.ts:28:14)
+      ----
+      at 
+Test._assertStatus (n
+ode_modules/supertest
+/lib/test.js:309:14)
+      at node_modules
+/supertest/lib/test.j
+s:365:13
+      at 
+Test._assertFunction 
+(node_modules/superte
+st/lib/test.js:342:13
+)
+      at Test.assert 
+(node_modules/superte
+st/lib/test.js:195:23
+)
+      at localAssert 
+(node_modules/superte
+st/lib/test.js:138:14
+)
+      at 
+Server.<anonymous> (n
+ode_modules/supertest
+/lib/test.js:152:11)
+
+Test Suites: 1 
+failed, 1 total
+Tests:       1 
+failed, 1 total
+Snapshots:   0 total
+Time:        5.506 
+s, estimated 6 s
+Ran all test suites 
+matching test/repro-i
+ssue.e2e-spec.ts.

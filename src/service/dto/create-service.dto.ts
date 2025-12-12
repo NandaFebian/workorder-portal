@@ -14,7 +14,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-// DTO untuk Staff (Tetap sama)
+// DTO untuk Staff
 class RequiredStaffDto {
     @IsMongoId({ message: 'positionId must be a valid MongoDB ObjectId' })
     @IsNotEmpty()
@@ -89,7 +89,7 @@ export class CreateServiceDto {
     @ValidateNested({ each: true })
     @Type(() => RequiredStaffDto)
     @ArrayMinSize(1, { message: 'At least one required staff must be specified' })
-    requiredStaff: RequiredStaffDto[];
+    requiredStaffs: RequiredStaffDto[];
 
     // Gunakan DTO dengan akses kontrol
     @IsArray()

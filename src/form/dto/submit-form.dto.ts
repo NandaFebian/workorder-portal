@@ -2,7 +2,7 @@
 import { Type } from 'class-transformer';
 import { IsMongoId, IsNotEmpty, IsArray, ValidateNested, IsString, IsDefined } from 'class-validator';
 
-class AnswerDto {
+export class AnswerDto {
     @IsString()
     @IsNotEmpty()
     fieldId: string;

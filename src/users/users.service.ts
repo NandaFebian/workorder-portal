@@ -43,6 +43,7 @@ export class UsersService {
         return this.userModel.find(query)
             .populate('positionId', 'name') // Populate posisi agar lebih informatif
             .select('-password') // Jangan sertakan password secara default
+            .sort({ createdAt: -1 })
             .exec();
     }
 }

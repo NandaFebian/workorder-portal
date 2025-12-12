@@ -44,9 +44,13 @@ export class CompaniesInternalController {
     }
 
     @Get('invitations/history')
-    @UseGuards(AuthGuard)
+    @UseGuards(AuthGuard, RolesGuard)
+    @Roles(Role.CompanyOwner, Role.CompanyManager)
     async getInvitationHistory(@GetUser() user: AuthenticatedUser) {
-        return this.companiesInternalService.getInvitationHistory(user._id.toString());
+        if (!user.company?._id) {
+            throw new ForbiddenException('You are not associated with any company.');
+        }
+        return this.companiesInternalService.getInvitationHistory(user.company._id.toString());
     }
 
     @Get('employees')

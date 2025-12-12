@@ -3,7 +3,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Company, CompanyDocument } from './schemas/company.schemas';
-import { ServicesClientService } from 'src/service/services.client.service'; // Import service client
+import { ServicesClientService } from 'src/service/services.client.service';
 
 @Injectable()
 export class CompaniesClientService {
@@ -15,6 +15,7 @@ export class CompaniesClientService {
     async findAllPublic(): Promise<CompanyDocument[]> {
         return this.companyModel.find({ isActive: true })
             .populate('ownerId', 'name email')
+            .sort({ createdAt: -1 })
             .exec();
     }
 
@@ -24,7 +25,7 @@ export class CompaniesClientService {
         }
 
         const company = await this.companyModel.findOne({ _id: id, isActive: true })
-            .populate('ownerId', 'name email')
+            .select('-ownerId') // Tidak menyertakan ownerId
             .exec();
 
         if (!company) {

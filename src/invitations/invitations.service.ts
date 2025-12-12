@@ -32,6 +32,7 @@ export class InvitationsService {
             .populate('companyId', 'name')
             .populate('positionId', 'name')
             .select('-userId') // Sembunyikan userId
+            .sort({ createdAt: -1 })
             .exec();
 
         const transformedInvitations = pendingInvitationsDocs.map(inv => {

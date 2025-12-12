@@ -1,29 +1,30 @@
 // src/service/services.client.service.ts
-import {
-    Injectable,
-    NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Service, type ServiceDocument } from './schemas/service.schema';
 import { FormsService } from 'src/form/form.service';
 import { getServicesWithAggregation } from './helpers/service-aggregation.helper';
+import { ClientServiceRequestService } from 'src/client-service-request/client-service-request.service';
+import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
+import { SubmitIntakeFormItemDto } from './dto/submit-intake-forms.dto'; // DTO Baru
+import { FormSubmission, FormSubmissionDocument } from 'src/form/schemas/form-submissions.schema';
 
 @Injectable()
 export class ServicesClientService {
     constructor(
         @InjectModel(Service.name) private serviceModel: Model<ServiceDocument>,
+        @InjectModel(FormSubmission.name) private submissionModel: Model<FormSubmissionDocument>,
         private readonly formsService: FormsService,
+        private readonly csrService: ClientServiceRequestService,
     ) { }
 
     private async findAndValidatePublicService(id: string): Promise<ServiceDocument> {
         if (!Types.ObjectId.isValid(id)) {
             throw new NotFoundException(`Invalid service ID: ${id}`);
         }
-
-        // Pilih field yang diperlukan
         const service = await this.serviceModel.findById(id).select(
-            'companyId title description accessType isActive workOrderForms reportForms clientIntakeForms formKey' // Tambahkan formKey untuk getLatestForms
+            'companyId title description accessType isActive workOrderForms reportForms clientIntakeForms formKey'
         ).exec();
 
         if (!service || !service.isActive || service.accessType !== 'public') {
@@ -33,30 +34,18 @@ export class ServicesClientService {
     }
 
     async findAllByCompanyId(companyId: string): Promise<any[]> {
-        if (!Types.ObjectId.isValid(companyId)) {
-            throw new NotFoundException(`Invalid company ID: ${companyId}`);
-        }
-        // Gunakan helper agregasi, tapi jangan populate forms (false)
-        const latestPublicServices = await getServicesWithAggregation(
+        if (!Types.ObjectId.isValid(companyId)) throw new NotFoundException(`Invalid company ID: ${companyId}`);
+        return getServicesWithAggregation(
             this.serviceModel,
             this.formsService,
-            {
-                companyId: new Types.ObjectId(companyId),
-                isActive: true,
-                accessType: 'public'
-            },
-            false // includeForms = false
+            { companyId: new Types.ObjectId(companyId), isActive: true, accessType: 'public' },
+            false
         );
-        return latestPublicServices;
     }
 
-    // Ini untuk GET /public/services/{id} (Service Detail)
     async findServiceDetailById(id: string): Promise<any> {
         const service = await this.findAndValidatePublicService(id);
-
-        const formQuantity = (service.workOrderForms?.length || 0) +
-            (service.reportForms?.length || 0) +
-            (service.clientIntakeForms?.length || 0);
+        const formQuantity = (service.workOrderForms?.length || 0) + (service.reportForms?.length || 0) + (service.clientIntakeForms?.length || 0);
 
         return {
             service: {
@@ -71,34 +60,79 @@ export class ServicesClientService {
         };
     }
 
-    // Ini untuk GET /public/services/{id}/intake-forms
     async getClientIntakeFormsForService(serviceId: string): Promise<any[]> {
         const service = await this.findAndValidatePublicService(serviceId);
-
         const intakeFormsInfo = service.clientIntakeForms || [];
-
         intakeFormsInfo.sort((a, b) => a.order - b.order);
 
         const populatedForms = await Promise.all(
             intakeFormsInfo.map(async (formInfo) => {
                 try {
-                    // findLatestTemplateByKey sudah diubah untuk return null jika tidak ada
                     const latestForm = await this.formsService.findLatestTemplateByKey(formInfo.formKey);
-                    if (!latestForm) {
-                        console.warn(`Form template with key ${formInfo.formKey} not found for service ${serviceId}.`);
-                        return null;
-                    }
-                    return {
-                        order: formInfo.order,
-                        form: latestForm, // Mengembalikan seluruh objek template form
-                    };
+                    if (!latestForm) return null;
+                    return { order: formInfo.order, form: latestForm };
                 } catch (error) {
-                    console.error(`Error processing formKey ${formInfo.formKey} for service ${serviceId}: ${error.message}`);
                     return null;
                 }
             })
         );
-
         return populatedForms.filter(pf => pf !== null);
+    }
+
+    // === LOGIC POST SUBMISSION ===
+    async processIntakeSubmission(serviceId: string, user: AuthenticatedUser, submissions: SubmitIntakeFormItemDto[]) {
+        // 1. Validasi Service
+        const service = await this.findAndValidatePublicService(serviceId);
+
+        // 2. Snapshot Client Intake Form
+        const intakeFormsInfo = service.clientIntakeForms || [];
+        const formSnapshots = await Promise.all(
+            intakeFormsInfo.map(async (item) => {
+                try {
+                    const template = await this.formsService.findLatestTemplateByKey(item.formKey);
+                    if (!template) return null;
+                    return {
+                        order: item.order,
+                        form: {
+                            // FIX TS Error: Cast _id ke any atau ObjectId agar compatible dengan Schema Snapshot
+                            _id: template._id as any,
+                            title: template.title,
+                            description: template.description,
+                            formType: template.formType
+                        }
+                    };
+                } catch (error) {
+                    return null;
+                }
+            })
+        );
+        const validFormSnapshots = formSnapshots.filter(f => f !== null);
+
+        // 3. Create CSR (Tabel 1)
+        // FIX TS Error: Cast property ID ke 'any' untuk mengatasi strict type checking Mongoose/TS
+        const newCSR = await this.csrService.create({
+            serviceId: service._id as any,
+            clientId: user._id as any,
+            companyId: service.companyId as any,
+            status: 'received',
+            clientIntakeForm: validFormSnapshots as any,
+        });
+
+        // 4. Create Submissions (Tabel 2)
+        if (Array.isArray(submissions) && submissions.length > 0) {
+            const submissionDocs = submissions.map(s => ({
+                ownerId: newCSR._id, // Link ke CSR
+                formId: new Types.ObjectId(s.formId),
+                submissionType: 'intake',
+                submittedBy: new Types.ObjectId(user._id.toString()),
+                fieldsData: s.fieldsData,
+                status: 'submitted',
+                submittedAt: new Date()
+            }));
+
+            await this.submissionModel.insertMany(submissionDocs);
+        }
+
+        return newCSR;
     }
 }

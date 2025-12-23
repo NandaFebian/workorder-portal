@@ -18,7 +18,11 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "seed": "ts-node -r tsconfig-paths/register src/database/seed.ts seed",
+    "seed:clear": "ts-node -r tsconfig-paths/register src/database/seed.ts clear",
+    "seed:status": "ts-node -r tsconfig-paths/register src/database/seed.ts status",
+    "generate:erd": "ts-node -r tsconfig-paths/register src/generate-erd.ts"
   },
   "engine": {
     "node": "22.x"
@@ -39,6 +43,7 @@
     "class-validator": "^0.14.2",
     "helmet": "^8.1.0",
     "mongoose": "^8.18.1",
+    "mongoose-erd-generator": "^0.0.5",
     "nestjs-rate-limiter": "^3.1.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",

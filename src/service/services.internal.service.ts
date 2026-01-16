@@ -95,17 +95,34 @@ export class ServicesInternalService {
         }
     }
 
-    async update(serviceKey: string, dto: UpdateServiceDto, user: AuthenticatedUser): Promise<any> {
+    async update(id: string, dto: UpdateServiceDto, user: AuthenticatedUser): Promise<any> {
         if (!user.company?._id) {
             throw new ForbiddenException('User is not associated with any company.');
         }
+
+        // Validate MongoDB ObjectId
+        if (!Types.ObjectId.isValid(id)) {
+            throw new NotFoundException(`Invalid service ID: ${id}`);
+        }
+
+        // Find the service by ID
+        const currentService = await this.serviceModel.findOne({
+            _id: new Types.ObjectId(id),
+            companyId: user.company._id
+        }).exec();
+
+        if (!currentService) {
+            throw new NotFoundException(`Service with ID ${id} not found`);
+        }
+
+        // Get the latest version of this service by using serviceKey
         const latestVersion = await this.serviceModel.findOne({
-            serviceKey,
+            serviceKey: currentService.serviceKey,
             companyId: user.company._id
         }).sort({ __v: -1 }).exec();
 
         if (!latestVersion) {
-            throw new NotFoundException(`Service with key ${serviceKey} not found`);
+            throw new NotFoundException(`Service with key ${currentService.serviceKey} not found`);
         }
 
         const currentIntakeForms: IOrderedForm[] = (latestVersion.clientIntakeForms as unknown as IOrderedForm[]) || [];
@@ -183,5 +200,30 @@ export class ServicesInternalService {
         }
 
         return services[0];
+    }
+
+    async delete(id: string, user: AuthenticatedUser): Promise<void> {
+        if (!user.company?._id) {
+            throw new ForbiddenException('User is not associated with any company.');
+        }
+
+        // Validate MongoDB ObjectId
+        if (!Types.ObjectId.isValid(id)) {
+            throw new NotFoundException(`Invalid service ID: ${id}`);
+        }
+
+        // Find the service by ID
+        const service = await this.serviceModel.findOne({
+            _id: new Types.ObjectId(id),
+            companyId: user.company._id
+        }).exec();
+
+        if (!service) {
+            throw new NotFoundException(`Service with ID ${id} not found`);
+        }
+
+        // Soft delete: set isActive to false
+        service.isActive = false;
+        await service.save();
     }
 }

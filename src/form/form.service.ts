@@ -88,9 +88,19 @@ export class FormsService {
             throw new NotFoundException(`Form template with ID ${dto.formTemplateId} not found`);
         }
 
+        // Map answers dari DTO ke fieldsData yang dibutuhkan schema
+        const fieldsData = dto.answers.map((answer, index) => ({
+            order: index + 1,
+            value: answer.value
+        }));
+
         const submission = new this.formSubmissionModel({
-            ...dto,
-            submittedById: user._id,
+            formId: dto.formTemplateId,  // Map formTemplateId ke formId
+            ownerId: user._id,  // Set ownerId dari authenticated user
+            submittedBy: user._id,  // Set submittedBy
+            fieldsData: fieldsData,  // Map answers ke fieldsData
+            submissionType: template.formType,  // Set submissionType dari template
+            status: 'submitted',
         });
 
         return submission.save();

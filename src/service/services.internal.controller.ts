@@ -9,6 +9,7 @@ import {
     HttpCode,
     HttpStatus,
     Put,
+    Delete,
 } from '@nestjs/common';
 // Import Service Internal
 import { ServicesInternalService } from './services.internal.service';
@@ -54,15 +55,23 @@ export class ServicesController {
         return ResponseUtil.success('Load data success', service);
     }
 
-    @Put(':serviceKey')
+    @Put(':id')
     @HttpCode(HttpStatus.OK)
     @Roles('owner_company', 'manager_company')
     async update(
-        @Param('serviceKey') serviceKey: string,
+        @Param('id') id: string,
         @Body() updateServiceDto: UpdateServiceDto,
         @GetUser() user: AuthenticatedUser,
     ) {
-        const populatedUpdatedService = await this.internalService.update(serviceKey, updateServiceDto, user);
+        const populatedUpdatedService = await this.internalService.updateById(id, updateServiceDto, user);
         return ResponseUtil.success('New service version created successfully', populatedUpdatedService);
+    }
+
+    @Delete(':id')
+    @HttpCode(HttpStatus.OK)
+    @Roles('owner_company', 'manager_company')
+    async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+        await this.internalService.removeById(id, user);
+        return ResponseUtil.success('Service deleted successfully', null);
     }
 }

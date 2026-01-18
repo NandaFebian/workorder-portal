@@ -149,6 +149,30 @@ export class ServicesInternalService {
         }
     }
 
+    async updateById(id: string, dto: UpdateServiceDto, user: AuthenticatedUser): Promise<any> {
+        if (!user.company?._id) {
+            throw new ForbiddenException('User is not associated with any company.');
+        }
+
+        // First, find the service by ID to get its serviceKey
+        if (!Types.ObjectId.isValid(id)) {
+            throw new NotFoundException(`Invalid service ID: ${id}`);
+        }
+
+        const service = await this.serviceModel.findOne({
+            _id: new Types.ObjectId(id),
+            companyId: user.company._id,
+            deletedAt: null
+        }).exec();
+
+        if (!service) {
+            throw new NotFoundException(`Service with ID ${id} not found`);
+        }
+
+        // Now call the existing update method with serviceKey
+        return this.update(service.serviceKey, dto, user);
+    }
+
     async findAll(user: AuthenticatedUser): Promise<any[]> {
         if (!user.company?._id) {
             throw new ForbiddenException('User is not associated with any company.');
@@ -183,5 +207,35 @@ export class ServicesInternalService {
         }
 
         return services[0];
+    }
+
+    async removeById(id: string, user: AuthenticatedUser): Promise<void> {
+        if (!user.company?._id) {
+            throw new ForbiddenException('User is not associated with any company.');
+        }
+
+        // First, find the service by ID to get its serviceKey
+        if (!Types.ObjectId.isValid(id)) {
+            throw new NotFoundException(`Invalid service ID: ${id}`);
+        }
+
+        const service = await this.serviceModel.findOne({
+            _id: new Types.ObjectId(id),
+            companyId: user.company._id,
+            deletedAt: null
+        }).exec();
+
+        if (!service) {
+            throw new NotFoundException(`Service with ID ${id} not found`);
+        }
+
+        // Soft delete all versions with the same serviceKey
+        await this.serviceModel.updateMany(
+            {
+                serviceKey: service.serviceKey,
+                companyId: user.company._id
+            },
+            { $set: { deletedAt: new Date() } }
+        ).exec();
     }
 }

@@ -1,0 +1,1545 @@
+{
+    "info": {
+        "_postman_id": "workorder-portal-collection",
+        "name": "Work Order Portal API",
+        "description": "Complete API collection for Work Order Portal with sample request bodies matching DTOs",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{authToken}}",
+                "type": "string"
+            }
+        ]
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:3000",
+            "type": "string"
+        },
+        {
+            "key": "authToken",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "ownerId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "companyId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "positionId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "formId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "serviceId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "workOrderId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "clientServiceRequestId",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "1. Authentication",
+            "item": [
+                {
+                    "name": "Register Company Owner",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201 || pm.response.code === 200) {",
+                                    "    const jsonData = pm.response.json();",
+                                    "    if (jsonData.data) {",
+                                    "        pm.collectionVariables.set('ownerId', jsonData.data.user._id);",
+                                    "        pm.collectionVariables.set('companyId', jsonData.data.company._id);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Jane Smith\",\n  \"email\": \"jane.smith@company.com\",\n  \"password\": \"companyPassword123\",\n  \"companyName\": \"PT Teknologi Nusantara\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/register-company",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "register-company"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Register User (Client)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201 || pm.response.code === 200) {",
+                                    "    const jsonData = pm.response.json();",
+                                    "    if (jsonData.data && jsonData.data.user) {",
+                                    "        pm.collectionVariables.set('clientId', jsonData.data.user._id);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"clientPassword123\",\n  \"role\": \"client\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/register",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "register"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Register User (Unassigned Staff)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Bob Wilson\",\n  \"email\": \"bob.wilson@example.com\",\n  \"password\": \"staffPassword123\",\n  \"role\": \"staff_unassigned\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/register",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "register"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const jsonData = pm.response.json();",
+                                    "    if (jsonData.data && jsonData.data.token) {",
+                                    "        const token = jsonData.data.token.replace('Bearer ', '');",
+                                    "        pm.collectionVariables.set('authToken', token);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"jane.smith@company.com\",\n  \"password\": \"companyPassword123\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/profile",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "profile"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Logout",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/logout",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "logout"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "2. Company Management",
+            "item": [
+                {
+                    "name": "Get Company (Owner)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/company",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "company"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Company by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/company/{{companyId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "company",
+                                "{{companyId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Company",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"PT Teknologi Nusantara Updated\",\n  \"address\": \"Jl. Gatot Subroto No. 456, Jakarta\",\n  \"description\": \"Updated company description\",\n  \"isActive\": true\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/company/{{companyId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "company",
+                                "{{companyId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Invite Employees",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"invites\": [\n    {\n      \"email\": \"manager@company.com\",\n      \"role\": \"manager_company\",\n      \"positionId\": \"{{positionId}}\"\n    },\n    {\n      \"email\": \"staff1@company.com\",\n      \"role\": \"staff_company\",\n      \"positionId\": \"{{positionId}}\"\n    }\n  ]\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/company/invite",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "company",
+                                "invite"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Employees",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/company/employees",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "company",
+                                "employees"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Invitation History",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/company/invitations/history",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "company",
+                                "invitations",
+                                "history"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Companies (Public)",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/public/companies",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "public",
+                                "companies"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Company by ID (Public)",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/public/companies/{{companyId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "public",
+                                "companies",
+                                "{{companyId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Company Services (Public)",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/public/companies/{{companyId}}/services",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "public",
+                                "companies",
+                                "{{companyId}}",
+                                "services"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "3. Position Management",
+            "item": [
+                {
+                    "name": "Create Position",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201 || pm.response.code === 200) {",
+                                    "    const jsonData = pm.response.json();",
+                                    "    if (jsonData.data && jsonData.data._id) {",
+                                    "        pm.collectionVariables.set('positionId', jsonData.data._id);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Software Engineer\",\n  \"description\": \"Bertanggung jawab untuk mengembangkan dan memelihara aplikasi\",\n  \"isActive\": true\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/positions",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "positions"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Positions",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/positions",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "positions"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Position by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/positions/{{positionId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "positions",
+                                "{{positionId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Position",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Senior Software Engineer\",\n  \"description\": \"Updated description for senior role\",\n  \"isActive\": true\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/positions/{{positionId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "positions",
+                                "{{positionId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Position",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/positions/{{positionId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "positions",
+                                "{{positionId}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "4. Form Templates",
+            "item": [
+                {
+                    "name": "Create Form Template (Intake)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201 || pm.response.code === 200) {",
+                                    "    const jsonData = pm.response.json();",
+                                    "    if (jsonData.data && jsonData.data._id) {",
+                                    "        pm.collectionVariables.set('formId', jsonData.data._id);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"Formulir Permintaan Layanan\",\n  \"description\": \"Formulir untuk mengajukan permintaan layanan baru\",\n  \"formType\": \"intake\",\n  \"fields\": [\n    {\n      \"order\": 1,\n      \"label\": \"Nama Lengkap\",\n      \"type\": \"text\",\n      \"required\": true,\n      \"placeholder\": \"Masukkan nama lengkap Anda\"\n    },\n    {\n      \"order\": 2,\n      \"label\": \"Email\",\n      \"type\": \"email\",\n      \"required\": true,\n      \"placeholder\": \"email@example.com\"\n    },\n    {\n      \"order\": 3,\n      \"label\": \"Jenis Layanan\",\n      \"type\": \"select\",\n      \"required\": true,\n      \"options\": [\n        {\n          \"key\": \"web_dev\",\n          \"value\": \"Website Development\"\n        },\n        {\n          \"key\": \"mobile_dev\",\n          \"value\": \"Mobile App Development\"\n        }\n      ]\n    },\n    {\n      \"order\": 4,\n      \"label\": \"Budget (dalam juta rupiah)\",\n      \"type\": \"number\",\n      \"required\": true,\n      \"min\": 10,\n      \"max\": 1000\n    }\n  ]\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/forms",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "forms"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Form Template (Work Order)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"Formulir Work Order\",\n  \"description\": \"Formulir untuk detail pekerjaan\",\n  \"formType\": \"work_order\",\n  \"fields\": [\n    {\n      \"order\": 1,\n      \"label\": \"Analisis Kebutuhan\",\n      \"type\": \"textarea\",\n      \"required\": true\n    },\n    {\n      \"order\": 2,\n      \"label\": \"Progress (%)\",\n      \"type\": \"number\",\n      \"required\": true,\n      \"min\": 0,\n      \"max\": 100\n    }\n  ]\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/forms",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "forms"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Form Template (Report)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"Formulir Laporan\",\n  \"description\": \"Formulir untuk laporan progress\",\n  \"formType\": \"report\",\n  \"fields\": [\n    {\n      \"order\": 1,\n      \"label\": \"Laporan Progress\",\n      \"type\": \"textarea\",\n      \"required\": true\n    },\n    {\n      \"order\": 2,\n      \"label\": \"Kendala\",\n      \"type\": \"textarea\",\n      \"required\": false\n    }\n  ]\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/forms",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "forms"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Forms",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/forms",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "forms"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Form by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/forms/{{formId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "forms",
+                                "{{formId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Form Template",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"Updated Form Title\",\n  \"description\": \"Updated description\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/forms/{{formId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "forms",
+                                "{{formId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Submit Form",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"formTemplateId\": \"{{formId}}\",\n  \"answers\": [\n    {\n      \"fieldId\": \"field_1\",\n      \"value\": \"John Doe\"\n    },\n    {\n      \"fieldId\": \"field_2\",\n      \"value\": \"john.doe@example.com\"\n    },\n    {\n      \"fieldId\": \"field_3\",\n      \"value\": \"web_dev\"\n    },\n    {\n      \"fieldId\": \"field_4\",\n      \"value\": 75\n    }\n  ]\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/forms/submissions",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "forms",
+                                "submissions"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "5. Service Management",
+            "item": [
+                {
+                    "name": "Create Service",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201 || pm.response.code === 200) {",
+                                    "    const jsonData = pm.response.json();",
+                                    "    if (jsonData.data && jsonData.data._id) {",
+                                    "        pm.collectionVariables.set('serviceId', jsonData.data._id);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"Website Development Service\",\n  \"description\": \"Layanan pembuatan website profesional untuk bisnis Anda\",\n  \"requiredStaffs\": [\n    {\n      \"positionId\": \"{{positionId}}\",\n      \"minimumStaff\": 1,\n      \"maximumStaff\": 3\n    }\n  ],\n  \"workOrderForms\": [\n    {\n      \"order\": 1,\n      \"formId\": \"{{formId}}\",\n      \"fillableByRoles\": [\"manager_company\", \"staff_company\"],\n      \"viewableByRoles\": [\"manager_company\", \"staff_company\", \"owner_company\"]\n    }\n  ],\n  \"reportForms\": [\n    {\n      \"order\": 1,\n      \"formId\": \"{{formId}}\",\n      \"fillableByRoles\": [\"staff_company\"],\n      \"viewableByRoles\": [\"manager_company\", \"staff_company\", \"owner_company\"]\n    }\n  ],\n  \"accessType\": \"public\",\n  \"isActive\": true,\n  \"clientIntakeForms\": [\n    {\n      \"order\": 1,\n      \"formId\": \"{{formId}}\"\n    }\n  ]\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/services",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "services"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Services",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/services",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "services"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Service by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/services/{{serviceId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "services",
+                                "{{serviceId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Service",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"Updated Website Development Service\",\n  \"description\": \"Updated description\",\n  \"accessType\": \"member_only\",\n  \"isActive\": true\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/services/{{serviceId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "services",
+                                "{{serviceId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Service by ID (Public)",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/public/services/{{serviceId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "public",
+                                "services",
+                                "{{serviceId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Service Intake Forms (Public)",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/public/services/{{serviceId}}/intake-forms",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "public",
+                                "services",
+                                "{{serviceId}}",
+                                "intake-forms"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Submit Intake Forms (Public)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201 || pm.response.code === 200) {",
+                                    "    const jsonData = pm.response.json();",
+                                    "    if (jsonData.data && jsonData.data._id) {",
+                                    "        pm.collectionVariables.set('clientServiceRequestId', jsonData.data._id);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{authToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "[\n  {\n    \"formId\": \"{{formId}}\",\n    \"fieldsData\": [\n      {\n        \"order\": 1,\n        \"value\": \"PT ABC Indonesia\"\n      },\n      {\n        \"order\": 2,\n        \"value\": \"contact@abc.com\"\n      },\n      {\n        \"order\": 3,\n        \"value\": \"web_dev\"\n      },\n      {\n        \"order\": 4,\n        \"value\": 50\n      }\n    ]\n  }\n]",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/public/services/{{serviceId}}/intake-forms",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "public",
+                                "services",
+                                "{{serviceId}}",
+                                "intake-forms"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Services by Company (Public)",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/public/services/company/{{companyId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "public",
+                                "services",
+                                "company",
+                                "{{companyId}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "6. Client Service Request",
+            "item": [
+                {
+                    "name": "Get All CSR (Public)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/public/client-service-request",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "public",
+                                "client-service-request"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get CSR by ID (Public)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/public/client-service-request/{{clientServiceRequestId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "public",
+                                "client-service-request",
+                                "{{clientServiceRequestId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get All CSR (Internal)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/client-service-request",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "client-service-request"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get CSR by ID (Internal)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/client-service-request/{{clientServiceRequestId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "client-service-request",
+                                "{{clientServiceRequestId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Approve CSR",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/client-service-request/{{clientServiceRequestId}}/approve",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "client-service-request",
+                                "{{clientServiceRequestId}}",
+                                "approve"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Reject CSR",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/client-service-request/{{clientServiceRequestId}}/reject",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "client-service-request",
+                                "{{clientServiceRequestId}}",
+                                "reject"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "7. Work Order",
+            "item": [
+                {
+                    "name": "Create Work Order",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201 || pm.response.code === 200) {",
+                                    "    const jsonData = pm.response.json();",
+                                    "    if (jsonData.data && jsonData.data._id) {",
+                                    "        pm.collectionVariables.set('workOrderId', jsonData.data._id);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"clientServiceRequestId\": \"{{clientServiceRequestId}}\",\n  \"serviceId\": \"{{serviceId}}\",\n  \"description\": \"Pembuatan website e-commerce untuk toko online\",\n  \"priority\": \"high\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/workorders",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "workorders"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Work Orders",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/workorders",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "workorders"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Work Order by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/workorders/{{workOrderId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "workorders",
+                                "{{workOrderId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Work Order",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"description\": \"Updated description for work order\",\n  \"priority\": \"medium\",\n  \"notes\": \"Work order sedang dikerjakan oleh tim\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/workorders/{{workOrderId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "workorders",
+                                "{{workOrderId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Work Order Status",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"status\": \"in_progress\",\n  \"reason\": \"Pekerjaan dimulai oleh tim\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/workorders/{{workOrderId}}/status",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "workorders",
+                                "{{workOrderId}}",
+                                "status"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Assign Staff",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"staffEmail\": [\n    \"staff1@company.com\",\n    \"staff2@company.com\"\n  ]\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/workorders/{{workOrderId}}/assign-staffs",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "workorders",
+                                "{{workOrderId}}",
+                                "assign-staffs"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Submissions",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"submissions\": [\n    {\n      \"ownerId\": \"{{workOrderId}}\",\n      \"formId\": \"{{formId}}\",\n      \"submissionType\": \"work_order\",\n      \"fieldsData\": [\n        {\n          \"order\": \"1\",\n          \"value\": \"Analisis kebutuhan sistem\"\n        },\n        {\n          \"order\": \"2\",\n          \"value\": 80\n        }\n      ],\n      \"status\": \"submitted\",\n      \"submittedBy\": \"{{ownerId}}\"\n    }\n  ]\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/workorders/{{workOrderId}}/submissions",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "workorders",
+                                "{{workOrderId}}",
+                                "submissions"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Set Work Order Ready",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/workorders/{{workOrderId}}/ready",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "workorders",
+                                "{{workOrderId}}",
+                                "ready"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Set Work Order In Progress",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/workorders/{{workOrderId}}/in-progress",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "workorders",
+                                "{{workOrderId}}",
+                                "in-progress"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Staff Work Orders",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/staff/work-orders",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "staff",
+                                "work-orders"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Staff Work Order by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/staff/work-orders/{{workOrderId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "staff",
+                                "work-orders",
+                                "{{workOrderId}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "8. Work Report",
+            "item": [
+                {
+                    "name": "Create Work Report",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"workOrderId\": \"{{workOrderId}}\",\n  \"companyId\": \"{{companyId}}\",\n  \"reportForms\": [\n    {\n      \"formId\": \"{{formId}}\",\n      \"submissionId\": \"submission_id_here\"\n    }\n  ],\n  \"status\": \"in_progress\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/workreports",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "workreports"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Work Report by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/workreports/{{workReportId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "workreports",
+                                "{{workReportId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Work Report",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"status\": \"completed\",\n  \"startedAt\": \"2026-01-10T08:00:00.000Z\",\n  \"completedAt\": \"2026-01-17T17:00:00.000Z\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/workreports/{{workReportId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "workreports",
+                                "{{workReportId}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "9. Invitations",
+            "item": [
+                {
+                    "name": "Get Pending Invitations",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/invitations/pending",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "invitations",
+                                "pending"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Accept Invitation",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/invitations/{{invitationId}}/accept",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "invitations",
+                                "{{invitationId}}",
+                                "accept"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Reject Invitation",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/invitations/{{invitationId}}/reject",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "invitations",
+                                "{{invitationId}}",
+                                "reject"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "10. Membership",
+            "item": [
+                {
+                    "name": "Get All Memberships",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/memberships",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "memberships"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Generate Membership Codes",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"amount\": 10,\n  \"prefix\": \"MEMBER2026\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/memberships/generate",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "memberships",
+                                "generate"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Claim Membership Code",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"code\": \"MEMBER2026-ABC123XYZ\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/memberships/claim",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "memberships",
+                                "claim"
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}

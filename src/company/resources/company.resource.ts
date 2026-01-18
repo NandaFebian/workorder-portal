@@ -7,7 +7,14 @@ export class CompanyResource {
      * Transform company data
      */
     static transformCompany(company: any): any {
-        return company.toObject ? company.toObject() : company;
+        const companyObj = company.toObject ? company.toObject() : { ...company };
+
+        if (companyObj.ownerId) {
+            companyObj.owner = companyObj.ownerId;
+            delete companyObj.ownerId;
+        }
+
+        return companyObj;
     }
 
     /**

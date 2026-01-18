@@ -20,20 +20,21 @@ export class PositionsService {
             }
             return this.positionModel.find({
                 isActive: true,
+                deletedAt: null,
                 $or: [
                     { companyId: user.company._id },
                     { companyId: null } // Global positions
                 ]
             }).sort({ createdAt: -1 }).exec();
         }
-        return this.positionModel.find({ isActive: true }).sort({ createdAt: -1 }).exec();
+        return this.positionModel.find({ isActive: true, deletedAt: null }).sort({ createdAt: -1 }).exec();
     }
 
     async findById(id: string): Promise<PositionDocument> {
         if (!Types.ObjectId.isValid(id)) {
             throw new NotFoundException(`Invalid position ID: ${id}`);
         }
-        const position = await this.positionModel.findById(id).exec();
+        const position = await this.positionModel.findOne({ _id: id, deletedAt: null }).exec();
         if (!position) {
             throw new NotFoundException(`Position with ID ${id} not found`);
         }
@@ -88,9 +89,8 @@ export class PositionsService {
             }
         }
 
-        const result = await this.positionModel.deleteOne({ _id: id }).exec();
-        if (result.deletedCount === 0) {
-            throw new NotFoundException(`Position with ID ${id} not found`);
-        }
+        // Soft delete: set deletedAt to current timestamp
+        existingPosition.deletedAt = new Date();
+        await existingPosition.save();
     }
 }

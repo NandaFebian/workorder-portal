@@ -1,9 +1,13 @@
-import { Controller, Get, Post, Put, Body, Param, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
 import { WorkReportService } from './work-report.service';
 import { CreateWorkReportDto } from './dto/create-work-report.dto';
 import { UpdateWorkReportDto } from './dto/update-work-report.dto';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { ResponseUtil } from 'src/common/utils/response.util';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { GetUser } from 'src/common/decorators/get-user.decorator';
+import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 // import { RolesGuard } from 'src/auth/guards/roles.guard'; // Jika perlu role specific
 
 @Controller('workreports')
@@ -42,5 +46,13 @@ export class WorkReportController {
             message: 'Work report updated successfully',
             data,
         };
+    }
+
+    @Delete(':id')
+    @HttpCode(HttpStatus.OK)
+    @Roles('owner_company', 'manager_company')
+    async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+        await this.workReportService.remove(id);
+        return ResponseUtil.success('Work report deleted successfully', null);
     }
 }

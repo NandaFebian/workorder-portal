@@ -37,11 +37,11 @@ export class MembershipService {
     }
 
     async findAll(): Promise<MembershipCodeDocument[]> {
-        return this.membershipCodeModel.find().populate('claimedBy', 'name email').sort({ createdAt: -1 }).exec();
+        return this.membershipCodeModel.find({ deletedAt: null }).populate('claimedBy', 'name email').sort({ createdAt: -1 }).exec();
     }
 
     async claimCode(dto: ClaimMemberCodeDto, user: AuthenticatedUser): Promise<MembershipCodeDocument> {
-        const codeDoc = await this.membershipCodeModel.findOne({ code: dto.code });
+        const codeDoc = await this.membershipCodeModel.findOne({ code: dto.code, deletedAt: null });
 
         if (!codeDoc) {
             throw new NotFoundException('Invalid membership code');
@@ -56,5 +56,20 @@ export class MembershipService {
         codeDoc.claimedAt = new Date();
 
         return codeDoc.save() as any;
+    }
+
+    async remove(id: string): Promise<void> {
+        if (!Types.ObjectId.isValid(id)) {
+            throw new NotFoundException('Invalid membership code ID');
+        }
+
+        const code = await this.membershipCodeModel.findOne({ _id: id, deletedAt: null }).exec();
+        if (!code) {
+            throw new NotFoundException('Membership code not found');
+        }
+
+        // Soft delete
+        code.deletedAt = new Date();
+        await code.save();
     }
 }

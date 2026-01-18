@@ -22,6 +22,9 @@ export class Invitation {
 
     @Prop({ required: true })
     expiresAt: Date;
+
+    @Prop({ type: Date, default: null })
+    deletedAt: Date;
 }
 
 export const InvitationSchema = SchemaFactory.createForClass(Invitation);

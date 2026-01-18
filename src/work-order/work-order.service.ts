@@ -51,7 +51,7 @@ export class WorkOrderService {
             throw new BadRequestException('User company information is missing');
         }
 
-        const query: any = { companyId: user.company._id };
+        const query: any = { companyId: user.company._id, deletedAt: null };
 
         if (filterDto.status) {
             query.status = filterDto.status;
@@ -93,7 +93,7 @@ export class WorkOrderService {
 
     // GET All Work Orders (Staff Assigned)
     async findAllAssigned(user: AuthenticatedUser): Promise<any[]> {
-        return this.workOrderModel.find({ assignedStaffs: user._id })
+        return this.workOrderModel.find({ assignedStaffs: user._id, deletedAt: null })
             .populate('serviceId', 'title description')
             .sort({ createdAt: -1 })
             .exec();
@@ -108,7 +108,8 @@ export class WorkOrderService {
         const wo = await this.workOrderModel
             .findOne({
                 _id: id,
-                companyId: user.company!._id
+                companyId: user.company!._id,
+                deletedAt: null
             })
             .populate('createdBy', 'name email role positionId')
             .populate({
@@ -147,7 +148,8 @@ export class WorkOrderService {
         const wo = await this.workOrderModel
             .findOne({
                 _id: id,
-                assignedStaffs: user._id // Ensure assignment
+                assignedStaffs: user._id, // Ensure assignment
+                deletedAt: null
             })
             .populate('serviceId', 'title description')
             .exec();
@@ -163,7 +165,7 @@ export class WorkOrderService {
         if (!user.company || !user.company._id) {
             throw new BadRequestException('User company information is missing');
         }
-        const wo = await this.workOrderModel.findOne({ _id: id, companyId: user.company._id });
+        const wo = await this.workOrderModel.findOne({ _id: id, companyId: user.company._id, deletedAt: null });
         if (!wo) throw new NotFoundException('Work Order not found');
 
         Object.assign(wo, updateWorkOrderDto);
@@ -174,7 +176,7 @@ export class WorkOrderService {
         if (!user.company || !user.company._id) {
             throw new BadRequestException('User company information is missing');
         }
-        const wo = await this.workOrderModel.findOne({ _id: id, companyId: user.company._id });
+        const wo = await this.workOrderModel.findOne({ _id: id, companyId: user.company._id, deletedAt: null });
         if (!wo) throw new NotFoundException('Work Order not found');
 
         wo.status = updateStatusDto.status;
@@ -192,7 +194,7 @@ export class WorkOrderService {
         if (!user.company || !user.company._id) {
             throw new BadRequestException('User company information is missing');
         }
-        const wo = await this.workOrderModel.findOne({ _id: id, companyId: user.company._id });
+        const wo = await this.workOrderModel.findOne({ _id: id, companyId: user.company._id, deletedAt: null });
         if (!wo) throw new NotFoundException('Work Order not found');
 
         const staffIds: Types.ObjectId[] = [];
@@ -277,7 +279,8 @@ export class WorkOrderService {
         // Verify work order exists and user has access
         const wo = await this.workOrderModel.findOne({
             _id: id,
-            companyId: user.company!._id
+            companyId: user.company!._id,
+            deletedAt: null
         });
 
         if (!wo) {
@@ -416,5 +419,25 @@ export class WorkOrderService {
         });
 
         return savedWo;
+    }
+
+    async remove(id: string, user: AuthenticatedUser): Promise<void> {
+        if (!user.company || !user.company._id) {
+            throw new BadRequestException('User company information is missing');
+        }
+
+        const wo = await this.workOrderModel.findOne({
+            _id: id,
+            companyId: user.company._id,
+            deletedAt: null
+        });
+
+        if (!wo) {
+            throw new NotFoundException('Work Order not found');
+        }
+
+        // Soft delete
+        wo.deletedAt = new Date();
+        await wo.save();
     }
 }

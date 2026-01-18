@@ -28,6 +28,9 @@ export class FormTemplate {
 
     @Prop({ type: [FormField] })
     fields: FormField[];
+
+    @Prop({ type: Date, default: null })
+    deletedAt: Date;
 }
 
 export const FormTemplateSchema = SchemaFactory.createForClass(FormTemplate);   

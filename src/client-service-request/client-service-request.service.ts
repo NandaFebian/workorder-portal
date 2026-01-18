@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { ClientServiceRequest, ClientServiceRequestDocument } from './schemas/client-service-request.schema';
@@ -29,7 +29,7 @@ export class ClientServiceRequestService {
     }
 
     async findAllByClientId(userId: string): Promise<any[]> {
-        const requests = await this.csrModel.find({ clientId: new Types.ObjectId(userId) })
+        const requests = await this.csrModel.find({ clientId: new Types.ObjectId(userId), deletedAt: null })
             .populate('serviceId', 'companyId title description accessType isActive')
             .populate('clientId', 'name email role positionId')
             .sort({ createdAt: -1 })
@@ -43,7 +43,8 @@ export class ClientServiceRequestService {
 
         const csr = await this.csrModel.findOne({
             _id: id,
-            clientId: new Types.ObjectId(userId)
+            clientId: new Types.ObjectId(userId),
+            deletedAt: null
         })
             .populate('serviceId', 'companyId title description accessType isActive')
             .populate('clientId', 'name email role positionId')
@@ -87,7 +88,7 @@ export class ClientServiceRequestService {
     }
 
     async findAllByCompanyId(companyId: string): Promise<any[]> {
-        const requests = await this.csrModel.find({ companyId: new Types.ObjectId(companyId) })
+        const requests = await this.csrModel.find({ companyId: new Types.ObjectId(companyId), deletedAt: null })
             .populate('serviceId', 'companyId title description accessType isActive')
             .populate('clientId', 'name email role positionId')
             .sort({ createdAt: -1 })
@@ -98,7 +99,7 @@ export class ClientServiceRequestService {
 
     async findOneInternal(id: string): Promise<any> {
         if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
-        const csr = await this.csrModel.findById(id)
+        const csr = await this.csrModel.findOne({ _id: id, deletedAt: null })
             .populate('serviceId', 'companyId title description accessType isActive')
             .populate('clientId', 'name email role positionId')
             .exec();
@@ -200,5 +201,24 @@ export class ClientServiceRequestService {
                 workReport: createdReport // Sertakan di response
             }
         };
+    }
+
+    async remove(id: string, user: AuthenticatedUser): Promise<void> {
+        if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
+
+        const csr = await this.csrModel.findOne({ _id: id, deletedAt: null }).exec();
+        if (!csr) throw new NotFoundException('Client service request not found');
+
+        // Validate company ownership
+        if (!user.company?._id) {
+            throw new ForbiddenException('User is not associated with any company.');
+        }
+        if (csr.companyId.toString() !== user.company._id.toString()) {
+            throw new ForbiddenException('You do not have permission to delete this request.');
+        }
+
+        // Soft delete
+        csr.deletedAt = new Date();
+        await csr.save();
     }
 }

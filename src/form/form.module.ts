@@ -7,6 +7,7 @@ import { FormTemplate, FormTemplateSchema } from './schemas/form-template.schema
 import { FormSubmission, FormSubmissionSchema } from './schemas/form-submissions.schema';
 import { AuthModule } from 'src/auth/auth.module';
 import { UsersModule } from 'src/users/users.module';
+import { CompaniesModule } from 'src/company/companies.module';
 
 @Module({
     imports: [
@@ -16,6 +17,7 @@ import { UsersModule } from 'src/users/users.module';
         ]),
         forwardRef(() => AuthModule),
         UsersModule,
+        forwardRef(() => CompaniesModule),
     ],
     controllers: [FormsController],
     providers: [FormsService],

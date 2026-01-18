@@ -28,7 +28,7 @@ export async function getServicesWithAggregation(
     }
 
     const pipeline: PipelineStage[] = [
-        { $match: matchQuery },
+        { $match: { ...matchQuery, deletedAt: null } },
         { $sort: { __v: -1 } },
         {
             $group: {

@@ -73,6 +73,9 @@ export class Service {
 
     @Prop({ required: true, default: 0 })
     __v: number;
+
+    @Prop({ type: Date, default: null })
+    deletedAt: Date;
 }
 
 export const ServiceSchema = SchemaFactory.createForClass(Service);

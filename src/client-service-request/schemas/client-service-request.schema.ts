@@ -45,6 +45,9 @@ export class ClientServiceRequest {
 
     @Prop({ required: true, enum: ['received', 'approved', 'rejected'], default: 'received' })
     status: string;
+
+    @Prop({ type: Date, default: null })
+    deletedAt: Date;
 }
 
 export const ClientServiceRequestSchema = SchemaFactory.createForClass(ClientServiceRequest);

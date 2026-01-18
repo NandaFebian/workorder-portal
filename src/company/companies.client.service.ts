@@ -13,8 +13,10 @@ export class CompaniesClientService {
     ) { }
 
     async findAllPublic(): Promise<CompanyDocument[]> {
-        return this.companyModel.find({ isActive: true })
-            .populate('ownerId', 'name email')
+        return this.companyModel.find({
+            deletedAt: null
+        })
+            .select('_id name address description ownerId') // Select specific fields
             .sort({ createdAt: -1 })
             .exec();
     }
@@ -24,12 +26,12 @@ export class CompaniesClientService {
             throw new NotFoundException(`Invalid company ID: ${id}`);
         }
 
-        const company = await this.companyModel.findOne({ _id: id, isActive: true })
-            .select('-ownerId') // Tidak menyertakan ownerId
+        const company = await this.companyModel.findOne({ _id: id, deletedAt: null })
+            .select('_id name address description ownerId') // Select specific fields exactly like findAllPublic
             .exec();
 
         if (!company) {
-            throw new NotFoundException(`Company with ID ${id} not found or is not active`);
+            throw new NotFoundException(`Company with ID ${id} not found`);
         }
 
         const services = await this.servicesClientService.findAllByCompanyId(id);
@@ -45,7 +47,7 @@ export class CompaniesClientService {
         if (!Types.ObjectId.isValid(id)) {
             throw new NotFoundException(`Invalid company ID: ${id}`);
         }
-        const companyExists = await this.companyModel.countDocuments({ _id: id, isActive: true });
+        const companyExists = await this.companyModel.countDocuments({ _id: id, isActive: true, deletedAt: null });
         if (companyExists === 0) {
             throw new NotFoundException(`Company with ID ${id} not found or is not active`);
         }

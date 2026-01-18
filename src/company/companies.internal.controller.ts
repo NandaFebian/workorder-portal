@@ -1,5 +1,5 @@
 // src/company/companies.internal.controller.ts
-import { Controller, Get, HttpCode, HttpStatus, Param, Put, Body, UseGuards, Post, ForbiddenException } from "@nestjs/common";
+import { Controller, Get, HttpCode, HttpStatus, Param, Put, Body, UseGuards, Post, ForbiddenException, Delete } from "@nestjs/common";
 import { CompaniesInternalService } from "./companies.internal.service";
 import { AuthGuard } from "src/auth/guards/auth.guard";
 import { UpdateCompanyDto } from "./dto/update-company.dto";
@@ -22,11 +22,24 @@ export class CompaniesInternalController {
     ) { }
 
     @Get()
+    @UseGuards(AuthGuard, RolesGuard)
+    @Roles('admin_app', 'owner_company')
     @HttpCode(HttpStatus.OK)
-    // Sebaiknya endpoint ini diamankan (misal: @Roles('admin_app'))
-    async findAll() {
-        const companies = await this.companiesInternalService.findAllInternal();
-        return ResponseUtil.success('Companies retrieved successfully', companies);
+    async findAll(@GetUser() user: AuthenticatedUser) {
+        if (user.role === 'admin_app') {
+            const companies = await this.companiesInternalService.findAllInternal();
+            const transformedCompanies = companies.map(c => CompanyResource.transformCompany(c));
+            return ResponseUtil.success('Companies retrieved successfully', transformedCompanies);
+        } else if (user.role === 'owner_company') {
+            if (!user.company?._id) {
+                // Should not happen for a valid owner, but good to handle
+                return ResponseUtil.success('No company associated with this owner', []);
+            }
+            const company = await this.companiesInternalService.findInternalById(user.company._id.toString());
+            const transformedCompany = CompanyResource.transformCompany(company);
+            // Return as array to be consistent with admin response
+            return ResponseUtil.success('Company retrieved successfully', [transformedCompany]);
+        }
     }
 
     @Post('invite')
@@ -89,7 +102,8 @@ export class CompaniesInternalController {
     async update(@Param('id') id: string, @Body() updateCompanyDto: UpdateCompanyDto) {
         // TODO: Tambahkan logika di service untuk cek otorisasi (apa user ini boleh update company dg id tsb)
         const company = await this.companiesInternalService.update(id, updateCompanyDto);
-        return ResponseUtil.success('Company updated successfully', company);
+        const transformedCompany = CompanyResource.transformCompany(company);
+        return ResponseUtil.success('Company updated successfully', transformedCompany);
     }
 
     @Get(':id')
@@ -97,6 +111,15 @@ export class CompaniesInternalController {
     // Sebaiknya endpoint ini diamankan
     async findById(@Param('id') id: string) {
         const company = await this.companiesInternalService.findInternalById(id);
-        return ResponseUtil.success('Company retrieved successfully', company);
+        const transformedCompany = CompanyResource.transformCompany(company);
+        return ResponseUtil.success('Company retrieved successfully', transformedCompany);
+    }
+
+    @Delete(':id')
+    @HttpCode(HttpStatus.OK)
+    @Roles('owner_company')
+    async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+        await this.companiesInternalService.remove(id, user);
+        return ResponseUtil.success('Company deleted successfully', null);
     }
 }

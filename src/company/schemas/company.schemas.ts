@@ -26,6 +26,9 @@ export class Company {
 
     @Prop({ default: false })
     isActive: boolean;
+
+    @Prop({ type: Date, default: null })
+    deletedAt: Date;
 }
 
 export const CompanySchema = SchemaFactory.createForClass(Company);

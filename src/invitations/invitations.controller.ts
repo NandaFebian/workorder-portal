@@ -1,5 +1,5 @@
 // src/invitations/invitations.controller.ts
-import { Controller, Put, Get, Param, UseGuards, HttpCode, HttpStatus, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Controller, Put, Get, Post, Delete, Param, UseGuards, HttpCode, HttpStatus, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -65,6 +65,17 @@ export class InvitationsController {
         return {
             message: 'Invitation rejected successfully',
             // data tidak perlu dikirim karena hanya update status invite
+        };
+    }
+
+    @Delete(':id')
+    @UseGuards(RolesGuard)
+    @Roles('owner_company', 'manager_company')
+    @HttpCode(HttpStatus.OK)
+    async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+        await this.invitationsService.remove(id, user);
+        return {
+            message: 'Invitation deleted successfully',
         };
     }
 

@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Param, UseGuards, HttpCode, HttpStatus, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Put, Param, UseGuards, HttpCode, HttpStatus, ForbiddenException, Delete } from '@nestjs/common';
 import { ClientServiceRequestService } from './client-service-request.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
@@ -42,5 +42,13 @@ export class ClientServiceRequestInternalController {
     async reject(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
         // Pass user ke service
         return await this.csrService.updateStatus(id, 'rejected', user);
+    }
+
+    @Delete(':id')
+    @HttpCode(HttpStatus.OK)
+    @Roles('owner_company', 'manager_company')
+    async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+        await this.csrService.remove(id, user);
+        return ResponseUtil.success('Client service request deleted successfully', null);
     }
 }

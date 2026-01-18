@@ -16,6 +16,9 @@ export class MembershipCode {
 
     @Prop({ default: null })
     claimedAt: Date;
+
+    @Prop({ type: Date, default: null })
+    deletedAt: Date;
 }
 
 export const MembershipCodeSchema = SchemaFactory.createForClass(MembershipCode);

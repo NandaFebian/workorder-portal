@@ -66,6 +66,9 @@ export class WorkReport {
 
     @Prop({ default: null })
     completedAt: Date;
+
+    @Prop({ type: Date, default: null })
+    deletedAt: Date;
 }
 
 export const WorkReportSchema = SchemaFactory.createForClass(WorkReport);

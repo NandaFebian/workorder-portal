@@ -79,6 +79,9 @@ export class WorkOrder {
 
     @Prop({ default: null })
     completedAt: Date;
+
+    @Prop({ type: Date, default: null })
+    deletedAt: Date;
 }
 
 export const WorkOrderSchema = SchemaFactory.createForClass(WorkOrder);

@@ -9,12 +9,14 @@ import { UpdateFormTemplateDto } from './dto/update-form-template.dto';
 import { SubmitFormDto } from './dto/submit-form.dto';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { v4 as uuidv4 } from 'uuid';
+import { CompaniesInternalService } from 'src/company/companies.internal.service';
 
 @Injectable()
 export class FormsService {
     constructor(
         @InjectModel(FormTemplate.name) private formTemplateModel: Model<FormTemplateDocument>,
         @InjectModel(FormSubmission.name) private formSubmissionModel: Model<FormSubmissionDocument>,
+        private companiesInternalService: CompaniesInternalService,
     ) { }
 
     async createTemplate(dto: CreateFormTemplateDto, user: AuthenticatedUser): Promise<FormTemplateDocument> {
@@ -37,7 +39,7 @@ export class FormsService {
         }
 
         return this.formTemplateModel.aggregate([
-            { $match: { companyId: user.company._id } },
+            { $match: { companyId: user.company._id, deletedAt: null } },
             { $sort: { __v: -1 } },
             {
                 $group: {
@@ -50,7 +52,7 @@ export class FormsService {
     }
 
     async findTemplateById(id: string): Promise<FormTemplateDocument> {
-        const template = await this.formTemplateModel.findById(id).exec();
+        const template = await this.formTemplateModel.findOne({ _id: id, deletedAt: null }).exec();
         if (!template) {
             throw new NotFoundException(`Form template with ID ${id} not found`);
         }
@@ -64,7 +66,8 @@ export class FormsService {
 
         const latestVersion = await this.formTemplateModel.findOne({
             formKey,
-            companyId: user.company._id
+            companyId: user.company._id,
+            deletedAt: null
         }).sort({ __v: -1 }).exec();
 
         if (!latestVersion) {
@@ -83,21 +86,46 @@ export class FormsService {
     }
 
     async submitForm(user: AuthenticatedUser, dto: SubmitFormDto): Promise<FormSubmissionDocument> {
-        const template = await this.formTemplateModel.findById(dto.formTemplateId).exec();
+        const template = await this.formTemplateModel.findOne({ _id: dto.formTemplateId, deletedAt: null }).exec();
         if (!template) {
             throw new NotFoundException(`Form template with ID ${dto.formTemplateId} not found`);
         }
 
+        // Map answers to fieldsData
+        const fieldsData = dto.answers.map(answer => {
+            const field = template.fields.find(f => (f as any)._id.toString() === answer.fieldId);
+            if (!field) {
+                // If field not found in template, we might want to skip or error. 
+                // For now, assuming standard submission, lets find by matching ID
+                // Wait, field._id might not be directly available if not casted, but Schema has _id:true
+                // Let's assume field has _id property
+                return null;
+            }
+            return {
+                order: field.order,
+                value: answer.value
+            };
+        }).filter(item => item !== null);
+
+        // Fetch Company to get Owner ID
+        const company = await this.companiesInternalService.findInternalById(template.companyId.toString());
+        // ownerId is populated in findInternalById, so we need to extract _id. 
+        // Handles cases where ownerId might be populated or not (though service says it populates)
+        const ownerId = (company.ownerId as any)._id || company.ownerId;
+
         const submission = new this.formSubmissionModel({
-            ...dto,
+            submissionType: template.formType,
+            ownerId: ownerId,
+            formId: template._id,
             submittedById: user._id,
+            fieldsData: fieldsData,
         });
 
         return submission.save();
     }
 
     async submitPublicForm(dto: SubmitFormDto, serviceId: string): Promise<FormSubmissionDocument> {
-        const template = await this.formTemplateModel.findById(dto.formTemplateId).exec();
+        const template = await this.formTemplateModel.findOne({ _id: dto.formTemplateId, deletedAt: null }).exec();
         if (!template) {
             throw new NotFoundException(`Form template with ID ${dto.formTemplateId} not found`);
         }
@@ -114,11 +142,37 @@ export class FormsService {
     async findLatestTemplateByKey(formKey: string): Promise<FormTemplateDocument> {
         const latestTemplate = await this.formTemplateModel.findOne({
             formKey,
+            deletedAt: null
         }).sort({ __v: -1 }).exec(); // Urutkan berdasarkan versi (__v) desc
 
         if (!latestTemplate) {
             throw new NotFoundException(`Form template with key ${formKey} not found`);
         }
         return latestTemplate;
+    }
+
+    async removeByFormKey(formKey: string, user: AuthenticatedUser): Promise<void> {
+        if (!user.company?._id) {
+            throw new ForbiddenException('User is not associated with any company.');
+        }
+
+        // Find all versions with this formKey
+        const templates = await this.formTemplateModel.find({
+            formKey,
+            companyId: user.company._id,
+            deletedAt: null
+        }).exec();
+
+        if (templates.length === 0) {
+            throw new NotFoundException(`Form template with key ${formKey} not found`);
+        }
+
+        // Soft delete all versions
+        const updatePromises = templates.map(template => {
+            template.deletedAt = new Date();
+            return template.save();
+        });
+
+        await Promise.all(updatePromises);
     }
 }

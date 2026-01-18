@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, UseGuards, Param } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Body, UseGuards, Param, HttpCode, HttpStatus } from '@nestjs/common';
 import { MembershipService } from './membership.service';
 import { GenerateMemberCodesDto } from './dto/generate-code.dto';
 import { ClaimMemberCodeDto } from './dto/claim-code.dto';
@@ -8,6 +8,7 @@ import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interf
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from 'src/common/enums/role.enum';
+import { ResponseUtil } from 'src/common/utils/response.util';
 
 @Controller('memberships')
 @UseGuards(AuthGuard)
@@ -31,5 +32,13 @@ export class MembershipController {
     @Post('claim')
     async claimCode(@Body() dto: ClaimMemberCodeDto, @GetUser() user: AuthenticatedUser) {
         return this.membershipService.claimCode(dto, user);
+    }
+
+    @Delete(':id')
+    @HttpCode(HttpStatus.OK)
+    @Roles('admin_app')
+    async remove(@Param('id') id: string) {
+        await this.membershipService.remove(id);
+        return ResponseUtil.success('Membership code deleted successfully', null);
     }
 }

@@ -1,28 +1,18 @@
-/**
- * Work Report Resource
- * Menangani transformasi data Work Report
- */
+import { WorkReportDocument } from '../schemas/work-report.schema';
+
 export class WorkReportResource {
     /**
-     * Transform work report
+     * Transform work report data
      */
-    static transformWorkReport(report: any): any {
-        const reportObj = report.toObject ? report.toObject() : { ...report };
+    static transformWorkReport(doc: any): any {
+        const report = doc.toObject ? doc.toObject() : { ...doc };
 
-        // Transform report forms jika ada
-        if (reportObj.reportForms) {
-            reportObj.reportForms = reportObj.reportForms.map((form: any) =>
-                this.transformReportForm(form),
-            );
+        // Rename workOrderId to workOrder if populated
+        if (report.workOrderId && (typeof report.workOrderId === 'object')) {
+            report.workOrder = report.workOrderId;
+            delete report.workOrderId;
         }
 
-        return reportObj;
-    }
-
-    /**
-     * Transform report form
-     */
-    static transformReportForm(reportForm: any): any {
-        return reportForm;
+        return report;
     }
 }

@@ -27,7 +27,8 @@ export class InvitationsService {
         const pendingInvitationsDocs = await this.invitationModel.find({
             userId: new Types.ObjectId(userId),
             status: 'pending',
-            expiresAt: { $gt: now }
+            expiresAt: { $gt: now },
+            deletedAt: null
         })
             .populate('companyId', 'name')
             .populate('positionId', 'name')
@@ -56,7 +57,8 @@ export class InvitationsService {
         const expiredPending = await this.invitationModel.find({
             userId: new Types.ObjectId(userId),
             status: 'pending',
-            expiresAt: { $lte: now }
+            expiresAt: { $lte: now },
+            deletedAt: null
         }).exec();
 
         if (expiredPending.length > 0) {
@@ -191,6 +193,29 @@ export class InvitationsService {
 
         // 3. Update Status Undangan
         invitation.status = 'rejected';
+        await invitation.save();
+    }
+
+    async remove(id: string, user: AuthenticatedUser): Promise<void> {
+        if (!Types.ObjectId.isValid(id)) {
+            throw new BadRequestException(`Invalid invitation ID format: ${id}`);
+        }
+
+        const invitation = await this.invitationModel.findOne({ _id: id, deletedAt: null }).exec();
+        if (!invitation) {
+            throw new NotFoundException(`Invitation with ID ${id} not found.`);
+        }
+
+        // Validate company ownership
+        if (!user.company?._id) {
+            throw new ForbiddenException('User is not associated with any company.');
+        }
+        if (invitation.companyId.toString() !== user.company._id.toString()) {
+            throw new ForbiddenException('You do not have permission to delete this invitation.');
+        }
+
+        // Soft delete
+        (invitation as any).deletedAt = new Date();
         await invitation.save();
     }
 }

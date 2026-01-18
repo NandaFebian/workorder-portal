@@ -17,6 +17,9 @@ export class Position {
 
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Company', default: null })
     companyId: MongooseSchema.Types.ObjectId;
+
+    @Prop({ type: Date, default: null })
+    deletedAt: Date;
 }
 
 export const PositionSchema = SchemaFactory.createForClass(Position);

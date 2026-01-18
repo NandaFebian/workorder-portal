@@ -85,4 +85,12 @@ export class WorkOrderInternalController {
         const data = await this.workOrderService.markAsInProgress(id, user);
         return ResponseUtil.success('Work Order started', data);
     }
+
+    @Delete(':id')
+    @HttpCode(HttpStatus.OK)
+    @Roles('owner_company', 'manager_company')
+    async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+        await this.workOrderService.remove(id, user);
+        return ResponseUtil.success('Work order deleted successfully', null);
+    }
 }

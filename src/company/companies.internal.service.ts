@@ -1,5 +1,5 @@
 // src/company/companies.internal.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Company, CompanyDocument } from './schemas/company.schemas';
@@ -11,6 +11,7 @@ import { SuccessfulInvite, InviteError, InviteEmployeesResponse } from './interf
 import { PositionsService } from 'src/positions/positions.service';
 import { UserDocument } from 'src/users/schemas/user.schema';
 import { Role } from 'src/common/enums/role.enum';
+import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 
 @Injectable()
 export class CompaniesInternalService {
@@ -42,14 +43,14 @@ export class CompaniesInternalService {
 
     async findAllInternal(): Promise<CompanyDocument[]> {
         // Logika internal, bisa mengambil semua (termasuk yang tidak aktif)
-        return this.companyModel.find().populate('ownerId', 'name email').sort({ createdAt: -1 }).exec();
+        return this.companyModel.find({ deletedAt: null }).populate('ownerId', 'name email _id').sort({ createdAt: -1 }).exec();
     }
 
     async findInternalById(id: string): Promise<CompanyDocument> {
         if (!Types.ObjectId.isValid(id)) {
             throw new NotFoundException(`Invalid company ID: ${id}`);
         }
-        const company = await this.companyModel.findById(id).populate('ownerId', 'name email').exec();
+        const company = await this.companyModel.findOne({ _id: id, deletedAt: null }).populate('ownerId', 'name email _id').exec();
         if (!company) {
             throw new NotFoundException(`Company with ID ${id} not found`);
         }
@@ -78,11 +79,11 @@ export class CompaniesInternalService {
                     errors.push(createError("User not found"));
                     continue;
                 }
-                const existingInvitation = await this.invitationModel.findOne({ userId: user._id, status: 'pending' }).exec();
-                if (existingInvitation) {
-                    errors.push(createError("User has a pending invitation", user));
-                    continue;
-                }
+                // const existingInvitation = await this.invitationModel.findOne({ userId: user._id, status: 'pending' }).exec();
+                // if (existingInvitation) {
+                //     errors.push(createError("User has a pending invitation", user));
+                //     continue;
+                // }
                 if (user.role !== Role.UnassignedStaff) {
                     errors.push(createError("User is not available for invitation", user));
                     continue;
@@ -128,7 +129,7 @@ export class CompaniesInternalService {
 
     async getInvitationHistory(companyId: string) {
         const invitations = await this.invitationModel
-            .find({ companyId: new Types.ObjectId(companyId) })
+            .find({ companyId: new Types.ObjectId(companyId), deletedAt: null })
             .populate([
                 { path: 'companyId', select: 'name' },
                 { path: 'positionId', select: 'name' },
@@ -153,5 +154,21 @@ export class CompaniesInternalService {
             message: "Invitations retrieved successfully",
             data: { invitations: transformedInvitations }
         };
+    }
+
+    async remove(id: string, user: AuthenticatedUser): Promise<void> {
+        const existingCompany = await this.findInternalById(id);
+
+        // Check if user is the owner
+        if (!user.company?._id) {
+            throw new ForbiddenException('User is not associated with any company.');
+        }
+        if ((existingCompany._id as Types.ObjectId).toString() !== user.company._id.toString()) {
+            throw new ForbiddenException('You do not have permission to delete this company.');
+        }
+
+        // Soft delete: set deletedAt to current timestamp
+        existingCompany.deletedAt = new Date();
+        await existingCompany.save();
     }
 }

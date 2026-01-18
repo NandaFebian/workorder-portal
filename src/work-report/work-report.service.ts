@@ -4,6 +4,7 @@ import { Model, Types } from 'mongoose';
 import { WorkReport, WorkReportDocument } from './schemas/work-report.schema';
 import { CreateWorkReportDto } from './dto/create-work-report.dto';
 import { UpdateWorkReportDto } from './dto/update-work-report.dto';
+import { WorkReportResource } from './resources/work-report.resource';
 
 @Injectable()
 export class WorkReportService {
@@ -20,16 +21,16 @@ export class WorkReportService {
     }
 
     async findAll(): Promise<WorkReportDocument[]> {
-        return this.workReportModel.find().sort({ createdAt: -1 }).exec();
+        return this.workReportModel.find({ deletedAt: null }).sort({ createdAt: -1 }).exec();
     }
 
-    async findOne(id: string): Promise<WorkReportDocument> {
+    async findOne(id: string): Promise<any> {
         if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Invalid ID');
-        const report = await this.workReportModel.findById(id)
+        const report = await this.workReportModel.findOne({ _id: id, deletedAt: null })
             .populate('workOrderId')
             .exec();
         if (!report) throw new NotFoundException('Work Report not found');
-        return report;
+        return WorkReportResource.transformWorkReport(report);
     }
 
     async update(id: string, updateDto: UpdateWorkReportDto): Promise<WorkReportDocument> {
@@ -43,5 +44,16 @@ export class WorkReportService {
 
         if (!updatedReport) throw new NotFoundException('Work Report not found');
         return updatedReport;
+    }
+
+    async remove(id: string): Promise<void> {
+        if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Invalid ID');
+
+        const report = await this.workReportModel.findOne({ _id: id, deletedAt: null }).exec();
+        if (!report) throw new NotFoundException('Work Report not found');
+
+        // Soft delete
+        report.deletedAt = new Date();
+        await report.save();
     }
 }

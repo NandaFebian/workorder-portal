@@ -1,5 +1,5 @@
 // src/form/form.controller.ts
-import { Controller, Post, Body, Get, Put, Param, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, Put, Param, UseGuards, Delete, HttpCode, HttpStatus } from '@nestjs/common';
 import { FormsService } from './form.service';
 import { CreateFormTemplateDto } from './dto/create-form-template.dto';
 import { UpdateFormTemplateDto } from './dto/update-form-template.dto';
@@ -52,5 +52,14 @@ export class FormsController {
     async submitForm(@GetUser() user: AuthenticatedUser, @Body() submitFormDto: SubmitFormDto) {
         const submission = await this.formsService.submitForm(user, submitFormDto);
         return ResponseUtil.success('Form submitted successfully', submission);
+    }
+
+    @Delete(':formKey')
+    @UseGuards(RolesGuard)
+    @Roles('owner_company', 'manager_company')
+    @HttpCode(HttpStatus.OK)
+    async remove(@Param('formKey') formKey: string, @GetUser() user: AuthenticatedUser) {
+        await this.formsService.removeByFormKey(formKey, user);
+        return ResponseUtil.success('Form template deleted successfully', null);
     }
 }

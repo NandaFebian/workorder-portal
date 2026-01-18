@@ -19,7 +19,7 @@ export class FormSubmission {
     submissionType: string; // 'intake', 'work_order', 'report'
 
     // Owner ID merujuk ke _id dari ClientServiceRequest
-    @Prop({ type: MongooseSchema.Types.ObjectId, required: true, index: true })
+    @Prop({ type: MongooseSchema.Types.ObjectId, required: false, default: null, index: true })
     ownerId: MongooseSchema.Types.ObjectId;
 
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormTemplate', required: true })
@@ -36,6 +36,9 @@ export class FormSubmission {
 
     @Prop({ type: Date, default: Date.now })
     submittedAt: Date;
+
+    @Prop({ type: Date, default: null })
+    deletedAt: Date;
 }
 
 export const FormSubmissionSchema = SchemaFactory.createForClass(FormSubmission);

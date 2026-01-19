@@ -1,5 +1,5 @@
 // src/service/services.client.controller.ts
-import { Controller, Get, HttpCode, HttpStatus, Param, Post, Body, UseGuards, ParseArrayPipe } from '@nestjs/common';
+import { Controller, Get, HttpCode, HttpStatus, Param, Post, Body, UseGuards } from '@nestjs/common';
 import { ServicesClientService } from './services.client.service';
 import { SubmitIntakeFormItemDto } from './dto/submit-intake-forms.dto'; // Import DTO Baru
 import { AuthGuard } from 'src/auth/guards/auth.guard';
@@ -41,15 +41,14 @@ export class ServicesClientController {
     @HttpCode(HttpStatus.CREATED)
     async submitIntakeForm(
         @Param('id') serviceId: string,
-        // Pastikan nama variabel di sini 'submissions' (array) bukan 'submitFormDto'
-        @Body(new ParseArrayPipe({ items: SubmitIntakeFormItemDto })) submissions: SubmitIntakeFormItemDto[],
+        @Body() submission: SubmitIntakeFormItemDto,
         @GetUser() user: AuthenticatedUser
     ) {
-        // Perbaikan: Kirim variabel 'submissions' ke service
-        const result = await this.clientService.processIntakeSubmission(serviceId, user, submissions);
+        // Perbaikan: Kirim variabel 'submission' ke service
+        const result = await this.clientService.processIntakeSubmission(serviceId, user, submission);
 
         return {
-            message: 'Work order created successfully',
+            message: 'Client service request created successfully',
             data: result,
         };
     }

@@ -86,30 +86,32 @@ export class FormsService {
     }
 
     async submitForm(user: AuthenticatedUser, dto: SubmitFormDto): Promise<FormSubmissionDocument> {
-        const template = await this.formTemplateModel.findOne({ _id: dto.formTemplateId, deletedAt: null }).exec();
+        const template = await this.formTemplateModel.findOne({ _id: dto.formId, deletedAt: null }).exec();
         if (!template) {
-            throw new NotFoundException(`Form template with ID ${dto.formTemplateId} not found`);
+            throw new NotFoundException(`Form template with ID ${dto.formId} not found`);
         }
 
-        // Map answers to fieldsData
-        const fieldsData = dto.answers.map(answer => {
-            const field = template.fields.find(f => (f as any)._id.toString() === answer.fieldId);
-            if (!field) {
-                // If field not found in template, we might want to skip or error. 
-                // For now, assuming standard submission, lets find by matching ID
-                // Wait, field._id might not be directly available if not casted, but Schema has _id:true
-                // Let's assume field has _id property
-                return null;
+        // Map fieldsData to schema format verifying order
+        const fieldsData = dto.fieldsData.map(inputField => {
+            const templateField = template.fields.find(f => f.order === inputField.order);
+            if (!templateField) {
+                // Determine if strict validation is needed. For now, we skip unknown fields or accept them?
+                // Given the requirement "follow structure", we assume valid orders are sent.
+                // We'll store it if it matches the DTO structure which is just order/value.
+                return {
+                    order: inputField.order,
+                    value: inputField.value
+                };
             }
             return {
-                order: field.order,
-                value: answer.value
+                order: templateField.order,
+                value: inputField.value
             };
-        }).filter(item => item !== null);
+        });
 
         // Fetch Company to get Owner ID
         const company = await this.companiesInternalService.findInternalById(template.companyId.toString());
-        // ownerId is populated in findInternalById, so we need to extract _id. 
+        // ownerId is populated in findInternalById, so we need to extract _id.
         // Handles cases where ownerId might be populated or not (though service says it populates)
         const ownerId = (company.ownerId as any)._id || company.ownerId;
 
@@ -125,13 +127,13 @@ export class FormsService {
     }
 
     async submitPublicForm(dto: SubmitFormDto, serviceId: string): Promise<FormSubmissionDocument> {
-        const template = await this.formTemplateModel.findOne({ _id: dto.formTemplateId, deletedAt: null }).exec();
+        const template = await this.formTemplateModel.findOne({ _id: dto.formId, deletedAt: null }).exec();
         if (!template) {
-            throw new NotFoundException(`Form template with ID ${dto.formTemplateId} not found`);
+            throw new NotFoundException(`Form template with ID ${dto.formId} not found`);
         }
         const submission = new this.formSubmissionModel({
-            formTemplateId: dto.formTemplateId,
-            answers: dto.answers,
+            formId: dto.formId,
+            fieldsData: dto.fieldsData,
             submittedById: null, // null untuk user publik
             relatedServiceId: serviceId ? new Types.ObjectId(serviceId) : undefined,
             companyId: template.companyId, // Ambil companyId dari template
@@ -174,5 +176,30 @@ export class FormsService {
         });
 
         await Promise.all(updatePromises);
+    }
+
+    async removeById(id: string, user: AuthenticatedUser): Promise<void> {
+        if (!user.company?._id) {
+            throw new ForbiddenException('User is not associated with any company.');
+        }
+
+        if (!Types.ObjectId.isValid(id)) {
+            throw new NotFoundException('Invalid form template ID');
+        }
+
+        // Find single form version by ID
+        const template = await this.formTemplateModel.findOne({
+            _id: new Types.ObjectId(id),
+            companyId: user.company._id,
+            deletedAt: null
+        }).exec();
+
+        if (!template) {
+            throw new NotFoundException(`Form template with ID ${id} not found`);
+        }
+
+        // Soft delete only this specific version
+        template.deletedAt = new Date();
+        await template.save();
     }
 }

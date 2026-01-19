@@ -80,7 +80,7 @@ export class ServicesClientService {
     }
 
     // === LOGIC POST SUBMISSION ===
-    async processIntakeSubmission(serviceId: string, user: AuthenticatedUser, submissions: SubmitIntakeFormItemDto[]) {
+    async processIntakeSubmission(serviceId: string, user: AuthenticatedUser, submission: SubmitIntakeFormItemDto) {
         // 1. Validasi Service
         const service = await this.findAndValidatePublicService(serviceId);
 
@@ -119,19 +119,18 @@ export class ServicesClientService {
         });
 
         // 4. Create Submissions (Tabel 2)
-        if (Array.isArray(submissions) && submissions.length > 0) {
-            const submissionDocs = submissions.map(s => ({
-                ownerId: newCSR._id, // Link ke CSR
-                formId: new Types.ObjectId(s.formId),
-                submissionType: 'intake',
-                submittedBy: new Types.ObjectId(user._id.toString()),
-                fieldsData: s.fieldsData,
-                status: 'submitted',
-                submittedAt: new Date()
-            }));
+        // Adjust for single submission object
+        const submissionDocs = [{
+            ownerId: newCSR._id, // Link ke CSR
+            formId: new Types.ObjectId(submission.formId),
+            submissionType: 'intake',
+            submittedBy: new Types.ObjectId(user._id.toString()),
+            fieldsData: submission.fieldsData,
+            status: 'submitted',
+            submittedAt: new Date()
+        }];
 
-            await this.submissionModel.insertMany(submissionDocs);
-        }
+        await this.submissionModel.insertMany(submissionDocs);
 
         return newCSR;
     }

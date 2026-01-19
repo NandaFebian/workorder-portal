@@ -229,13 +229,9 @@ export class ServicesInternalService {
             throw new NotFoundException(`Service with ID ${id} not found`);
         }
 
-        // Soft delete all versions with the same serviceKey
-        await this.serviceModel.updateMany(
-            {
-                serviceKey: service.serviceKey,
-                companyId: user.company._id
-            },
-            { $set: { deletedAt: new Date() } }
-        ).exec();
+
+        // Soft delete only this specific version
+        service.deletedAt = new Date();
+        await service.save();
     }
 }

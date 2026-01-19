@@ -54,12 +54,12 @@ export class FormsController {
         return ResponseUtil.success('Form submitted successfully', submission);
     }
 
-    @Delete(':formKey')
+    @Delete(':id')
     @UseGuards(RolesGuard)
     @Roles('owner_company', 'manager_company')
     @HttpCode(HttpStatus.OK)
-    async remove(@Param('formKey') formKey: string, @GetUser() user: AuthenticatedUser) {
-        await this.formsService.removeByFormKey(formKey, user);
+    async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+        await this.formsService.removeById(id, user);
         return ResponseUtil.success('Form template deleted successfully', null);
     }
 }

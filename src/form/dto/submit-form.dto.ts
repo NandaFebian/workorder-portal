@@ -1,11 +1,11 @@
 // src/forms/dto/submit-form.dto.ts
 import { Type } from 'class-transformer';
-import { IsMongoId, IsNotEmpty, IsArray, ValidateNested, IsString, IsDefined } from 'class-validator';
+import { IsMongoId, IsNotEmpty, IsArray, ValidateNested, IsDefined, IsNumber } from 'class-validator';
 
-export class AnswerDto {
-    @IsString()
+export class FieldDataDto {
+    @IsNumber()
     @IsNotEmpty()
-    fieldId: string;
+    order: number;
 
     @IsDefined()
     value: any;
@@ -14,10 +14,10 @@ export class AnswerDto {
 export class SubmitFormDto {
     @IsMongoId()
     @IsNotEmpty()
-    formTemplateId: string;
+    formId: string;
 
     @IsArray()
     @ValidateNested({ each: true })
-    @Type(() => AnswerDto)
-    answers: AnswerDto[];
+    @Type(() => FieldDataDto)
+    fieldsData: FieldDataDto[];
 }

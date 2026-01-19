@@ -726,7 +726,7 @@
                         "header": [],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"formTemplateId\": \"{{formId}}\",\n  \"answers\": [\n    {\n      \"fieldId\": \"field_1\",\n      \"value\": \"John Doe\"\n    },\n    {\n      \"fieldId\": \"field_2\",\n      \"value\": \"john.doe@example.com\"\n    },\n    {\n      \"fieldId\": \"field_3\",\n      \"value\": \"web_dev\"\n    },\n    {\n      \"fieldId\": \"field_4\",\n      \"value\": 75\n    }\n  ]\n}",
+                            "raw": "{\n    \"formId\": \"{{formId}}\",\n    \"fieldsData\": [\n      {\n        \"order\": 1,\n        \"value\": \"John Doe\"\n      },\n      {\n        \"order\": 2,\n        \"value\": \"john.doe@example.com\"\n      },\n      {\n        \"order\": 3,\n        \"value\": \"web_dev\"\n      },\n      {\n        \"order\": 4,\n        \"value\": 75\n      }\n    ]\n  }",
                             "options": {
                                 "raw": {
                                     "language": "json"

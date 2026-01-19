@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Delete, Body, Param, HttpCode, HttpStatus, 
 import { WorkReportService } from './work-report.service';
 import { CreateWorkReportDto } from './dto/create-work-report.dto';
 import { UpdateWorkReportDto } from './dto/update-work-report.dto';
+import { SubmitWorkReportFormDto } from './dto/submit-work-report-form.dto';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { ResponseUtil } from 'src/common/utils/response.util';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
@@ -46,6 +47,22 @@ export class WorkReportController {
             message: 'Work report updated successfully',
             data,
         };
+    }
+
+    // POST {{base_url}}/workreports/:id/submit
+    @Post(':id/submit')
+    @UseGuards(RolesGuard)
+    @Roles('owner_company', 'manager_company', 'staff_company')
+    @HttpCode(HttpStatus.OK)
+    async submitForm(
+        @Param('id') workReportId: string,
+        @Body() submitDto: SubmitWorkReportFormDto,
+        @GetUser() user: AuthenticatedUser
+    ) {
+        // Override workReportId from params
+        const dto = { ...submitDto, workReportId };
+        const result = await this.workReportService.submitReportForm(dto, user);
+        return ResponseUtil.success('Work report form submitted successfully', result);
     }
 
     @Delete(':id')

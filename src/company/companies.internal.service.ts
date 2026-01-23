@@ -156,7 +156,7 @@ export class CompaniesInternalService {
         };
     }
 
-    async remove(id: string, user: AuthenticatedUser): Promise<void> {
+    async remove(id: string, user: AuthenticatedUser): Promise<{ deletedAt: Date }> {
         const existingCompany = await this.findInternalById(id);
 
         // Check if user is the owner
@@ -168,7 +168,10 @@ export class CompaniesInternalService {
         }
 
         // Soft delete: set deletedAt to current timestamp
-        existingCompany.deletedAt = new Date();
+        const deletedAt = new Date();
+        existingCompany.deletedAt = deletedAt;
         await existingCompany.save();
+
+        return { deletedAt };
     }
 }

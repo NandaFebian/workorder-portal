@@ -203,7 +203,7 @@ export class ClientServiceRequestService {
         };
     }
 
-    async remove(id: string, user: AuthenticatedUser): Promise<void> {
+    async remove(id: string, user: AuthenticatedUser): Promise<{ deletedAt: Date }> {
         if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
 
         const csr = await this.csrModel.findOne({ _id: id, deletedAt: null }).exec();
@@ -218,7 +218,10 @@ export class ClientServiceRequestService {
         }
 
         // Soft delete
-        csr.deletedAt = new Date();
+        const deletedAt = new Date();
+        csr.deletedAt = deletedAt;
         await csr.save();
+
+        return { deletedAt };
     }
 }

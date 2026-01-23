@@ -97,7 +97,7 @@ export class CompaniesInternalController {
 
     @Put(':id')
     @UseGuards(AuthGuard, RolesGuard)
-    @Roles('owner_company', 'manager_company', 'admin_app') // Tentukan siapa yg boleh update
+    @Roles(Role.CompanyOwner, Role.CompanyManager) // Tentukan siapa yg boleh update
     @HttpCode(HttpStatus.OK)
     async update(@Param('id') id: string, @Body() updateCompanyDto: UpdateCompanyDto) {
         // TODO: Tambahkan logika di service untuk cek otorisasi (apa user ini boleh update company dg id tsb)
@@ -108,7 +108,7 @@ export class CompaniesInternalController {
 
     @Get(':id')
     @HttpCode(HttpStatus.OK)
-    // Sebaiknya endpoint ini diamankan
+    @Roles(Role.CompanyOwner, Role.CompanyManager, Role.AppAdmin)
     async findById(@Param('id') id: string) {
         const company = await this.companiesInternalService.findInternalById(id);
         const transformedCompany = CompanyResource.transformCompany(company);
@@ -117,9 +117,9 @@ export class CompaniesInternalController {
 
     @Delete(':id')
     @HttpCode(HttpStatus.OK)
-    @Roles('owner_company')
+    @Roles(Role.CompanyOwner)
     async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-        await this.companiesInternalService.remove(id, user);
-        return ResponseUtil.success('Company deleted successfully', null);
+        const data = await this.companiesInternalService.remove(id, user);
+        return ResponseUtil.success('Company deleted successfully', data);
     }
 }

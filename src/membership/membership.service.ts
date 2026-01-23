@@ -58,7 +58,7 @@ export class MembershipService {
         return codeDoc.save() as any;
     }
 
-    async remove(id: string): Promise<void> {
+    async remove(id: string): Promise<{ deletedAt: Date }> {
         if (!Types.ObjectId.isValid(id)) {
             throw new NotFoundException('Invalid membership code ID');
         }
@@ -69,7 +69,10 @@ export class MembershipService {
         }
 
         // Soft delete
-        code.deletedAt = new Date();
+        const deletedAt = new Date();
+        code.deletedAt = deletedAt;
         await code.save();
+
+        return { deletedAt };
     }
 }

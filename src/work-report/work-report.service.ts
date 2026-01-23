@@ -91,14 +91,17 @@ export class WorkReportService {
         return savedSubmission;
     }
 
-    async remove(id: string): Promise<void> {
+    async remove(id: string): Promise<{ deletedAt: Date }> {
         if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Invalid ID');
 
         const report = await this.workReportModel.findOne({ _id: id, deletedAt: null }).exec();
         if (!report) throw new NotFoundException('Work Report not found');
 
         // Soft delete
-        report.deletedAt = new Date();
+        const deletedAt = new Date();
+        report.deletedAt = deletedAt;
         await report.save();
+
+        return { deletedAt };
     }
 }

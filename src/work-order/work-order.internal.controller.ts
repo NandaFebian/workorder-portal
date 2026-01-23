@@ -58,6 +58,7 @@ export class WorkOrderInternalController {
 
     @Put(':id/assign-staffs')
     @HttpCode(HttpStatus.OK)
+    @Roles(Role.CompanyOwner, Role.CompanyManager)
     async assignStaff(@Param('id') id: string, @Body() assignStaffDto: AssignStaffDto, @GetUser() user: AuthenticatedUser) {
         const data = await this.workOrderService.assignStaff(id, assignStaffDto, user);
         return ResponseUtil.success('Staff assigned successfully', data);
@@ -90,7 +91,7 @@ export class WorkOrderInternalController {
     @HttpCode(HttpStatus.OK)
     @Roles('owner_company', 'manager_company')
     async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-        await this.workOrderService.remove(id, user);
-        return ResponseUtil.success('Work order deleted successfully', null);
+        const data = await this.workOrderService.remove(id, user);
+        return ResponseUtil.success('Work order deleted successfully', data);
     }
 }

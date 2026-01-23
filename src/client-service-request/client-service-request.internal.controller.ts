@@ -48,7 +48,7 @@ export class ClientServiceRequestInternalController {
     @HttpCode(HttpStatus.OK)
     @Roles('owner_company', 'manager_company')
     async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-        await this.csrService.remove(id, user);
-        return ResponseUtil.success('Client service request deleted successfully', null);
+        const data = await this.csrService.remove(id, user);
+        return ResponseUtil.success('Client service request deleted successfully', data);
     }
 }

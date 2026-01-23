@@ -71,7 +71,7 @@ export class ServicesController {
     @HttpCode(HttpStatus.OK)
     @Roles('owner_company', 'manager_company')
     async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-        await this.internalService.removeById(id, user);
-        return ResponseUtil.success('Service deleted successfully', null);
+        const data = await this.internalService.removeById(id, user);
+        return ResponseUtil.success('Service deleted successfully', data);
     }
 }

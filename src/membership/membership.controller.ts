@@ -38,7 +38,7 @@ export class MembershipController {
     @HttpCode(HttpStatus.OK)
     @Roles('admin_app')
     async remove(@Param('id') id: string) {
-        await this.membershipService.remove(id);
-        return ResponseUtil.success('Membership code deleted successfully', null);
+        const data = await this.membershipService.remove(id);
+        return ResponseUtil.success('Membership code deleted successfully', data);
     }
 }

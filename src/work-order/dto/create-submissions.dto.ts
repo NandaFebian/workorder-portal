@@ -1,10 +1,10 @@
-import { IsArray, IsString, IsNotEmpty, ValidateNested, IsOptional, IsDateString } from 'class-validator';
+import { IsArray, IsString, IsNotEmpty, ValidateNested, IsOptional, IsDateString, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class FieldDataDto {
-    @IsString()
+    @IsNumber()
     @IsNotEmpty()
-    order: string;
+    order: number;
 
     @IsNotEmpty()
     value: any;

@@ -196,7 +196,7 @@ export class InvitationsService {
         await invitation.save();
     }
 
-    async remove(id: string, user: AuthenticatedUser): Promise<void> {
+    async remove(id: string, user: AuthenticatedUser): Promise<{ deletedAt: Date }> {
         if (!Types.ObjectId.isValid(id)) {
             throw new BadRequestException(`Invalid invitation ID format: ${id}`);
         }
@@ -215,7 +215,10 @@ export class InvitationsService {
         }
 
         // Soft delete
-        (invitation as any).deletedAt = new Date();
+        const deletedAt = new Date();
+        (invitation as any).deletedAt = deletedAt;
         await invitation.save();
+
+        return { deletedAt };
     }
 }

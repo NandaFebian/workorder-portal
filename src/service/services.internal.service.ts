@@ -209,7 +209,7 @@ export class ServicesInternalService {
         return services[0];
     }
 
-    async removeById(id: string, user: AuthenticatedUser): Promise<void> {
+    async removeById(id: string, user: AuthenticatedUser): Promise<{ deletedAt: Date }> {
         if (!user.company?._id) {
             throw new ForbiddenException('User is not associated with any company.');
         }
@@ -231,7 +231,10 @@ export class ServicesInternalService {
 
 
         // Soft delete only this specific version
-        service.deletedAt = new Date();
+        const deletedAt = new Date();
+        service.deletedAt = deletedAt;
         await service.save();
+
+        return { deletedAt };
     }
 }

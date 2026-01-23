@@ -178,7 +178,7 @@ export class FormsService {
         await Promise.all(updatePromises);
     }
 
-    async removeById(id: string, user: AuthenticatedUser): Promise<void> {
+    async removeById(id: string, user: AuthenticatedUser): Promise<{ deletedAt: Date }> {
         if (!user.company?._id) {
             throw new ForbiddenException('User is not associated with any company.');
         }
@@ -199,7 +199,10 @@ export class FormsService {
         }
 
         // Soft delete only this specific version
-        template.deletedAt = new Date();
+        const deletedAt = new Date();
+        template.deletedAt = deletedAt;
         await template.save();
+
+        return { deletedAt };
     }
 }

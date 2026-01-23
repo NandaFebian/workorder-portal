@@ -18,6 +18,7 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
+import { ResponseUtil } from 'src/common/utils/response.util';
 
 @Controller('positions')
 @UseGuards(AuthGuard, RolesGuard)
@@ -58,7 +59,7 @@ export class PositionsAdminController {
         @Param('id') id: string,
         @GetUser() user: AuthenticatedUser
     ) {
-        await this.positionsService.remove(id, user);
-        return { message: 'Position deleted successfully' };
+        const data = await this.positionsService.remove(id, user);
+        return ResponseUtil.success('Position deleted successfully', data);
     }
 }

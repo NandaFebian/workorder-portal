@@ -1,10 +1,11 @@
 // src/service/dto/submit-intake-forms.dto.ts
 import { Type } from 'class-transformer';
-import { IsArray, IsDefined, IsMongoId, IsNotEmpty, IsNumber, IsString, ValidateNested } from 'class-validator';
+import { IsArray, IsDefined, IsMongoId, IsNotEmpty, IsNumber, ValidateNested } from 'class-validator';
 
 export class FieldDataDto {
-    @IsDefined() // Bisa number atau string sesuai mock (order)
-    order: any;
+    @IsNumber()
+    @IsNotEmpty()
+    order: number;
 
     @IsDefined()
     value: any;

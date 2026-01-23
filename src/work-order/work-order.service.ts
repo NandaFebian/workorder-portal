@@ -300,7 +300,7 @@ export class WorkOrderService {
             // Map fieldsData using order from FormTemplate
             const fieldsData = submission.fieldsData.map(field => {
                 // Find matching field in template by order
-                const templateField = formTemplate.fields.find(f => f.order === parseInt(field.order));
+                const templateField = formTemplate.fields.find(f => f.order === field.order);
 
                 if (!templateField) {
                     throw new BadRequestException(`Field with order ${field.order} not found in form template`);
@@ -421,7 +421,7 @@ export class WorkOrderService {
         return savedWo;
     }
 
-    async remove(id: string, user: AuthenticatedUser): Promise<void> {
+    async remove(id: string, user: AuthenticatedUser): Promise<{ deletedAt: Date }> {
         if (!user.company || !user.company._id) {
             throw new BadRequestException('User company information is missing');
         }
@@ -437,7 +437,10 @@ export class WorkOrderService {
         }
 
         // Soft delete
-        wo.deletedAt = new Date();
+        const deletedAt = new Date();
+        wo.deletedAt = deletedAt;
         await wo.save();
+
+        return { deletedAt };
     }
 }

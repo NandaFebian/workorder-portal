@@ -7,6 +7,7 @@ import { GetUser } from '../common/decorators/get-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { InvitationsService } from './invitations.service';
 import { Role } from '../common/enums/role.enum';
+import { ResponseUtil } from '../common/utils/response.util';
 
 @Controller('invitations')
 @UseGuards(AuthGuard) // Semua endpoint di sini butuh login
@@ -73,10 +74,8 @@ export class InvitationsController {
     @Roles('owner_company', 'manager_company')
     @HttpCode(HttpStatus.OK)
     async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-        await this.invitationsService.remove(id, user);
-        return {
-            message: 'Invitation deleted successfully',
-        };
+        const data = await this.invitationsService.remove(id, user);
+        return ResponseUtil.success('Invitation deleted successfully', data);
     }
 
     // Mungkin perlu endpoint GET /invitations/pending untuk user melihat undangannya?

@@ -1,6 +1,6 @@
 import { WorkOrderDocument } from '../schemas/work-order.schema';
 import { FormSubmissionDocument } from '../../form/schemas/form-submissions.schema';
-import { RequiredStaffsResource } from 'src/common/resources/required-staffs.resource';
+import { RequiredStaffsResource } from '../../common/resources/required-staffs.resource';
 
 /**
  * Work Order Resource

@@ -1,4 +1,4 @@
-import { RequiredStaffsResource } from 'src/common/resources/required-staffs.resource';
+import { RequiredStaffsResource } from '../../common/resources/required-staffs.resource';
 
 /**
  * Service Resource

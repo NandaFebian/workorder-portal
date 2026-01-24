@@ -17,14 +17,14 @@ export class MembershipController {
 
     @Get()
     @UseGuards(RolesGuard)
-    @Roles(Role.CompanyOwner, Role.CompanyManager, 'admin_app') // Assume admin or managers manage this
+    @Roles(Role.CompanyOwner, Role.CompanyManager, Role.AppAdmin) // Assume admin or managers manage this
     async findAll() {
         return this.membershipService.findAll();
     }
 
     @Post('generate')
     @UseGuards(RolesGuard)
-    @Roles(Role.CompanyOwner, Role.CompanyManager, 'admin_app')
+    @Roles(Role.CompanyOwner, Role.CompanyManager, Role.AppAdmin)
     async generateCodes(@Body() dto: GenerateMemberCodesDto) {
         return this.membershipService.generateCodes(dto);
     }
@@ -36,7 +36,7 @@ export class MembershipController {
 
     @Delete(':id')
     @HttpCode(HttpStatus.OK)
-    @Roles('admin_app')
+    @Roles(Role.AppAdmin)
     async remove(@Param('id') id: string) {
         const data = await this.membershipService.remove(id);
         return ResponseUtil.success('Membership code deleted successfully', data);

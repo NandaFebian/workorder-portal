@@ -56,17 +56,12 @@ export async function getServicesWithAggregation(
                             $mergeObjects: [
                                 '$$rs',
                                 {
-                                    position: {
-                                        $arrayElemAt: [
-                                            {
-                                                $filter: {
-                                                    input: '$requiredStaffsPositions',
-                                                    as: 'pos',
-                                                    cond: { $eq: ['$$pos._id', '$$rs.positionId'] },
-                                                },
-                                            },
-                                            0,
-                                        ],
+                                    positions: {
+                                        $filter: {
+                                            input: '$requiredStaffsPositions',
+                                            as: 'pos',
+                                            cond: { $eq: ['$$pos._id', '$$rs.positionId'] },
+                                        },
                                     },
                                 },
                             ],

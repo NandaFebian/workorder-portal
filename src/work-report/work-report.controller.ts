@@ -7,6 +7,7 @@ import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { ResponseUtil } from 'src/common/utils/response.util';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
+import { Role } from 'src/common/enums/role.enum';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 // import { RolesGuard } from 'src/auth/guards/roles.guard'; // Jika perlu role specific
@@ -52,7 +53,7 @@ export class WorkReportController {
     // POST {{base_url}}/workreports/:id/submit
     @Post(':id/submit')
     @UseGuards(RolesGuard)
-    @Roles('owner_company', 'manager_company', 'staff_company')
+    @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
     @HttpCode(HttpStatus.OK)
     async submitForm(
         @Param('id') workReportId: string,
@@ -67,7 +68,7 @@ export class WorkReportController {
 
     @Delete(':id')
     @HttpCode(HttpStatus.OK)
-    @Roles('owner_company', 'manager_company')
+    @Roles(Role.CompanyOwner, Role.CompanyManager)
     async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
         const data = await this.workReportService.remove(id);
         return ResponseUtil.success('Work report deleted successfully', data);

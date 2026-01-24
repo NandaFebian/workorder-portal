@@ -26,7 +26,7 @@ export class ServiceResource {
         return {
             minimumStaff: requiredStaff.minimumStaff,
             maximumStaff: requiredStaff.maximumStaff,
-            positionId: requiredStaff.positionId,
+            positions: requiredStaff.positions,
         };
     }
 

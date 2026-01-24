@@ -20,6 +20,7 @@ import { GetUser } from '../common/decorators/get-user.decorator';
 import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
+import { Role } from 'src/common/enums/role.enum';
 import { ResponseUtil } from 'src/common/utils/response.util';
 
 @Controller('services')
@@ -30,7 +31,7 @@ export class ServicesController {
 
     @Post()
     @HttpCode(HttpStatus.CREATED)
-    @Roles('owner_company', 'manager_company')
+    @Roles(Role.CompanyOwner, Role.CompanyManager)
     async create(
         @Body() createServiceDto: CreateServiceDto,
         @GetUser() user: AuthenticatedUser,
@@ -41,7 +42,7 @@ export class ServicesController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
-    @Roles('owner_company', 'manager_company')
+    @Roles(Role.CompanyOwner, Role.CompanyManager)
     async findAll(@GetUser() user: AuthenticatedUser) {
         const services = await this.internalService.findAll(user);
         return ResponseUtil.success('Load data success', services);
@@ -49,7 +50,7 @@ export class ServicesController {
 
     @Get(':id')
     @HttpCode(HttpStatus.OK)
-    @Roles('owner_company', 'manager_company')
+    @Roles(Role.CompanyOwner, Role.CompanyManager)
     async findOne(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
         const service = await this.internalService.findByVersionId(id, user);
         return ResponseUtil.success('Load data success', service);
@@ -57,7 +58,7 @@ export class ServicesController {
 
     @Put(':id')
     @HttpCode(HttpStatus.OK)
-    @Roles('owner_company', 'manager_company')
+    @Roles(Role.CompanyOwner, Role.CompanyManager)
     async update(
         @Param('id') id: string,
         @Body() updateServiceDto: UpdateServiceDto,
@@ -69,7 +70,7 @@ export class ServicesController {
 
     @Delete(':id')
     @HttpCode(HttpStatus.OK)
-    @Roles('owner_company', 'manager_company')
+    @Roles(Role.CompanyOwner, Role.CompanyManager)
     async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
         const data = await this.internalService.removeById(id, user);
         return ResponseUtil.success('Service deleted successfully', data);

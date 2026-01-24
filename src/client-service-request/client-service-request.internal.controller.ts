@@ -3,13 +3,14 @@ import { ClientServiceRequestService } from './client-service-request.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
+import { Role } from 'src/common/enums/role.enum';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { ResponseUtil } from 'src/common/utils/response.util';
 
 @Controller('client-service-request')
 @UseGuards(AuthGuard, RolesGuard)
-@Roles('owner_company', 'manager_company', 'staff_company')
+@Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
 export class ClientServiceRequestInternalController {
     constructor(private readonly csrService: ClientServiceRequestService) { }
 
@@ -29,7 +30,7 @@ export class ClientServiceRequestInternalController {
     }
 
     @Put(':id/approve')
-    @Roles('owner_company', 'manager_company')
+    @Roles(Role.CompanyOwner, Role.CompanyManager)
     @HttpCode(HttpStatus.OK)
     async approve(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
         // Pass user ke service
@@ -37,7 +38,7 @@ export class ClientServiceRequestInternalController {
     }
 
     @Put(':id/reject')
-    @Roles('owner_company', 'manager_company')
+    @Roles(Role.CompanyOwner, Role.CompanyManager)
     @HttpCode(HttpStatus.OK)
     async reject(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
         // Pass user ke service
@@ -46,7 +47,7 @@ export class ClientServiceRequestInternalController {
 
     @Delete(':id')
     @HttpCode(HttpStatus.OK)
-    @Roles('owner_company', 'manager_company')
+    @Roles(Role.CompanyOwner, Role.CompanyManager)
     async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
         const data = await this.csrService.remove(id, user);
         return ResponseUtil.success('Client service request deleted successfully', data);

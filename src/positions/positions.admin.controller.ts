@@ -16,13 +16,14 @@ import { UpdatePositionDto } from './dto/update-position.dto';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
+import { Role } from 'src/common/enums/role.enum';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { ResponseUtil } from 'src/common/utils/response.util';
 
 @Controller('positions')
 @UseGuards(AuthGuard, RolesGuard)
-@Roles('admin_app', 'owner_company', 'manager_company')
+@Roles(Role.AppAdmin, Role.CompanyOwner, Role.CompanyManager)
 export class PositionsAdminController {
     constructor(private readonly positionsService: PositionsService) { }
 

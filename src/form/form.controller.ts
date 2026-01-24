@@ -6,6 +6,7 @@ import { UpdateFormTemplateDto } from './dto/update-form-template.dto';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
+import { Role } from 'src/common/enums/role.enum';
 import { SubmitFormDto } from './dto/submit-form.dto';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
@@ -18,7 +19,7 @@ export class FormsController {
 
     @Post('')
     @UseGuards(RolesGuard)
-    @Roles('owner_company', 'manager_company')
+    @Roles(Role.CompanyOwner, Role.CompanyManager)
     async createTemplate(@Body() createFormTemplateDto: CreateFormTemplateDto, @GetUser() user: AuthenticatedUser) {
         const template = await this.formsService.createTemplate(createFormTemplateDto, user);
         return ResponseUtil.success('Form template created successfully', template);
@@ -38,7 +39,7 @@ export class FormsController {
 
     @Put(':formKey')
     @UseGuards(RolesGuard)
-    @Roles('owner_company', 'manager_company')
+    @Roles(Role.CompanyOwner, Role.CompanyManager)
     async updateTemplate(
         @Param('formKey') formKey: string,
         @Body() updateFormTemplateDto: UpdateFormTemplateDto,
@@ -56,7 +57,7 @@ export class FormsController {
 
     @Delete(':id')
     @UseGuards(RolesGuard)
-    @Roles('owner_company', 'manager_company')
+    @Roles(Role.CompanyOwner, Role.CompanyManager)
     @HttpCode(HttpStatus.OK)
     async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
         const data = await this.formsService.removeById(id, user);

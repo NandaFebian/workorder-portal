@@ -23,7 +23,7 @@ export class CompaniesInternalController {
 
     @Get()
     @UseGuards(AuthGuard, RolesGuard)
-    @Roles('admin_app', 'owner_company')
+    @Roles(Role.AppAdmin, Role.CompanyOwner)
     @HttpCode(HttpStatus.OK)
     async findAll(@GetUser() user: AuthenticatedUser) {
         if (user.role === 'admin_app') {
@@ -44,7 +44,7 @@ export class CompaniesInternalController {
 
     @Post('invite')
     @UseGuards(AuthGuard, RolesGuard)
-    @Roles('owner_company')
+    @Roles(Role.CompanyOwner)
     async inviteEmployees(
         @GetUser() invitingUser: AuthenticatedUser,
         @Body() inviteEmployeesDto: InviteEmployeesDto

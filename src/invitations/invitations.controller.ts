@@ -71,7 +71,7 @@ export class InvitationsController {
 
     @Delete(':id')
     @UseGuards(RolesGuard)
-    @Roles('owner_company', 'manager_company')
+    @Roles(Role.CompanyOwner, Role.CompanyManager)
     @HttpCode(HttpStatus.OK)
     async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
         const data = await this.invitationsService.remove(id, user);

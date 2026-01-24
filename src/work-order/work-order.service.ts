@@ -233,11 +233,28 @@ export class WorkOrderService {
         const workOrderFormsWithFields = await Promise.all(
             wo.workOrderForms.map(async (item) => {
                 const snapshotForm = item.form;
-                let fields: any[] = [];
+                let fullFormData: any = {
+                    _id: snapshotForm._id,
+                    title: snapshotForm.title,
+                    formType: snapshotForm.formType,
+                    description: snapshotForm.description,
+                    fields: []
+                };
+
                 try {
                     const template = await this.formsService.findTemplateById(snapshotForm._id.toString());
                     if (template) {
-                        fields = template.fields;
+                        // Populate with complete form template data (excluding formKey and companyId)
+                        fullFormData = {
+                            _id: template._id,
+                            title: template.title,
+                            description: template.description,
+                            formType: template.formType,
+                            __v: template.__v,
+                            fields: template.fields,
+                            createdAt: (template as any).createdAt,
+                            updatedAt: (template as any).updatedAt
+                        };
                     }
                 } catch (error) {
                     console.warn(`Form template not found: ${snapshotForm._id}`);
@@ -245,13 +262,7 @@ export class WorkOrderService {
 
                 return {
                     order: item.order,
-                    form: {
-                        _id: snapshotForm._id,
-                        title: snapshotForm.title,
-                        formType: snapshotForm.formType,
-                        description: snapshotForm.description,
-                        fields: fields
-                    }
+                    form: fullFormData
                 };
             })
         );

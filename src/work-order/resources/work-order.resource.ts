@@ -23,6 +23,26 @@ export class WorkOrderResource {
             }));
         }
 
+        // Transform service object
+        let transformedService: any = null;
+        if (wo.serviceId) {
+            const serviceObj = wo.serviceId.toObject ? wo.serviceId.toObject() : wo.serviceId;
+            transformedService = {
+                _id: serviceObj._id,
+                companyId: serviceObj.companyId,
+                title: serviceObj.title,
+                description: serviceObj.description,
+                accessType: serviceObj.accessType,
+                isActive: serviceObj.isActive,
+                requiredStaffs: serviceObj.requiredStaffs?.map((req: any) => ({
+                    minimumStaff: req.minimumStaff,
+                    maximumStaff: req.maximumStaff,
+                    positions: req.positionId ? [req.positionId] : [],
+                    _id: req._id,
+                })) || [],
+            };
+        }
+
         return {
             _id: wo._id,
             clientServiceRequestId: wo.clientServiceRequestId,
@@ -36,7 +56,7 @@ export class WorkOrderResource {
             startedAt: wo.startedAt,
             completedAt: wo.completedAt,
             createdBy: wo.createdBy,
-            service: wo.serviceId,
+            service: transformedService,
         };
     }
 

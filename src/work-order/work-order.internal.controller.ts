@@ -89,7 +89,7 @@ export class WorkOrderInternalController {
 
     @Delete(':id')
     @HttpCode(HttpStatus.OK)
-    @Roles('owner_company', 'manager_company')
+    @Roles(Role.CompanyOwner, Role.CompanyManager)
     async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
         const data = await this.workOrderService.remove(id, user);
         return ResponseUtil.success('Work order deleted successfully', data);

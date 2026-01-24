@@ -57,11 +57,16 @@ export async function getServicesWithAggregation(
                                 '$$rs',
                                 {
                                     positions: {
-                                        $filter: {
-                                            input: '$requiredStaffsPositions',
-                                            as: 'pos',
-                                            cond: { $eq: ['$$pos._id', '$$rs.positionId'] },
-                                        },
+                                        $arrayElemAt: [
+                                            {
+                                                $filter: {
+                                                    input: '$requiredStaffsPositions',
+                                                    as: 'pos',
+                                                    cond: { $eq: ['$$pos._id', '$$rs.positionId'] },
+                                                },
+                                            },
+                                            0,
+                                        ],
                                     },
                                 },
                             ],

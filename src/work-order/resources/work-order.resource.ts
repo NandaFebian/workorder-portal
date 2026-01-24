@@ -1,5 +1,6 @@
 import { WorkOrderDocument } from '../schemas/work-order.schema';
 import { FormSubmissionDocument } from '../../form/schemas/form-submissions.schema';
+import { RequiredStaffsResource } from 'src/common/resources/required-staffs.resource';
 
 /**
  * Work Order Resource
@@ -13,34 +14,20 @@ export class WorkOrderResource {
     static transformWorkOrder(doc: any): any {
         const wo = doc.toObject ? doc.toObject() : doc;
 
-        // Transform requiredStaffs dengan positions array
-        let requiredStaffs = [];
+        // Transform requiredStaffs menggunakan centralized resource
+        let requiredStaffs: any[] = [];
         if (wo.serviceId?.requiredStaffs) {
-            requiredStaffs = wo.serviceId.requiredStaffs.map((req: any) => ({
-                minimumStaff: req.minimumStaff,
-                maximumStaff: req.maximumStaff,
-                positions: req.positionId ? [req.positionId] : [],
-            }));
+            requiredStaffs = RequiredStaffsResource.transformRequiredStaffs(
+                wo.serviceId.requiredStaffs,
+            );
         }
 
-        // Transform service object
+        // Transform service object menggunakan centralized resource
         let transformedService: any = null;
         if (wo.serviceId) {
-            const serviceObj = wo.serviceId.toObject ? wo.serviceId.toObject() : wo.serviceId;
-            transformedService = {
-                _id: serviceObj._id,
-                companyId: serviceObj.companyId,
-                title: serviceObj.title,
-                description: serviceObj.description,
-                accessType: serviceObj.accessType,
-                isActive: serviceObj.isActive,
-                requiredStaffs: serviceObj.requiredStaffs?.map((req: any) => ({
-                    minimumStaff: req.minimumStaff,
-                    maximumStaff: req.maximumStaff,
-                    positions: req.positionId ? [req.positionId] : [],
-                    _id: req._id,
-                })) || [],
-            };
+            transformedService = RequiredStaffsResource.transformServiceWithRequiredStaffs(
+                wo.serviceId,
+            );
         }
 
         return {

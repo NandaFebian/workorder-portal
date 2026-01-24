@@ -1,3 +1,5 @@
+import { RequiredStaffsResource } from 'src/common/resources/required-staffs.resource';
+
 /**
  * Service Resource
  * Menangani transformasi data Service dengan required staffs dan forms
@@ -9,10 +11,10 @@ export class ServiceResource {
     static transformService(service: any): any {
         const serviceObj = service.toObject ? service.toObject() : { ...service };
 
-        // Transform required staffs jika ada
+        // Transform required staffs jika ada menggunakan centralized resource
         if (serviceObj.requiredStaffs) {
-            serviceObj.requiredStaffs = serviceObj.requiredStaffs.map((req: any) =>
-                this.transformRequiredStaff(req),
+            serviceObj.requiredStaffs = RequiredStaffsResource.transformRequiredStaffs(
+                serviceObj.requiredStaffs,
             );
         }
 
@@ -21,13 +23,10 @@ export class ServiceResource {
 
     /**
      * Transform required staff dengan position info
+     * @deprecated Use RequiredStaffsResource.transformRequiredStaff instead
      */
     static transformRequiredStaff(requiredStaff: any): any {
-        return {
-            minimumStaff: requiredStaff.minimumStaff,
-            maximumStaff: requiredStaff.maximumStaff,
-            positions: requiredStaff.positions,
-        };
+        return RequiredStaffsResource.transformRequiredStaff(requiredStaff);
     }
 
     /**

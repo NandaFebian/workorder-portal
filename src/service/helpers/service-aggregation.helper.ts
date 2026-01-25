@@ -56,7 +56,7 @@ export async function getServicesWithAggregation(
                             $mergeObjects: [
                                 '$$rs',
                                 {
-                                    positions: {
+                                    position: {
                                         $arrayElemAt: [
                                             {
                                                 $filter: {

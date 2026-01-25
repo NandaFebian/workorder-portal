@@ -1,4 +1,4 @@
-import { IsArray, IsString, IsNotEmpty, ValidateNested, IsOptional, IsDateString, IsNumber } from 'class-validator';
+import { IsArray, IsString, IsNotEmpty, ValidateNested, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class FieldDataDto {

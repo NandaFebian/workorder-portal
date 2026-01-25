@@ -161,7 +161,7 @@ export class WorkOrderService {
         return this.hydrateWorkOrderForms(wo);
     }
 
-    async update(id: string, updateWorkOrderDto: UpdateWorkOrderDto, user: AuthenticatedUser): Promise<WorkOrderDocument> {
+    async update(id: string, updateWorkOrderDto: UpdateWorkOrderDto, user: AuthenticatedUser): Promise<any> {
         if (!user.company || !user.company._id) {
             throw new BadRequestException('User company information is missing');
         }
@@ -169,10 +169,13 @@ export class WorkOrderService {
         if (!wo) throw new NotFoundException('Work Order not found');
 
         Object.assign(wo, updateWorkOrderDto);
-        return wo.save();
+        await wo.save();
+
+        // Refetch with populated fields to return full details
+        return this.findOneInternal(id, user);
     }
 
-    async updateStatus(id: string, updateStatusDto: UpdateWorkOrderStatusDto, user: AuthenticatedUser): Promise<WorkOrderDocument> {
+    async updateStatus(id: string, updateStatusDto: UpdateWorkOrderStatusDto, user: AuthenticatedUser): Promise<any> {
         if (!user.company || !user.company._id) {
             throw new BadRequestException('User company information is missing');
         }
@@ -187,10 +190,13 @@ export class WorkOrderService {
             wo.completedAt = new Date();
         }
 
-        return wo.save();
+        await wo.save();
+
+        // Refetch with populated fields to return full details
+        return this.findOneInternal(id, user);
     }
 
-    async assignStaff(id: string, assignStaffDto: AssignStaffDto, user: AuthenticatedUser): Promise<WorkOrderDocument> {
+    async assignStaff(id: string, assignStaffDto: AssignStaffDto, user: AuthenticatedUser): Promise<any> {
         if (!user.company || !user.company._id) {
             throw new BadRequestException('User company information is missing');
         }
@@ -225,7 +231,10 @@ export class WorkOrderService {
         }
 
         wo.assignedStaffs = staffIds as any;
-        return wo.save();
+        await wo.save();
+
+        // Refetch with populated fields to return full details
+        return this.findOneInternal(id, user);
     }
 
     // Helper to hydrate forms
@@ -344,7 +353,7 @@ export class WorkOrderService {
         };
     }
 
-    async markAsReady(id: string, user: AuthenticatedUser): Promise<WorkOrderDocument> {
+    async markAsReady(id: string, user: AuthenticatedUser): Promise<any> {
         if (!user.company || !user.company._id) {
             throw new BadRequestException('User company information is missing');
         }
@@ -378,10 +387,13 @@ export class WorkOrderService {
         }
 
         wo.status = 'ready';
-        return wo.save();
+        await wo.save();
+
+        // Refetch with populated fields to return full details
+        return this.findOneInternal(id, user);
     }
 
-    async markAsInProgress(id: string, user: AuthenticatedUser): Promise<WorkOrderDocument> {
+    async markAsInProgress(id: string, user: AuthenticatedUser): Promise<any> {
         if (!user.company || !user.company._id) {
             throw new BadRequestException('User company information is missing');
         }
@@ -429,7 +441,8 @@ export class WorkOrderService {
             status: 'in_progress'
         });
 
-        return savedWo;
+        // Refetch with populated fields to return full details
+        return this.findOneInternal(id, user);
     }
 
     async remove(id: string, user: AuthenticatedUser): Promise<{ deletedAt: Date }> {

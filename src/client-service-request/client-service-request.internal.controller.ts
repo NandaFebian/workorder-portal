@@ -33,16 +33,16 @@ export class ClientServiceRequestInternalController {
     @Roles(Role.CompanyOwner, Role.CompanyManager)
     @HttpCode(HttpStatus.OK)
     async approve(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-        // Pass user ke service
-        return await this.csrService.updateStatus(id, 'approved', user);
+        const data = await this.csrService.updateStatus(id, 'approved', user);
+        return ResponseUtil.success('Request approved successfully', data);
     }
 
     @Put(':id/reject')
     @Roles(Role.CompanyOwner, Role.CompanyManager)
     @HttpCode(HttpStatus.OK)
     async reject(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-        // Pass user ke service
-        return await this.csrService.updateStatus(id, 'rejected', user);
+        const data = await this.csrService.updateStatus(id, 'rejected', user);
+        return ResponseUtil.success('Request rejected successfully', data);
     }
 
     @Delete(':id')

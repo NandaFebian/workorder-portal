@@ -126,19 +126,32 @@ export class FormsService {
         return submission.save();
     }
 
-    async submitPublicForm(dto: { formId: string, fieldsData: any[] }, serviceId: string): Promise<FormSubmissionDocument> {
-        const template = await this.formTemplateModel.findOne({ _id: dto.formId, deletedAt: null }).exec();
-        if (!template) {
-            throw new NotFoundException(`Form template with ID ${dto.formId} not found`);
+    async submitPublicForm(dto: { submissions: { formId: string, fieldsData: any[] }[] }, serviceId: string): Promise<FormSubmissionDocument[]> {
+        const results: FormSubmissionDocument[] = [];
+
+        // Handle potentially missing submissions array
+        const submissions = dto.submissions || [];
+
+        for (const submissionDto of submissions) {
+            const template = await this.formTemplateModel.findOne({ _id: submissionDto.formId, deletedAt: null }).exec();
+            if (!template) {
+                // We could throw here, or skip. Throwing is safer for data integrity.
+                throw new NotFoundException(`Form template with ID ${submissionDto.formId} not found`);
+            }
+
+            const submission = new this.formSubmissionModel({
+                formId: submissionDto.formId,
+                fieldsData: submissionDto.fieldsData,
+                submittedById: null, // null untuk user publik
+                relatedServiceId: serviceId ? new Types.ObjectId(serviceId) : undefined,
+                companyId: template.companyId,
+            });
+
+            const saved = await submission.save();
+            results.push(saved);
         }
-        const submission = new this.formSubmissionModel({
-            formId: dto.formId,
-            fieldsData: dto.fieldsData,
-            submittedById: null, // null untuk user publik
-            relatedServiceId: serviceId ? new Types.ObjectId(serviceId) : undefined,
-            companyId: template.companyId, // Ambil companyId dari template
-        });
-        return submission.save();
+
+        return results;
     }
 
     async findLatestTemplateByKey(formKey: string): Promise<FormTemplateDocument> {

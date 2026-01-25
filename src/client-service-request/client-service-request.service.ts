@@ -193,14 +193,13 @@ export class ClientServiceRequestService {
             }
         }
 
-        return {
-            message: `Request ${status} successfully`,
-            data: {
-                request: csr,
-                workOrder: createdWorkOrder,
-                workReport: createdReport // Sertakan di response
-            }
-        };
+        if (status === 'approved' && createdWorkOrder) {
+            // Return full Work Order details
+            return this.workOrderService.findOneInternal((createdWorkOrder as any)._id.toString(), user);
+        }
+
+        // Return enriched CSR for rejection or other statuses
+        return this.findOneInternal(id);
     }
 
     async remove(id: string, user: AuthenticatedUser): Promise<{ deletedAt: Date }> {

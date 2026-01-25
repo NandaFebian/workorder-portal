@@ -5,7 +5,7 @@
 export class RequiredStaffsResource {
     /**
      * Transform single requiredStaff item
-     * Converts positionId to positions (single object)
+     * Converts positionId to position (single object)
      */
     static transformRequiredStaff(requiredStaff: any): any {
         if (!requiredStaff) return null;
@@ -13,7 +13,7 @@ export class RequiredStaffsResource {
         return {
             minimumStaff: requiredStaff.minimumStaff,
             maximumStaff: requiredStaff.maximumStaff,
-            positions: requiredStaff.positionId || requiredStaff.positions || null,
+            position: requiredStaff.positionId || requiredStaff.position || null,
             ...(requiredStaff._id && { _id: requiredStaff._id }),
         };
     }

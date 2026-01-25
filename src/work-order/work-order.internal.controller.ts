@@ -79,7 +79,7 @@ export class WorkOrderInternalController {
         return ResponseUtil.success('Work Order marked as ready', data);
     }
 
-    @Put(':id/in-progress')
+    @Put(':id/start')
     @HttpCode(HttpStatus.OK)
     @Roles(Role.CompanyOwner, Role.CompanyManager)
     async markAsInProgress(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {

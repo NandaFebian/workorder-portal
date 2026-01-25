@@ -1,16 +1,25 @@
+import { UserResource } from '../../users/resources/user.resource';
+
 /**
  * Company Resource
- * Menangani transformasi data Company dan Employee
+ * Handles company data transformation for API responses
  */
 export class CompanyResource {
     /**
-     * Transform company data
+     * Transform company data - full details
      */
     static transformCompany(company: any): any {
+        if (!company) return null;
+
         const companyObj = company.toObject ? company.toObject() : { ...company };
 
+        // Transform ownerId to owner if populated
         if (companyObj.ownerId) {
-            companyObj.owner = companyObj.ownerId;
+            if (typeof companyObj.ownerId === 'object') {
+                companyObj.owner = UserResource.transformUserMinimal(companyObj.ownerId);
+            } else {
+                companyObj.owner = companyObj.ownerId;
+            }
             delete companyObj.ownerId;
         }
 
@@ -18,18 +27,46 @@ export class CompanyResource {
     }
 
     /**
-     * Transform employee dengan position nested object
+     * Transform company minimal - for nested objects
+     * Returns only essential fields: _id, name, address, description
      */
-    static transformEmployee(user: any): any {
-        const empObject: any = user.toObject ? user.toObject() : { ...user };
+    static transformCompanyMinimal(company: any): any {
+        if (!company) return null;
 
-        // Transform positionId menjadi position nested object
-        if (empObject.positionId) {
-            empObject.position = empObject.positionId;
-            delete empObject.positionId;
+        const companyObj = company.toObject ? company.toObject() : { ...company };
+
+        return {
+            _id: companyObj._id,
+            name: companyObj.name,
+            address: companyObj.address,
+            description: companyObj.description,
+        };
+    }
+
+    /**
+     * Transform company with owner details
+     * Use when owner is populated
+     */
+    static transformCompanyWithOwner(company: any): any {
+        if (!company) return null;
+
+        const companyObj = company.toObject ? company.toObject() : { ...company };
+
+        // Transform owner
+        if (companyObj.ownerId) {
+            companyObj.owner = UserResource.transformUser(companyObj.ownerId);
+            delete companyObj.ownerId;
         }
 
-        return empObject;
+        return companyObj;
+    }
+
+    /**
+     * Transform employee with position nested object
+     * @deprecated Use UserResource.transformUser instead
+     */
+    static transformEmployee(user: any): any {
+        return UserResource.transformUser(user);
     }
 
     /**

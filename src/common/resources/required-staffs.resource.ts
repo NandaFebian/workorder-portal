@@ -3,10 +3,6 @@
  * Ensures consistent transformation of requiredStaffs across all endpoints
  */
 export class RequiredStaffsResource {
-    /**
-     * Transform single requiredStaff item
-     * Converts positionId to position (single object)
-     */
     static transformRequiredStaff(requiredStaff: any): any {
         if (!requiredStaff) return null;
 

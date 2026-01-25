@@ -2,6 +2,7 @@
 import { Model, PipelineStage, Types } from 'mongoose';
 import { ServiceDocument } from '../schemas/service.schema';
 import { FormsService } from 'src/form/form.service';
+import { RequiredStaffsResource } from 'src/common/resources/required-staffs.resource';
 
 export async function getServicesWithAggregation(
     serviceModel: Model<ServiceDocument>,
@@ -56,7 +57,7 @@ export async function getServicesWithAggregation(
                             $mergeObjects: [
                                 '$$rs',
                                 {
-                                    position: {
+                                    positionId: {
                                         $arrayElemAt: [
                                             {
                                                 $filter: {
@@ -78,16 +79,23 @@ export async function getServicesWithAggregation(
         {
             $project: {
                 requiredStaffsPositions: 0,
-                'requiredStaffs.positionId': 0
             }
         },
     ];
 
     const services = await serviceModel.aggregate(pipeline);
 
+    // Apply RequiredStaffsResource transformation to ensure consistency
+    const transformedServices = services.map(service => {
+        if (service.requiredStaffs) {
+            service.requiredStaffs = RequiredStaffsResource.transformRequiredStaffs(service.requiredStaffs);
+        }
+        return service;
+    });
+
     if (includeForms) {
         return Promise.all(
-            services.map(async (service) => {
+            transformedServices.map(async (service) => {
                 const populateFormDetail = async (formInfo: any) => {
                     try {
                         const latestForm = await formsService.findLatestTemplateByKey(formInfo.formKey);
@@ -150,5 +158,5 @@ export async function getServicesWithAggregation(
             })
         );
     }
-    return services;
+    return transformedServices;
 }

@@ -1,4 +1,4 @@
-import { IsArray, IsString, IsNotEmpty, ValidateNested, IsNumber } from 'class-validator';
+import { IsArray, IsString, IsNotEmpty, ValidateNested, IsNumber, IsDefined, IsMongoId } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class FieldDataDto {
@@ -6,12 +6,12 @@ class FieldDataDto {
     @IsNotEmpty()
     order: number;
 
-    @IsNotEmpty()
+    @IsDefined()
     value: any;
 }
 
 export class SubmissionItemDto {
-    @IsString()
+    @IsMongoId()
     @IsNotEmpty()
     formId: string;
 

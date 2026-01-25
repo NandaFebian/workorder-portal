@@ -7,7 +7,7 @@ import { FormsService } from 'src/form/form.service';
 import { getServicesWithAggregation } from './helpers/service-aggregation.helper';
 import { ClientServiceRequestService } from 'src/client-service-request/client-service-request.service';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
-import { SubmitIntakeFormItemDto } from './dto/submit-intake-forms.dto'; // DTO Baru
+import { SubmitIntakeFormDto } from './dto/submit-intake-forms.dto'; // DTO Baru
 import { FormSubmission, FormSubmissionDocument } from 'src/form/schemas/form-submissions.schema';
 
 @Injectable()
@@ -80,7 +80,7 @@ export class ServicesClientService {
     }
 
     // === LOGIC POST SUBMISSION ===
-    async processIntakeSubmission(serviceId: string, user: AuthenticatedUser, submission: SubmitIntakeFormItemDto) {
+    async processIntakeSubmission(serviceId: string, user: AuthenticatedUser, dto: any) {
         // 1. Validasi Service
         const service = await this.findAndValidatePublicService(serviceId);
 
@@ -115,12 +115,13 @@ export class ServicesClientService {
             clientId: user._id as any,
             companyId: service.companyId as any,
             status: 'received',
-            clientIntakeForm: validFormSnapshots as any,
+            clientIntakeForm: validFormSnapshots as any, // Snapshot form structure at time of submission
         });
 
         // 4. Create Submissions (Tabel 2)
-        // Adjust for single submission object
-        const submissionDocs = [{
+        // Handle array of submissions
+        const submissions = dto.submissions || [];
+        const submissionDocs = submissions.map((submission: any) => ({
             ownerId: newCSR._id, // Link ke CSR
             formId: new Types.ObjectId(submission.formId),
             submissionType: 'intake',
@@ -128,9 +129,11 @@ export class ServicesClientService {
             fieldsData: submission.fieldsData,
             status: 'submitted',
             submittedAt: new Date()
-        }];
+        }));
 
-        await this.submissionModel.insertMany(submissionDocs);
+        if (submissionDocs.length > 0) {
+            await this.submissionModel.insertMany(submissionDocs);
+        }
 
         return newCSR;
     }

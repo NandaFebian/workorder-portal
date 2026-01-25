@@ -51,8 +51,12 @@ export class FormsController {
 
     @Post('submissions')
     async submitForm(@GetUser() user: AuthenticatedUser, @Body() submitFormDto: SubmitFormDto) {
-        const submission = await this.formsService.submitForm(user, submitFormDto);
-        return ResponseUtil.success('Form submitted successfully', submission);
+        const results = await Promise.all(
+            submitFormDto.submissions.map(submission =>
+                this.formsService.submitForm(user, submission)
+            )
+        );
+        return ResponseUtil.success('Form submitted successfully', results);
     }
 
     @Delete(':id')

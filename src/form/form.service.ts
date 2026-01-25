@@ -85,7 +85,7 @@ export class FormsService {
         return newVersion.save();
     }
 
-    async submitForm(user: AuthenticatedUser, dto: SubmitFormDto): Promise<FormSubmissionDocument> {
+    async submitForm(user: AuthenticatedUser, dto: { formId: string; fieldsData: any[] }): Promise<FormSubmissionDocument> {
         const template = await this.formTemplateModel.findOne({ _id: dto.formId, deletedAt: null }).exec();
         if (!template) {
             throw new NotFoundException(`Form template with ID ${dto.formId} not found`);
@@ -126,7 +126,7 @@ export class FormsService {
         return submission.save();
     }
 
-    async submitPublicForm(dto: SubmitFormDto, serviceId: string): Promise<FormSubmissionDocument> {
+    async submitPublicForm(dto: { formId: string, fieldsData: any[] }, serviceId: string): Promise<FormSubmissionDocument> {
         const template = await this.formTemplateModel.findOne({ _id: dto.formId, deletedAt: null }).exec();
         if (!template) {
             throw new NotFoundException(`Form template with ID ${dto.formId} not found`);

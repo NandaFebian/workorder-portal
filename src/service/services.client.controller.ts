@@ -1,7 +1,7 @@
 // src/service/services.client.controller.ts
 import { Controller, Get, HttpCode, HttpStatus, Param, Post, Body, UseGuards } from '@nestjs/common';
 import { ServicesClientService } from './services.client.service';
-import { SubmitIntakeFormItemDto } from './dto/submit-intake-forms.dto'; // Import DTO Baru
+import { SubmitIntakeFormDto } from './dto/submit-intake-forms.dto'; // Import DTO Baru
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
@@ -41,7 +41,7 @@ export class ServicesClientController {
     @HttpCode(HttpStatus.CREATED)
     async submitIntakeForm(
         @Param('id') serviceId: string,
-        @Body() submission: SubmitIntakeFormItemDto,
+        @Body() submission: import('./dto/submit-intake-forms.dto').SubmitIntakeFormDto,
         @GetUser() user: AuthenticatedUser
     ) {
         // Perbaikan: Kirim variabel 'submission' ke service

@@ -49,7 +49,7 @@ export class WorkReportService {
     }
 
     async submitReportForm(dto: any, user: any): Promise<any> {
-        const { workReportId, formId, fieldsData } = dto;
+        const { workReportId, submissions } = dto;
 
         // Validate work report exists
         if (!Types.ObjectId.isValid(workReportId)) {
@@ -65,30 +65,40 @@ export class WorkReportService {
             throw new NotFoundException('Work report not found');
         }
 
-        // Validate formId
-        if (!Types.ObjectId.isValid(formId)) {
-            throw new NotFoundException('Invalid form ID');
-        }
-
         // Authorization check - verify user belongs to the same company
         if (user.company?._id?.toString() !== workReport.companyId.toString()) {
             throw new NotFoundException('Unauthorized to submit this work report form');
         }
 
-        // Create form submission
-        const submission = new this.formSubmissionModel({
-            submissionType: 'work_report',
-            ownerId: new Types.ObjectId(workReportId),
-            formId: new Types.ObjectId(formId),
-            submittedBy: user._id,
-            fieldsData: fieldsData,
-            status: 'submitted',
-            submittedAt: new Date()
-        });
+        const savedSubmissions: FormSubmissionDocument[] = [];
 
-        const savedSubmission = await submission.save();
+        // Iterate over submissions
+        if (submissions && Array.isArray(submissions)) {
+            for (const item of submissions) {
+                const { formId, fieldsData } = item;
 
-        return savedSubmission;
+                // Validate formId
+                if (!Types.ObjectId.isValid(formId)) {
+                    continue; // Skip invalid forms or throw error
+                }
+
+                // Create form submission
+                const submission = new this.formSubmissionModel({
+                    submissionType: 'work_report',
+                    ownerId: new Types.ObjectId(workReportId),
+                    formId: new Types.ObjectId(formId),
+                    submittedBy: user._id,
+                    fieldsData: fieldsData,
+                    status: 'submitted',
+                    submittedAt: new Date()
+                });
+
+                const saved = await submission.save();
+                savedSubmissions.push(saved);
+            }
+        }
+
+        return savedSubmissions;
     }
 
     async remove(id: string): Promise<{ deletedAt: Date }> {

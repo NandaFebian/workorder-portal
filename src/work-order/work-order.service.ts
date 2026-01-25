@@ -333,13 +333,13 @@ export class WorkOrderService {
             });
 
             const submissionData = {
-                submissionType: submission.submissionType,
-                ownerId: new Types.ObjectId(submission.ownerId),
+                submissionType: 'work_order',
+                ownerId: new Types.ObjectId(id),
                 formId: new Types.ObjectId(submission.formId),
-                submittedBy: new Types.ObjectId(submission.submittedBy),
+                submittedBy: new Types.ObjectId(user._id.toString()),
                 fieldsData: fieldsData,
-                status: submission.status,
-                submittedAt: submission.submittedAt ? new Date(submission.submittedAt) : new Date()
+                status: 'submitted',
+                submittedAt: new Date()
             };
 
             const newSubmission = new this.submissionModel(submissionData);

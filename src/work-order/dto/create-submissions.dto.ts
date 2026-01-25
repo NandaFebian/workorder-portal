@@ -4,6 +4,7 @@ import { Type } from 'class-transformer';
 class FieldDataDto {
     @IsNumber()
     @IsNotEmpty()
+    @Type(() => Number)
     order: number;
 
     @IsDefined()

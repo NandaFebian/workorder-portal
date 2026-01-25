@@ -347,10 +347,8 @@ export class WorkOrderService {
             savedSubmissions.push(saved);
         }
 
-        return {
-            workOrderId: id,
-            submissions: savedSubmissions
-        };
+        // Return full Work Order detail
+        return this.findOneInternal(id, user);
     }
 
     async markAsReady(id: string, user: AuthenticatedUser): Promise<any> {

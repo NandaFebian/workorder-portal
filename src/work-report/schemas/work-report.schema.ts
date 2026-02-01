@@ -56,7 +56,7 @@ export class WorkReport {
 
     @Prop({
         required: true,
-        enum: ['in_progress', 'completed', 'cancelled', 'rejected'],
+        enum: ['in_progress', 'completed', 'cancelled', 'rejected', 'drafted'],
         default: 'in_progress'
     })
     status: string;

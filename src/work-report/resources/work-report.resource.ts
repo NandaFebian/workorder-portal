@@ -7,6 +7,11 @@ export class WorkReportResource {
     static transformWorkReport(doc: any): any {
         const report = doc.toObject ? doc.toObject() : { ...doc };
 
+        // Ensure workOrderId is a string, not an object
+        if (report.workOrderId && typeof report.workOrderId === 'object') {
+            report.workOrderId = report.workOrderId.toString();
+        }
+
         return report;
     }
 }

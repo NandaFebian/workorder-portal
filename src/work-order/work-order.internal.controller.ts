@@ -12,6 +12,7 @@ import { UpdateWorkOrderStatusDto } from './dto/update-work-order-status.dto';
 import { AssignStaffDto } from './dto/assign-staff.dto';
 import { WorkOrderFilterDto } from './dto/work-order-filter.dto';
 import { CreateSubmissionsDto } from './dto/create-submissions.dto';
+import { SubmitWorkReportFormDto } from 'src/work-report/dto/submit-work-report-form.dto';
 import { ResponseUtil } from 'src/common/utils/response.util';
 
 @Controller('workorders')
@@ -99,5 +100,12 @@ export class WorkOrderInternalController {
     async getReport(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
         const data = await this.workOrderService.getReport(id, user);
         return ResponseUtil.success('Report retrieved successfully', data);
+    }
+
+    @Put(':id/report')
+    @HttpCode(HttpStatus.OK)
+    async submitReportForm(@Param('id') id: string, @Body() submitDto: SubmitWorkReportFormDto, @GetUser() user: AuthenticatedUser) {
+        const data = await this.workOrderService.submitReportForm(id, submitDto, user);
+        return ResponseUtil.success('Work report form submitted successfully', data);
     }
 }

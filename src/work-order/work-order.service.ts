@@ -436,7 +436,7 @@ export class WorkOrderService {
                     formType: 'report'
                 }
             })),
-            status: 'in_progress'
+            status: 'drafted'
         });
 
         // Refetch with populated fields to return full details
@@ -468,5 +468,9 @@ export class WorkOrderService {
 
     async getReport(id: string, user: AuthenticatedUser): Promise<any> {
         return this.workReportService.findByWorkOrderId(id, user);
+    }
+
+    async submitReportForm(id: string, dto: any, user: AuthenticatedUser): Promise<any> {
+        return this.workReportService.submitReportFormByWorkOrderId(id, dto, user);
     }
 }

@@ -8,7 +8,7 @@ import { WorkReportResource } from './resources/work-report.resource';
 import { FormSubmission, FormSubmissionDocument } from '../form/schemas/form-submissions.schema';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { FormsService } from 'src/form/form.service';
-import { SubmissionType } from 'src/common/enums/submission-type.enum';
+import { SubmissionType } from '../common/enums/submission-type.enum';
 
 @Injectable()
 export class WorkReportService {

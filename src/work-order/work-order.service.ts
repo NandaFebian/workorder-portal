@@ -15,7 +15,7 @@ import { CreateSubmissionsDto } from './dto/create-submissions.dto';
 import { FormSubmission, FormSubmissionDocument } from 'src/form/schemas/form-submissions.schema';
 import { WorkReportService } from 'src/work-report/work-report.service';
 import { WorkOrderResource } from './resources/work-order.resource';
-import { SubmissionType } from 'src/common/enums/submission-type.enum';
+import { SubmissionType } from '../common/enums/submission-type.enum';
 
 @Injectable()
 export class WorkOrderService {

@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
-import { SubmissionType } from 'src/common/enums/submission-type.enum';
+import { SubmissionType } from '../../common/enums/submission-type.enum';
 
 @Schema({ _id: false })
 class FieldData {

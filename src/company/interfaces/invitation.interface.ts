@@ -7,7 +7,7 @@ export interface SuccessfulInvite {
     position_offered: {
         _id: string;
         name: string;
-    };
+    } | null;
 }
 
 export interface InviteError {
@@ -19,7 +19,7 @@ export interface InviteError {
     position_offered?: {
         _id: string;
         name: string;
-    };
+    } | null;
     message: string;
 }
 

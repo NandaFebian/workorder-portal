@@ -8,6 +8,7 @@ import { WorkReportResource } from './resources/work-report.resource';
 import { FormSubmission, FormSubmissionDocument } from '../form/schemas/form-submissions.schema';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { FormsService } from 'src/form/form.service';
+import { SubmissionType } from 'src/common/enums/submission-type.enum';
 
 @Injectable()
 export class WorkReportService {
@@ -85,7 +86,7 @@ export class WorkReportService {
 
                 // Create form submission
                 const submission = new this.formSubmissionModel({
-                    submissionType: 'report',
+                    submissionType: SubmissionType.Report,
                     ownerId: new Types.ObjectId(workReportId),
                     formId: new Types.ObjectId(formId),
                     submittedBy: user._id,
@@ -147,7 +148,7 @@ export class WorkReportService {
 
                 // Create form submission
                 const submission = new this.formSubmissionModel({
-                    submissionType: 'report',
+                    submissionType: SubmissionType.Report,
                     ownerId: workReport._id,
                     formId: new Types.ObjectId(formId),
                     submittedBy: user._id,
@@ -248,7 +249,7 @@ export class WorkReportService {
         const submissions = await this.formSubmissionModel
             .find({
                 ownerId: report._id,
-                submissionType: 'report'
+                submissionType: SubmissionType.Report
             })
             .exec();
 

@@ -64,16 +64,53 @@ export class CompaniesInternalService {
 
         for (const invite of inviteEmployeesDto.invites) {
             try {
-                if (!Types.ObjectId.isValid(invite.positionId)) {
-                    errors.push({ user: { email: invite.email }, role_offered: invite.role, position_offered: { _id: invite.positionId, name: "Invalid ID" }, message: "Invalid Position ID format" });
+                // Check if role is valid first
+                if (![Role.CompanyStaff, Role.CompanyManager].includes(invite.role as Role)) {
+                    errors.push({ user: { email: invite.email }, role_offered: invite.role, position_offered: null, message: "Invalid role specified" });
                     continue;
                 }
-                const position = await this.positionsService.findById(invite.positionId);
-                if (!position) {
-                    errors.push({ user: { email: invite.email }, role_offered: invite.role, position_offered: { _id: invite.positionId, name: "Not Found" }, message: `Position with ID ${invite.positionId} not found` });
-                    continue;
+
+                // For manager_company, positionId is optional
+                // For staff_company, positionId is required
+                let position: any = null;
+                if (invite.role === Role.CompanyManager) {
+                    // Manager doesn't need a position
+                    if (invite.positionId) {
+                        // If positionId is provided for manager, validate it
+                        if (!Types.ObjectId.isValid(invite.positionId)) {
+                            errors.push({ user: { email: invite.email }, role_offered: invite.role, position_offered: { _id: invite.positionId, name: "Invalid ID" }, message: "Invalid Position ID format" });
+                            continue;
+                        }
+                        position = await this.positionsService.findById(invite.positionId);
+                        if (!position) {
+                            errors.push({ user: { email: invite.email }, role_offered: invite.role, position_offered: { _id: invite.positionId, name: "Not Found" }, message: `Position with ID ${invite.positionId} not found` });
+                            continue;
+                        }
+                    }
+                } else {
+                    // Staff requires a position
+                    if (!invite.positionId) {
+                        errors.push({ user: { email: invite.email }, role_offered: invite.role, position_offered: null, message: "Position ID is required for staff role" });
+                        continue;
+                    }
+                    if (!Types.ObjectId.isValid(invite.positionId)) {
+                        errors.push({ user: { email: invite.email }, role_offered: invite.role, position_offered: { _id: invite.positionId, name: "Invalid ID" }, message: "Invalid Position ID format" });
+                        continue;
+                    }
+                    position = await this.positionsService.findById(invite.positionId);
+                    if (!position) {
+                        errors.push({ user: { email: invite.email }, role_offered: invite.role, position_offered: { _id: invite.positionId, name: "Not Found" }, message: `Position with ID ${invite.positionId} not found` });
+                        continue;
+                    }
                 }
-                const createError = (message: string, user?: UserDocument): InviteError => ({ user: { email: invite.email, name: user?.name }, role_offered: invite.role, position_offered: { _id: position.id, name: position.name }, message });
+
+                const createError = (message: string, user?: UserDocument): InviteError => ({
+                    user: { email: invite.email, name: user?.name },
+                    role_offered: invite.role,
+                    position_offered: position ? { _id: position.id, name: position.name } : null,
+                    message
+                });
+
                 const user = await this.usersService.findOneByEmail(invite.email);
                 if (!user) {
                     errors.push(createError("User not found"));
@@ -92,24 +129,21 @@ export class CompaniesInternalService {
                     errors.push(createError("User already belongs to a company", user));
                     continue;
                 }
-                if (![Role.CompanyStaff, Role.CompanyManager].includes(invite.role as Role)) {
-                    errors.push(createError("Invalid role specified", user));
-                    continue;
-                }
+
                 const expiresAt = new Date();
                 expiresAt.setDate(expiresAt.getDate() + 7);
                 await this.invitationModel.create({
                     companyId: new Types.ObjectId(companyId),
                     userId: user._id,
                     role: invite.role,
-                    positionId: new Types.ObjectId(invite.positionId),
+                    positionId: invite.positionId ? new Types.ObjectId(invite.positionId) : null,
                     status: 'pending',
                     expiresAt
                 });
                 successfulInvites.push({
                     user: { name: user.name, email: user.email },
                     role_offered: invite.role,
-                    position_offered: { _id: position.id, name: position.name }
+                    position_offered: position ? { _id: position.id, name: position.name } : null
                 });
             } catch (error) {
                 errors.push({ user: { email: invite.email }, role_offered: invite.role, position_offered: { _id: invite.positionId, name: "Unknown" }, message: error.message });

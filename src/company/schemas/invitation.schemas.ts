@@ -14,7 +14,7 @@ export class Invitation {
     @Prop({ required: true })
     role: string;
 
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Position', required: true })
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Position', required: false, default: null })
     positionId: MongooseSchema.Types.ObjectId;
 
     @Prop({ required: true })

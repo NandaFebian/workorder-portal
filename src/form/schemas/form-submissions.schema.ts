@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
+import { SubmissionType } from 'src/common/enums/submission-type.enum';
 
 @Schema({ _id: false })
 class FieldData {
@@ -15,7 +16,12 @@ export type FormSubmissionDocument = FormSubmission & Document;
 
 @Schema({ timestamps: true })
 export class FormSubmission {
-    @Prop({ type: String, required: true, default: 'intake' })
+    @Prop({
+        type: String,
+        required: true,
+        enum: Object.values(SubmissionType),
+        default: SubmissionType.Intake
+    })
     submissionType: string; // 'intake', 'work_order', 'report'
 
     // Owner ID merujuk ke _id dari ClientServiceRequest

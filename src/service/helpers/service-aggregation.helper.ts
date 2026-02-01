@@ -125,12 +125,28 @@ export async function getServicesWithAggregation(
                             };
 
                             if (includeAccessControl) {
+                                // Fetch full position data for fillableByPositionIds
+                                const fillablePositions = formInfo.fillableByPositionIds && formInfo.fillableByPositionIds.length > 0
+                                    ? await serviceModel.db.collection('positions').find({
+                                        _id: { $in: formInfo.fillableByPositionIds.map((id: any) => new Types.ObjectId(id)) },
+                                        deletedAt: null
+                                    }).toArray()
+                                    : [];
+
+                                // Fetch full position data for viewableByPositionIds
+                                const viewablePositions = formInfo.viewableByPositionIds && formInfo.viewableByPositionIds.length > 0
+                                    ? await serviceModel.db.collection('positions').find({
+                                        _id: { $in: formInfo.viewableByPositionIds.map((id: any) => new Types.ObjectId(id)) },
+                                        deletedAt: null
+                                    }).toArray()
+                                    : [];
+
                                 return {
                                     ...baseResult,
                                     fillableByRoles: formInfo.fillableByRoles,
                                     viewableByRoles: formInfo.viewableByRoles,
-                                    fillableByPositionIds: formInfo.fillableByPositionIds,
-                                    viewableByPositionIds: formInfo.viewableByPositionIds,
+                                    fillableByPositions: fillablePositions,
+                                    viewableByPositions: viewablePositions,
                                 };
                             }
                             return baseResult;

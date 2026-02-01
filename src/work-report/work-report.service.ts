@@ -85,7 +85,7 @@ export class WorkReportService {
 
                 // Create form submission
                 const submission = new this.formSubmissionModel({
-                    submissionType: 'work_report',
+                    submissionType: 'report',
                     ownerId: new Types.ObjectId(workReportId),
                     formId: new Types.ObjectId(formId),
                     submittedBy: user._id,
@@ -147,7 +147,7 @@ export class WorkReportService {
 
                 // Create form submission
                 const submission = new this.formSubmissionModel({
-                    submissionType: 'work_report',
+                    submissionType: 'report',
                     ownerId: workReport._id,
                     formId: new Types.ObjectId(formId),
                     submittedBy: user._id,
@@ -248,7 +248,7 @@ export class WorkReportService {
         const submissions = await this.formSubmissionModel
             .find({
                 ownerId: report._id,
-                submissionType: 'work_report'
+                submissionType: 'report'
             })
             .exec();
 

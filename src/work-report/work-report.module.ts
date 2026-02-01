@@ -6,6 +6,7 @@ import { WorkReportService } from './work-report.service';
 import { WorkReportController } from './work-report.controller';
 import { AuthModule } from 'src/auth/auth.module';
 import { UsersModule } from 'src/users/users.module';
+import { FormModule } from 'src/form/form.module';
 
 @Module({
     imports: [
@@ -15,9 +16,10 @@ import { UsersModule } from 'src/users/users.module';
         ]),
         forwardRef(() => AuthModule),
         UsersModule,
+        FormModule,
     ],
     controllers: [WorkReportController],
     providers: [WorkReportService],
-    exports: [WorkReportService], // PENTING: Export service agar bisa dipakai di CSR Module
+    exports: [WorkReportService],
 })
 export class WorkReportModule { }

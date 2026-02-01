@@ -465,4 +465,8 @@ export class WorkOrderService {
 
         return { deletedAt };
     }
+
+    async getReport(id: string, user: AuthenticatedUser): Promise<any> {
+        return this.workReportService.findByWorkOrderId(id, user);
+    }
 }

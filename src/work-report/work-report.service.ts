@@ -6,12 +6,15 @@ import { CreateWorkReportDto } from './dto/create-work-report.dto';
 import { UpdateWorkReportDto } from './dto/update-work-report.dto';
 import { WorkReportResource } from './resources/work-report.resource';
 import { FormSubmission, FormSubmissionDocument } from '../form/schemas/form-submissions.schema';
+import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
+import { FormsService } from 'src/form/form.service';
 
 @Injectable()
 export class WorkReportService {
     constructor(
         @InjectModel(WorkReport.name) private workReportModel: Model<WorkReportDocument>,
         @InjectModel(FormSubmission.name) private formSubmissionModel: Model<FormSubmissionDocument>,
+        private readonly formsService: FormsService,
     ) { }
 
     async create(createDto: CreateWorkReportDto): Promise<WorkReportDocument> {
@@ -99,6 +102,73 @@ export class WorkReportService {
         }
 
         return savedSubmissions;
+    }
+
+    async findByWorkOrderId(workOrderId: string, user: AuthenticatedUser): Promise<any> {
+        if (!Types.ObjectId.isValid(workOrderId)) throw new NotFoundException('Invalid Work Order ID');
+
+        const report = await this.workReportModel.findOne({
+            workOrderId: new Types.ObjectId(workOrderId),
+            deletedAt: null
+        })
+            .populate('workOrderId')
+            .exec();
+
+        if (!report) throw new NotFoundException('Work Report not found');
+
+        // Transform and Filter based on Role and Position
+        const transformedReport = WorkReportResource.transformWorkReport(report);
+
+        // Filter AND Hydrate reportForms
+        if (transformedReport.reportForms) {
+            const filteredForms = transformedReport.reportForms.filter((item: any) => {
+                const hasRole = item.viewableByRoles?.includes(user.role);
+                if (!hasRole) return false;
+
+                const positionIds = item.viewableByPositionIds || [];
+                if (positionIds.length === 0) {
+                    return true;
+                }
+
+                if (user.position && user.position._id) {
+                    return positionIds.includes(user.position._id.toString());
+                } else if (user.position) {
+                    return positionIds.includes((user.position as any).toString());
+                }
+
+                return false;
+            });
+
+            // Hydrate forms with full details from FormsService
+            transformedReport.reportForms = await Promise.all(filteredForms.map(async (item: any) => {
+                const formId = item.form._id;
+                let fullFormData = { ...item.form, fields: [] }; // Default fallback
+
+                try {
+                    const template = await this.formsService.findTemplateById(formId.toString());
+                    if (template) {
+                        // Populate fields and other details from template
+                        fullFormData = {
+                            _id: template._id,
+                            title: template.title,
+                            description: template.description,
+                            formType: template.formType,
+                            fields: template.fields,
+                            // Add other necessary fields if any
+                        };
+                    }
+                } catch (e) {
+                    console.warn(`Failed to hydrate form ${formId}: ${e.message}`);
+                }
+
+                return {
+                    ...item,
+                    form: fullFormData
+                };
+            }));
+        }
+
+        return transformedReport;
     }
 
     async remove(id: string): Promise<{ deletedAt: Date }> {

@@ -94,4 +94,10 @@ export class WorkOrderInternalController {
         const data = await this.workOrderService.remove(id, user);
         return ResponseUtil.success('Work order deleted successfully', data);
     }
+    @Get(':id/report')
+    @HttpCode(HttpStatus.OK)
+    async getReport(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+        const data = await this.workOrderService.getReport(id, user);
+        return ResponseUtil.success('Report retrieved successfully', data);
+    }
 }

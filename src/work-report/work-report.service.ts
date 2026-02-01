@@ -161,7 +161,8 @@ export class WorkReportService {
             }
         }
 
-        return savedSubmissions;
+        // Return full work report object with updated submissions
+        return this.findByWorkOrderId(workOrderId, user);
     }
 
     async findByWorkOrderId(workOrderId: string, user: AuthenticatedUser): Promise<any> {

@@ -30,12 +30,19 @@ export class WorkOrderResource {
             );
         }
 
+        // Transform assigned staffs
+        const transformedAssignedStaffs =
+            wo.assignedStaffs?.map((staff: any) =>
+                this.transformAssignedStaff(staff),
+            ) || [];
+
         return {
             _id: wo._id,
             clientServiceRequestId: wo.clientServiceRequestId,
             companyId: wo.companyId,
             relatedWorkOrderId: wo.relatedWorkOrderId,
             requiredStaffs: requiredStaffs,
+            assignedStaffs: transformedAssignedStaffs,
             status: wo.status,
             priority: wo.priority,
             createdAt: wo.createdAt,

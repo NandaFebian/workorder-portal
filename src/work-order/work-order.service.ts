@@ -85,7 +85,15 @@ export class WorkOrderService {
                     select: 'name description isActive companyId'
                 }
             })
-            .populate('assignedStaffs', 'name email')
+            .populate({
+                path: 'assignedStaffs',
+                select: 'name email role companyId positionId',
+                populate: {
+                    path: 'positionId',
+                    model: 'Position',
+                    select: '_id name companyId createdAt updatedAt'
+                }
+            })
             .sort({ createdAt: -1 })
             .exec();
 

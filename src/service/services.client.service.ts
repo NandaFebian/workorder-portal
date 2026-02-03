@@ -9,6 +9,7 @@ import { ClientServiceRequestService } from 'src/client-service-request/client-s
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { SubmitIntakeFormDto } from './dto/submit-intake-forms.dto'; // DTO Baru
 import { FormSubmission, FormSubmissionDocument } from 'src/form/schemas/form-submissions.schema';
+import { validateFormSubmission } from 'src/form/helpers/form-validation.helper';
 
 @Injectable()
 export class ServicesClientService {
@@ -121,15 +122,36 @@ export class ServicesClientService {
         // 4. Create Submissions (Tabel 2)
         // Handle array of submissions
         const submissions = dto.submissions || [];
-        const submissionDocs = submissions.map((submission: any) => ({
-            ownerId: newCSR._id, // Link ke CSR
-            formId: new Types.ObjectId(submission.formId),
-            submissionType: 'intake',
-            submittedBy: new Types.ObjectId(user._id.toString()),
-            fieldsData: submission.fieldsData,
-            status: 'submitted',
-            submittedAt: new Date()
-        }));
+        const submissionDocs: Array<{
+            ownerId: any;
+            formId: Types.ObjectId;
+            submissionType: string;
+            submittedBy: Types.ObjectId;
+            fieldsData: any;
+            status: string;
+            submittedAt: Date;
+        }> = [];
+
+        for (const submission of submissions) {
+            // Fetch form template to validate fields
+            const formTemplate = await this.formsService.findTemplateById(submission.formId);
+            if (!formTemplate) {
+                throw new NotFoundException(`Form template with ID ${submission.formId} not found`);
+            }
+
+            // Validate field values (especially for single_select and multi_select)
+            validateFormSubmission(formTemplate.fields, submission.fieldsData);
+
+            submissionDocs.push({
+                ownerId: newCSR._id, // Link ke CSR
+                formId: new Types.ObjectId(submission.formId),
+                submissionType: 'intake',
+                submittedBy: new Types.ObjectId(user._id.toString()),
+                fieldsData: submission.fieldsData,
+                status: 'submitted',
+                submittedAt: new Date()
+            });
+        }
 
         if (submissionDocs.length > 0) {
             await this.submissionModel.insertMany(submissionDocs);

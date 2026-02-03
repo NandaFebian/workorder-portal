@@ -16,6 +16,7 @@ import { FormSubmission, FormSubmissionDocument } from 'src/form/schemas/form-su
 import { WorkReportService } from 'src/work-report/work-report.service';
 import { WorkOrderResource } from './resources/work-order.resource';
 import { SubmissionType } from '../common/enums/submission-type.enum';
+import { validateFormSubmission } from 'src/form/helpers/form-validation.helper';
 
 @Injectable()
 export class WorkOrderService {
@@ -325,6 +326,9 @@ export class WorkOrderService {
             if (!formTemplate) {
                 throw new NotFoundException(`Form template with ID ${submission.formId} not found`);
             }
+
+            // Validate field values (especially for single_select and multi_select)
+            validateFormSubmission(formTemplate.fields, submission.fieldsData);
 
             // Map fieldsData using order from FormTemplate
             const fieldsData = submission.fieldsData.map(field => {

@@ -9,6 +9,7 @@ import { FormSubmission, FormSubmissionDocument } from '../form/schemas/form-sub
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { FormsService } from 'src/form/form.service';
 import { SubmissionType } from '../common/enums/submission-type.enum';
+import { validateFormSubmission } from 'src/form/helpers/form-validation.helper';
 
 @Injectable()
 export class WorkReportService {
@@ -84,6 +85,15 @@ export class WorkReportService {
                     continue; // Skip invalid forms or throw error
                 }
 
+                // Fetch form template to validate fields
+                const formTemplate = await this.formsService.findTemplateById(formId);
+                if (!formTemplate) {
+                    throw new NotFoundException(`Form template with ID ${formId} not found`);
+                }
+
+                // Validate field values (especially for single_select and multi_select)
+                validateFormSubmission(formTemplate.fields, fieldsData);
+
                 // Create form submission
                 const submission = new this.formSubmissionModel({
                     submissionType: SubmissionType.Report,
@@ -146,6 +156,15 @@ export class WorkReportService {
                     throw new NotFoundException(`Form ${formId} is not part of this work report`);
                 }
 
+                // Fetch form template to validate fields
+                const formTemplate = await this.formsService.findTemplateById(formId);
+                if (!formTemplate) {
+                    throw new NotFoundException(`Form template with ID ${formId} not found`);
+                }
+
+                // Validate field values (especially for single_select and multi_select)
+                validateFormSubmission(formTemplate.fields, fieldsData);
+
                 // Create form submission
                 const submission = new this.formSubmissionModel({
                     submissionType: SubmissionType.Report,
@@ -182,14 +201,24 @@ export class WorkReportService {
         // Filter AND Hydrate reportForms
         if (transformedReport.reportForms) {
             const filteredForms = transformedReport.reportForms.filter((item: any) => {
-                const hasRole = item.viewableByRoles?.includes(user.role);
+                // Company owner can view all report forms
+                if (user.role === 'owner_company') {
+                    return true;
+                }
+
+                // If viewableByRoles is empty or undefined, allow all roles
+                const viewableRoles = item.viewableByRoles || [];
+                const hasRole = viewableRoles.length === 0 || viewableRoles.includes(user.role);
+
                 if (!hasRole) return false;
 
+                // If viewableByPositionIds is empty or undefined, allow all positions
                 const positionIds = item.viewableByPositionIds || [];
                 if (positionIds.length === 0) {
                     return true;
                 }
 
+                // Check if user's position is in the allowed list
                 if (user.position && user.position._id) {
                     return positionIds.includes(user.position._id.toString());
                 } else if (user.position) {

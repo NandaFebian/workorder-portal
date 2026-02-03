@@ -10,6 +10,7 @@ import { SubmitFormDto } from './dto/submit-form.dto';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { v4 as uuidv4 } from 'uuid';
 import { CompaniesInternalService } from 'src/company/companies.internal.service';
+import { validateFormSubmission } from './helpers/form-validation.helper';
 
 @Injectable()
 export class FormsService {
@@ -91,13 +92,14 @@ export class FormsService {
             throw new NotFoundException(`Form template with ID ${dto.formId} not found`);
         }
 
+        // Validate field values (especially for single_select and multi_select)
+        validateFormSubmission(template.fields, dto.fieldsData);
+
         // Map fieldsData to schema format verifying order
         const fieldsData = dto.fieldsData.map(inputField => {
             const templateField = template.fields.find(f => f.order === inputField.order);
             if (!templateField) {
-                // Determine if strict validation is needed. For now, we skip unknown fields or accept them?
-                // Given the requirement "follow structure", we assume valid orders are sent.
-                // We'll store it if it matches the DTO structure which is just order/value.
+                // This should not happen as validateFormSubmission already checks this
                 return {
                     order: inputField.order,
                     value: inputField.value
@@ -138,6 +140,9 @@ export class FormsService {
                 // We could throw here, or skip. Throwing is safer for data integrity.
                 throw new NotFoundException(`Form template with ID ${submissionDto.formId} not found`);
             }
+
+            // Validate field values (especially for single_select and multi_select)
+            validateFormSubmission(template.fields, submissionDto.fieldsData);
 
             const submission = new this.formSubmissionModel({
                 formId: submissionDto.formId,

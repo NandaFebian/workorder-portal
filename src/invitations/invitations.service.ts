@@ -21,6 +21,15 @@ export class InvitationsService {
             throw new BadRequestException(`Invalid user ID format: ${userId}`);
         }
 
+        const user = await this.userModel.findById(userId).exec();
+        if (!user) {
+            throw new BadRequestException('User not found');
+        }
+
+        if (user.companyId) {
+            throw new BadRequestException('You already belong to a company. You cannot view or receive new invitations.');
+        }
+
         const now = new Date();
 
         // Cari undangan yang pending dan belum expired 

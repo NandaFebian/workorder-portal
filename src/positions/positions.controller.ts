@@ -1,6 +1,7 @@
 // src/positions/positions.controller.ts
 import { Controller, Get, HttpCode, HttpStatus, Param, UseGuards } from '@nestjs/common';
 import { PositionsService } from './positions.service';
+import { UsersService } from 'src/users/users.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
@@ -12,7 +13,10 @@ import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.i
 @UseGuards(AuthGuard, RolesGuard)
 @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
 export class PositionsController {
-    constructor(private readonly positionsService: PositionsService) { }
+    constructor(
+        private readonly positionsService: PositionsService,
+        private readonly usersService: UsersService,
+    ) { }
 
     @Get()
     @HttpCode(HttpStatus.OK)
@@ -28,9 +32,16 @@ export class PositionsController {
     @HttpCode(HttpStatus.OK)
     async findById(@Param('id') id: string) {
         const position = await this.positionsService.findById(id);
+        const employees = await this.usersService.findByPositionId(id);
+        
+        const positionData = position.toObject ? position.toObject() : position;
+        
         return {
             message: 'Position retrieved successfully',
-            data: position,
+            data: {
+                ...positionData,
+                employee: employees,
+            },
         };
     }
 }

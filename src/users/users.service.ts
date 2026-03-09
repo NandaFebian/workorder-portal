@@ -28,6 +28,14 @@ export class UsersService {
         return this.userModel.findOne({ _id: id, deletedAt: null });
     }
 
+    // Method untuk mendapatkan list user berdasarkan positionId
+    async findByPositionId(positionId: string): Promise<UserDocument[]> {
+        return this.userModel.find({ positionId: new Types.ObjectId(positionId), deletedAt: null })
+            .select('-password -__v')
+            .sort({ createdAt: -1 })
+            .exec();
+    }
+
     // Method untuk mendapatkan semua user berdasarkan companyId dengan filter role
     async findAllByCompanyId(
         companyId: Types.ObjectId,

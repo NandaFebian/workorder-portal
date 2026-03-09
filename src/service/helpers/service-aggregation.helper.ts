@@ -38,6 +38,7 @@ export async function getServicesWithAggregation(
             }
         },
         { $replaceRoot: { newRoot: '$latest_doc' } },
+        { $sort: { createdAt: -1 } },
         { $project: projectStage },
         {
             $lookup: {

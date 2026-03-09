@@ -19,7 +19,6 @@ export class PositionsService {
                 throw new ForbiddenException('User is not associated with any company.');
             }
             return this.positionModel.find({
-                isActive: true,
                 deletedAt: null,
                 $or: [
                     { companyId: user.company._id },
@@ -27,7 +26,7 @@ export class PositionsService {
                 ]
             }).sort({ createdAt: -1 }).exec();
         }
-        return this.positionModel.find({ isActive: true, deletedAt: null }).sort({ createdAt: -1 }).exec();
+        return this.positionModel.find({ deletedAt: null }).sort({ createdAt: -1 }).exec();
     }
 
     async findById(id: string): Promise<PositionDocument> {

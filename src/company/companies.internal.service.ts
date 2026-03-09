@@ -164,6 +164,7 @@ export class CompaniesInternalService {
     async getInvitationHistory(companyId: string) {
         const invitations = await this.invitationModel
             .find({ companyId: new Types.ObjectId(companyId), deletedAt: null })
+            .sort({ createdAt: -1 })
             .populate([
                 { path: 'companyId', select: 'name' },
                 { path: 'positionId', select: 'name' },

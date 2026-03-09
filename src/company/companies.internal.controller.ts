@@ -95,30 +95,44 @@ export class CompaniesInternalController {
         return ResponseUtil.success('Employees retrieved successfully', transformedEmployees);
     }
 
-    @Put(':id')
+    @Put()
     @UseGuards(AuthGuard, RolesGuard)
     @Roles(Role.CompanyOwner, Role.CompanyManager) // Tentukan siapa yg boleh update
     @HttpCode(HttpStatus.OK)
-    async update(@Param('id') id: string, @Body() updateCompanyDto: UpdateCompanyDto) {
+    async update(@GetUser() user: AuthenticatedUser, @Body() updateCompanyDto: UpdateCompanyDto) {
+        if (!user.company?._id) {
+            throw new ForbiddenException('You are not associated with any company.');
+        }
+        const id = user.company._id.toString();
         // TODO: Tambahkan logika di service untuk cek otorisasi (apa user ini boleh update company dg id tsb)
         const company = await this.companiesInternalService.update(id, updateCompanyDto);
         const transformedCompany = CompanyResource.transformCompany(company);
         return ResponseUtil.success('Company updated successfully', transformedCompany);
     }
 
-    @Get(':id')
+    @Get('detail')
+    @UseGuards(AuthGuard, RolesGuard)
     @HttpCode(HttpStatus.OK)
-    @Roles(Role.CompanyOwner, Role.CompanyManager, Role.AppAdmin)
-    async findById(@Param('id') id: string) {
+    @Roles(Role.CompanyOwner, Role.CompanyManager)
+    async findById(@GetUser() user: AuthenticatedUser) {
+        if (!user.company?._id) {
+            throw new ForbiddenException('You are not associated with any company.');
+        }
+        const id = user.company._id.toString();
         const company = await this.companiesInternalService.findInternalById(id);
         const transformedCompany = CompanyResource.transformCompany(company);
         return ResponseUtil.success('Company retrieved successfully', transformedCompany);
     }
 
-    @Delete(':id')
+    @Delete()
+    @UseGuards(AuthGuard, RolesGuard)
     @HttpCode(HttpStatus.OK)
     @Roles(Role.CompanyOwner)
-    async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+    async remove(@GetUser() user: AuthenticatedUser) {
+        if (!user.company?._id) {
+            throw new ForbiddenException('You are not associated with any company.');
+        }
+        const id = user.company._id.toString();
         const data = await this.companiesInternalService.remove(id, user);
         return ResponseUtil.success('Company deleted successfully', data);
     }

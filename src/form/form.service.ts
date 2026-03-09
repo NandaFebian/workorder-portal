@@ -48,7 +48,8 @@ export class FormsService {
                     latest_doc: { $first: '$$ROOT' }
                 }
             },
-            { $replaceRoot: { newRoot: '$latest_doc' } }
+            { $replaceRoot: { newRoot: '$latest_doc' } },
+            { $sort: { createdAt: -1 } }
         ]);
     }
 

@@ -1,5 +1,12 @@
 // src/positions/positions.controller.ts
-import { Controller, Get, HttpCode, HttpStatus, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
 import { PositionsService } from './positions.service';
 import { UsersService } from 'src/users/users.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
@@ -13,35 +20,35 @@ import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.i
 @UseGuards(AuthGuard, RolesGuard)
 @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
 export class PositionsController {
-    constructor(
-        private readonly positionsService: PositionsService,
-        private readonly usersService: UsersService,
-    ) { }
+  constructor(
+    private readonly positionsService: PositionsService,
+    private readonly usersService: UsersService,
+  ) {}
 
-    @Get()
-    @HttpCode(HttpStatus.OK)
-    async findAll(@GetUser() user: AuthenticatedUser) {
-        const positions = await this.positionsService.findAll(user);
-        return {
-            message: 'Positions retrieved successfully',
-            data: positions,
-        };
-    }
+  @Get()
+  @HttpCode(HttpStatus.OK)
+  async findAll(@GetUser() user: AuthenticatedUser) {
+    const positions = await this.positionsService.findAll(user);
+    return {
+      message: 'Positions retrieved successfully',
+      data: positions,
+    };
+  }
 
-    @Get(':id')
-    @HttpCode(HttpStatus.OK)
-    async findById(@Param('id') id: string) {
-        const position = await this.positionsService.findById(id);
-        const employees = await this.usersService.findByPositionId(id);
-        
-        const positionData = position.toObject ? position.toObject() : position;
-        
-        return {
-            message: 'Position retrieved successfully',
-            data: {
-                ...positionData,
-                employee: employees,
-            },
-        };
-    }
+  @Get(':id')
+  @HttpCode(HttpStatus.OK)
+  async findById(@Param('id') id: string) {
+    const position = await this.positionsService.findById(id);
+    const employees = await this.usersService.findByPositionId(id);
+
+    const positionData = position.toObject ? position.toObject() : position;
+
+    return {
+      message: 'Position retrieved successfully',
+      data: {
+        ...positionData,
+        employee: employees,
+      },
+    };
+  }
 }

@@ -10,4 +10,4 @@ import { User, UserSchema } from './schemas/user.schema';
   providers: [UsersService],
   exports: [UsersService], // Ekspor service agar bisa dipakai di AuthModule
 })
-export class UsersModule { }
+export class UsersModule {}

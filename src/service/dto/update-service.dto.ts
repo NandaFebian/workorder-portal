@@ -5,9 +5,9 @@ import { IsArray, IsOptional, ValidateNested } from 'class-validator'; // Import
 import { Type } from 'class-transformer';
 
 export class UpdateServiceDto extends PartialType(CreateServiceDto) {
-    @IsArray()
-    @ValidateNested({ each: true })
-    @Type(() => ClientIntakeFormDto)
-    @IsOptional()
-    clientIntakeForms?: ClientIntakeFormDto[];
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ClientIntakeFormDto)
+  @IsOptional()
+  clientIntakeForms?: ClientIntakeFormDto[];
 }

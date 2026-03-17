@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { WorkOrder, WorkOrderDocument } from './schemas/work-order.schema';
@@ -12,7 +17,10 @@ import { UpdateWorkOrderStatusDto } from './dto/update-work-order-status.dto';
 import { AssignStaffDto } from './dto/assign-staff.dto';
 import { WorkOrderFilterDto } from './dto/work-order-filter.dto';
 import { CreateSubmissionsDto } from './dto/create-submissions.dto';
-import { FormSubmission, FormSubmissionDocument } from 'src/form/schemas/form-submissions.schema';
+import {
+  FormSubmission,
+  FormSubmissionDocument,
+} from 'src/form/schemas/form-submissions.schema';
 import { WorkReportService } from 'src/work-report/work-report.service';
 import { WorkOrderResource } from './resources/work-order.resource';
 import { SubmissionType } from '../common/enums/submission-type.enum';
@@ -20,470 +28,545 @@ import { validateFormSubmission } from 'src/form/helpers/form-validation.helper'
 
 @Injectable()
 export class WorkOrderService {
-    constructor(
-        @InjectModel(WorkOrder.name) private workOrderModel: Model<WorkOrderDocument>,
-        @InjectModel(FormSubmission.name) private submissionModel: Model<FormSubmissionDocument>,
-        private readonly formsService: FormsService,
-        private readonly usersService: UsersService,
-        private readonly workReportService: WorkReportService,
-    ) { }
+  constructor(
+    @InjectModel(WorkOrder.name)
+    private workOrderModel: Model<WorkOrderDocument>,
+    @InjectModel(FormSubmission.name)
+    private submissionModel: Model<FormSubmissionDocument>,
+    private readonly formsService: FormsService,
+    private readonly usersService: UsersService,
+    private readonly workReportService: WorkReportService,
+  ) {}
 
-    async create(createWorkOrderDto: CreateWorkOrderDto, user: AuthenticatedUser): Promise<WorkOrderDocument> {
-        if (!user.company || !user.company._id) {
-            throw new BadRequestException('User company information is missing');
-        }
-
-        const newWorkOrder = new this.workOrderModel({
-            ...createWorkOrderDto,
-            companyId: user.company._id,
-            createdBy: user._id,
-            status: 'drafted', // Default status
-        });
-        return newWorkOrder.save();
+  async create(
+    createWorkOrderDto: CreateWorkOrderDto,
+    user: AuthenticatedUser,
+  ): Promise<WorkOrderDocument> {
+    if (!user.company || !user.company._id) {
+      throw new BadRequestException('User company information is missing');
     }
 
-    async createInternal(data: any): Promise<WorkOrderDocument> {
-        const newWorkOrder = new this.workOrderModel(data);
-        return newWorkOrder.save();
+    const newWorkOrder = new this.workOrderModel({
+      ...createWorkOrderDto,
+      companyId: user.company._id,
+      createdBy: user._id,
+      status: 'drafted', // Default status
+    });
+    return newWorkOrder.save();
+  }
+
+  async createInternal(data: any): Promise<WorkOrderDocument> {
+    const newWorkOrder = new this.workOrderModel(data);
+    return newWorkOrder.save();
+  }
+
+  // GET All Work Orders (Internal Company)
+  async findAllInternal(
+    user: AuthenticatedUser,
+    filterDto: WorkOrderFilterDto,
+  ): Promise<any[]> {
+    if (!user.company || !user.company._id) {
+      throw new BadRequestException('User company information is missing');
     }
 
-    // GET All Work Orders (Internal Company)
-    async findAllInternal(user: AuthenticatedUser, filterDto: WorkOrderFilterDto): Promise<any[]> {
-        if (!user.company || !user.company._id) {
-            throw new BadRequestException('User company information is missing');
-        }
+    const query: any = { companyId: user.company._id, deletedAt: null };
 
-        const query: any = { companyId: user.company._id, deletedAt: null };
+    if (filterDto.status) {
+      query.status = filterDto.status;
+    }
+    if (filterDto.priority) {
+      query.priority = filterDto.priority;
+    }
+    if (filterDto.assignedStaffId) {
+      query.assignedStaffs = new Types.ObjectId(filterDto.assignedStaffId);
+    }
+    if (filterDto.clientId) {
+      // Assuming we can filter by client via clientServiceRequestId population or if we store clientId directly
+    }
+    if (filterDto.startDate && filterDto.endDate) {
+      query.createdAt = {
+        $gte: new Date(filterDto.startDate),
+        $lte: new Date(filterDto.endDate),
+      };
+    }
 
-        if (filterDto.status) {
-            query.status = filterDto.status;
-        }
-        if (filterDto.priority) {
-            query.priority = filterDto.priority;
-        }
-        if (filterDto.assignedStaffId) {
-            query.assignedStaffs = new Types.ObjectId(filterDto.assignedStaffId);
-        }
-        if (filterDto.clientId) {
-            // Assuming we can filter by client via clientServiceRequestId population or if we store clientId directly
-        }
-        if (filterDto.startDate && filterDto.endDate) {
-            query.createdAt = {
-                $gte: new Date(filterDto.startDate),
-                $lte: new Date(filterDto.endDate),
+    const workOrders = await this.workOrderModel
+      .find(query)
+      .populate('createdBy', 'name email role positionId')
+      .populate({
+        path: 'serviceId',
+        select:
+          'companyId title description accessType isActive requiredStaffs',
+        populate: {
+          path: 'requiredStaffs.positionId',
+          model: 'Position',
+          select: 'name description isActive companyId',
+        },
+      })
+      .populate({
+        path: 'assignedStaffs',
+        select: 'name email role companyId positionId',
+        populate: {
+          path: 'positionId',
+          model: 'Position',
+          select: '_id name companyId createdAt updatedAt',
+        },
+      })
+      .sort({ createdAt: -1 })
+      .exec();
+
+    return workOrders.map((doc) => WorkOrderResource.transformWorkOrder(doc));
+  }
+
+  // GET All Work Orders (Staff Assigned)
+  async findAllAssigned(user: AuthenticatedUser): Promise<any[]> {
+    return this.workOrderModel
+      .find({ assignedStaffs: user._id, deletedAt: null })
+      .populate('serviceId', 'title description')
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  // GET Detail Work Order (Internal)
+  async findOneInternal(id: string, user: AuthenticatedUser): Promise<any> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid Work Order ID');
+    }
+
+    const wo = await this.workOrderModel
+      .findOne({
+        _id: id,
+        companyId: user.company!._id,
+        deletedAt: null,
+      })
+      .populate('createdBy', 'name email role positionId')
+      .populate({
+        path: 'serviceId',
+        select:
+          'companyId title description accessType isActive requiredStaffs',
+        populate: {
+          path: 'requiredStaffs.positionId',
+          model: 'Position',
+          select: '_id name',
+        },
+      })
+      .populate({
+        path: 'assignedStaffs',
+        select: 'name email role companyId positionId',
+        populate: {
+          path: 'positionId',
+          model: 'Position',
+          select: '_id name companyId createdAt updatedAt',
+        },
+      })
+      .exec();
+
+    if (!wo) {
+      throw new NotFoundException('Work Order not found');
+    }
+
+    return this.hydrateWorkOrderForms(wo);
+  }
+
+  // GET Detail Work Order (Staff Assigned)
+  async findOneAssigned(id: string, user: AuthenticatedUser): Promise<any> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid Work Order ID');
+    }
+
+    const wo = await this.workOrderModel
+      .findOne({
+        _id: id,
+        assignedStaffs: user._id, // Ensure assignment
+        deletedAt: null,
+      })
+      .populate('serviceId', 'title description')
+      .exec();
+
+    if (!wo) {
+      throw new NotFoundException('Work Order not found');
+    }
+
+    return this.hydrateWorkOrderForms(wo);
+  }
+
+  async update(
+    id: string,
+    updateWorkOrderDto: UpdateWorkOrderDto,
+    user: AuthenticatedUser,
+  ): Promise<any> {
+    if (!user.company || !user.company._id) {
+      throw new BadRequestException('User company information is missing');
+    }
+    const wo = await this.workOrderModel.findOne({
+      _id: id,
+      companyId: user.company._id,
+      deletedAt: null,
+    });
+    if (!wo) throw new NotFoundException('Work Order not found');
+
+    Object.assign(wo, updateWorkOrderDto);
+    await wo.save();
+
+    // Refetch with populated fields to return full details
+    return this.findOneInternal(id, user);
+  }
+
+  async updateStatus(
+    id: string,
+    updateStatusDto: UpdateWorkOrderStatusDto,
+    user: AuthenticatedUser,
+  ): Promise<any> {
+    if (!user.company || !user.company._id) {
+      throw new BadRequestException('User company information is missing');
+    }
+    const wo = await this.workOrderModel.findOne({
+      _id: id,
+      companyId: user.company._id,
+      deletedAt: null,
+    });
+    if (!wo) throw new NotFoundException('Work Order not found');
+
+    wo.status = updateStatusDto.status;
+
+    if (updateStatusDto.status === 'in_progress' && !wo.startedAt) {
+      wo.startedAt = new Date();
+    } else if (updateStatusDto.status === 'completed' && !wo.completedAt) {
+      wo.completedAt = new Date();
+    }
+
+    await wo.save();
+
+    // Refetch with populated fields to return full details
+    return this.findOneInternal(id, user);
+  }
+
+  async assignStaff(
+    id: string,
+    assignStaffDto: AssignStaffDto,
+    user: AuthenticatedUser,
+  ): Promise<any> {
+    if (!user.company || !user.company._id) {
+      throw new BadRequestException('User company information is missing');
+    }
+    const wo = await this.workOrderModel.findOne({
+      _id: id,
+      companyId: user.company._id,
+      deletedAt: null,
+    });
+    if (!wo) throw new NotFoundException('Work Order not found');
+
+    const staffIds: Types.ObjectId[] = [];
+    const errors: string[] = [];
+
+    // Ensure staffEmail is treated as an array (though DTO validation should handle this)
+    const emails = Array.isArray(assignStaffDto.staffEmail)
+      ? assignStaffDto.staffEmail
+      : [assignStaffDto.staffEmail];
+
+    for (const email of emails) {
+      const staff = await this.usersService.findOneByEmail(email);
+      if (!staff) {
+        errors.push(`Staff with email ${email} not found`);
+        continue;
+      }
+      // Check if staff belongs to the same company
+      if (
+        staff.companyId &&
+        staff.companyId.toString() !== user.company._id.toString()
+      ) {
+        errors.push(
+          `Staff with email ${email} does not belong to your company`,
+        );
+        continue;
+      }
+
+      staffIds.push(staff._id as Types.ObjectId);
+    }
+
+    if (errors.length > 0) {
+      throw new BadRequestException(errors.join(', '));
+    }
+
+    wo.assignedStaffs = staffIds as any;
+    await wo.save();
+
+    // Refetch with populated fields to return full details
+    return this.findOneInternal(id, user);
+  }
+
+  // Helper to hydrate forms
+  private async hydrateWorkOrderForms(wo: any) {
+    const workOrderFormsWithFields = await Promise.all(
+      wo.workOrderForms.map(async (item) => {
+        const snapshotForm = item.form;
+        let fullFormData: any = {
+          _id: snapshotForm._id,
+          title: snapshotForm.title,
+          formType: snapshotForm.formType,
+          description: snapshotForm.description,
+          fields: [],
+        };
+
+        try {
+          const template = await this.formsService.findTemplateById(
+            snapshotForm._id.toString(),
+          );
+          if (template) {
+            // Populate with complete form template data (excluding formKey and companyId)
+            fullFormData = {
+              _id: template._id,
+              title: template.title,
+              description: template.description,
+              formType: template.formType,
+              __v: template.__v,
+              fields: template.fields,
+              createdAt: (template as any).createdAt,
+              updatedAt: (template as any).updatedAt,
             };
+          }
+        } catch (error) {
+          console.warn(`Form template not found: ${snapshotForm._id}`);
         }
 
-        const workOrders = await this.workOrderModel
-            .find(query)
-            .populate('createdBy', 'name email role positionId')
-            .populate({
-                path: 'serviceId',
-                select: 'companyId title description accessType isActive requiredStaffs',
-                populate: {
-                    path: 'requiredStaffs.positionId',
-                    model: 'Position',
-                    select: 'name description isActive companyId'
-                }
-            })
-            .populate({
-                path: 'assignedStaffs',
-                select: 'name email role companyId positionId',
-                populate: {
-                    path: 'positionId',
-                    model: 'Position',
-                    select: '_id name companyId createdAt updatedAt'
-                }
-            })
-            .sort({ createdAt: -1 })
-            .exec();
+        return {
+          order: item.order,
+          form: fullFormData,
+        };
+      }),
+    );
 
-        return workOrders.map(doc => WorkOrderResource.transformWorkOrder(doc));
+    // Fetch submissions for this work order
+    const submissions = await this.submissionModel
+      .find({
+        ownerId: wo._id,
+        submissionType: SubmissionType.WorkOrder,
+      })
+      .exec();
+
+    return WorkOrderResource.transformWorkOrderDetail(
+      wo,
+      workOrderFormsWithFields,
+      submissions,
+    );
+  }
+
+  async createSubmissions(
+    id: string,
+    createSubmissionsDto: CreateSubmissionsDto,
+    user: AuthenticatedUser,
+  ): Promise<any> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid Work Order ID');
     }
 
-    // GET All Work Orders (Staff Assigned)
-    async findAllAssigned(user: AuthenticatedUser): Promise<any[]> {
-        return this.workOrderModel.find({ assignedStaffs: user._id, deletedAt: null })
-            .populate('serviceId', 'title description')
-            .sort({ createdAt: -1 })
-            .exec();
+    // Verify work order exists and user has access
+    const wo = await this.workOrderModel.findOne({
+      _id: id,
+      companyId: user.company!._id,
+      deletedAt: null,
+    });
+
+    if (!wo) {
+      throw new NotFoundException('Work Order not found');
     }
 
-    // GET Detail Work Order (Internal)
-    async findOneInternal(id: string, user: AuthenticatedUser): Promise<any> {
-        if (!Types.ObjectId.isValid(id)) {
-            throw new BadRequestException('Invalid Work Order ID');
-        }
+    const savedSubmissions: FormSubmissionDocument[] = [];
 
-        const wo = await this.workOrderModel
-            .findOne({
-                _id: id,
-                companyId: user.company!._id,
-                deletedAt: null
-            })
-            .populate('createdBy', 'name email role positionId')
-            .populate({
-                path: 'serviceId',
-                select: 'companyId title description accessType isActive requiredStaffs',
-                populate: {
-                    path: 'requiredStaffs.positionId',
-                    model: 'Position',
-                    select: '_id name'
-                }
-            })
-            .populate({
-                path: 'assignedStaffs',
-                select: 'name email role companyId positionId',
-                populate: {
-                    path: 'positionId',
-                    model: 'Position',
-                    select: '_id name companyId createdAt updatedAt'
-                }
-            })
-            .exec();
+    for (const submission of createSubmissionsDto.submissions) {
+      // Fetch FormTemplate to get the correct field order
+      const formTemplate = await this.formsService.findTemplateById(
+        submission.formId,
+      );
 
-        if (!wo) {
-            throw new NotFoundException('Work Order not found');
-        }
+      if (!formTemplate) {
+        throw new NotFoundException(
+          `Form template with ID ${submission.formId} not found`,
+        );
+      }
 
-        return this.hydrateWorkOrderForms(wo);
-    }
+      // Validate field values (especially for single_select and multi_select)
+      validateFormSubmission(formTemplate.fields, submission.fieldsData);
 
-    // GET Detail Work Order (Staff Assigned)
-    async findOneAssigned(id: string, user: AuthenticatedUser): Promise<any> {
-        if (!Types.ObjectId.isValid(id)) {
-            throw new BadRequestException('Invalid Work Order ID');
-        }
-
-        const wo = await this.workOrderModel
-            .findOne({
-                _id: id,
-                assignedStaffs: user._id, // Ensure assignment
-                deletedAt: null
-            })
-            .populate('serviceId', 'title description')
-            .exec();
-
-        if (!wo) {
-            throw new NotFoundException('Work Order not found');
-        }
-
-        return this.hydrateWorkOrderForms(wo);
-    }
-
-    async update(id: string, updateWorkOrderDto: UpdateWorkOrderDto, user: AuthenticatedUser): Promise<any> {
-        if (!user.company || !user.company._id) {
-            throw new BadRequestException('User company information is missing');
-        }
-        const wo = await this.workOrderModel.findOne({ _id: id, companyId: user.company._id, deletedAt: null });
-        if (!wo) throw new NotFoundException('Work Order not found');
-
-        Object.assign(wo, updateWorkOrderDto);
-        await wo.save();
-
-        // Refetch with populated fields to return full details
-        return this.findOneInternal(id, user);
-    }
-
-    async updateStatus(id: string, updateStatusDto: UpdateWorkOrderStatusDto, user: AuthenticatedUser): Promise<any> {
-        if (!user.company || !user.company._id) {
-            throw new BadRequestException('User company information is missing');
-        }
-        const wo = await this.workOrderModel.findOne({ _id: id, companyId: user.company._id, deletedAt: null });
-        if (!wo) throw new NotFoundException('Work Order not found');
-
-        wo.status = updateStatusDto.status;
-
-        if (updateStatusDto.status === 'in_progress' && !wo.startedAt) {
-            wo.startedAt = new Date();
-        } else if (updateStatusDto.status === 'completed' && !wo.completedAt) {
-            wo.completedAt = new Date();
-        }
-
-        await wo.save();
-
-        // Refetch with populated fields to return full details
-        return this.findOneInternal(id, user);
-    }
-
-    async assignStaff(id: string, assignStaffDto: AssignStaffDto, user: AuthenticatedUser): Promise<any> {
-        if (!user.company || !user.company._id) {
-            throw new BadRequestException('User company information is missing');
-        }
-        const wo = await this.workOrderModel.findOne({ _id: id, companyId: user.company._id, deletedAt: null });
-        if (!wo) throw new NotFoundException('Work Order not found');
-
-        const staffIds: Types.ObjectId[] = [];
-        const errors: string[] = [];
-
-        // Ensure staffEmail is treated as an array (though DTO validation should handle this)
-        const emails = Array.isArray(assignStaffDto.staffEmail)
-            ? assignStaffDto.staffEmail
-            : [assignStaffDto.staffEmail];
-
-        for (const email of emails) {
-            const staff = await this.usersService.findOneByEmail(email);
-            if (!staff) {
-                errors.push(`Staff with email ${email} not found`);
-                continue;
-            }
-            // Check if staff belongs to the same company
-            if (staff.companyId && staff.companyId.toString() !== user.company._id.toString()) {
-                errors.push(`Staff with email ${email} does not belong to your company`);
-                continue;
-            }
-
-            staffIds.push(staff._id as unknown as Types.ObjectId);
-        }
-
-        if (errors.length > 0) {
-            throw new BadRequestException(errors.join(', '));
-        }
-
-        wo.assignedStaffs = staffIds as any;
-        await wo.save();
-
-        // Refetch with populated fields to return full details
-        return this.findOneInternal(id, user);
-    }
-
-    // Helper to hydrate forms
-    private async hydrateWorkOrderForms(wo: any) {
-        const workOrderFormsWithFields = await Promise.all(
-            wo.workOrderForms.map(async (item) => {
-                const snapshotForm = item.form;
-                let fullFormData: any = {
-                    _id: snapshotForm._id,
-                    title: snapshotForm.title,
-                    formType: snapshotForm.formType,
-                    description: snapshotForm.description,
-                    fields: []
-                };
-
-                try {
-                    const template = await this.formsService.findTemplateById(snapshotForm._id.toString());
-                    if (template) {
-                        // Populate with complete form template data (excluding formKey and companyId)
-                        fullFormData = {
-                            _id: template._id,
-                            title: template.title,
-                            description: template.description,
-                            formType: template.formType,
-                            __v: template.__v,
-                            fields: template.fields,
-                            createdAt: (template as any).createdAt,
-                            updatedAt: (template as any).updatedAt
-                        };
-                    }
-                } catch (error) {
-                    console.warn(`Form template not found: ${snapshotForm._id}`);
-                }
-
-                return {
-                    order: item.order,
-                    form: fullFormData
-                };
-            })
+      // Map fieldsData using order from FormTemplate
+      const fieldsData = submission.fieldsData.map((field) => {
+        // Find matching field in template by order
+        const templateField = formTemplate.fields.find(
+          (f) => f.order === field.order,
         );
 
-        // Fetch submissions for this work order
-        const submissions = await this.submissionModel
-            .find({
-                ownerId: wo._id,
-                submissionType: SubmissionType.WorkOrder
-            })
-            .exec();
+        if (!templateField) {
+          throw new BadRequestException(
+            `Field with order ${field.order} not found in form template`,
+          );
+        }
 
-        return WorkOrderResource.transformWorkOrderDetail(
-            wo,
-            workOrderFormsWithFields,
-            submissions
+        return {
+          order: templateField.order,
+          value: field.value,
+        };
+      });
+
+      const submissionData = {
+        submissionType: SubmissionType.WorkOrder,
+        ownerId: new Types.ObjectId(id),
+        formId: new Types.ObjectId(submission.formId),
+        submittedBy: new Types.ObjectId(user._id.toString()),
+        fieldsData: fieldsData,
+        status: 'submitted',
+        submittedAt: new Date(),
+      };
+
+      const newSubmission = new this.submissionModel(submissionData);
+      const saved = await newSubmission.save();
+      savedSubmissions.push(saved);
+    }
+
+    // Return full Work Order detail
+    return this.findOneInternal(id, user);
+  }
+
+  async markAsReady(id: string, user: AuthenticatedUser): Promise<any> {
+    if (!user.company || !user.company._id) {
+      throw new BadRequestException('User company information is missing');
+    }
+
+    const wo = await this.workOrderModel
+      .findOne({
+        _id: id,
+        companyId: user.company._id,
+      })
+      .populate('serviceId');
+
+    if (!wo) {
+      throw new NotFoundException('Work Order not found');
+    }
+
+    // Check if all required work order forms have submissions
+    if (wo.workOrderForms && wo.workOrderForms.length > 0) {
+      const submissions = await this.submissionModel
+        .find({
+          ownerId: wo._id,
+          submissionType: SubmissionType.WorkOrder,
+        })
+        .exec();
+
+      const submittedFormIds = submissions.map((sub) => sub.formId.toString());
+      const requiredFormIds = wo.workOrderForms.map((form) =>
+        form.form._id.toString(),
+      );
+
+      const missingForms = requiredFormIds.filter(
+        (formId) => !submittedFormIds.includes(formId),
+      );
+
+      if (missingForms.length > 0) {
+        throw new BadRequestException(
+          'All required work order forms must be submitted before marking as ready',
         );
+      }
     }
 
-    async createSubmissions(id: string, createSubmissionsDto: CreateSubmissionsDto, user: AuthenticatedUser): Promise<any> {
-        if (!Types.ObjectId.isValid(id)) {
-            throw new BadRequestException('Invalid Work Order ID');
-        }
+    wo.status = 'ready';
+    await wo.save();
 
-        // Verify work order exists and user has access
-        const wo = await this.workOrderModel.findOne({
-            _id: id,
-            companyId: user.company!._id,
-            deletedAt: null
-        });
+    // Refetch with populated fields to return full details
+    return this.findOneInternal(id, user);
+  }
 
-        if (!wo) {
-            throw new NotFoundException('Work Order not found');
-        }
-
-        const savedSubmissions: FormSubmissionDocument[] = [];
-
-        for (const submission of createSubmissionsDto.submissions) {
-            // Fetch FormTemplate to get the correct field order
-            const formTemplate = await this.formsService.findTemplateById(submission.formId);
-
-            if (!formTemplate) {
-                throw new NotFoundException(`Form template with ID ${submission.formId} not found`);
-            }
-
-            // Validate field values (especially for single_select and multi_select)
-            validateFormSubmission(formTemplate.fields, submission.fieldsData);
-
-            // Map fieldsData using order from FormTemplate
-            const fieldsData = submission.fieldsData.map(field => {
-                // Find matching field in template by order
-                const templateField = formTemplate.fields.find(f => f.order === field.order);
-
-                if (!templateField) {
-                    throw new BadRequestException(`Field with order ${field.order} not found in form template`);
-                }
-
-                return {
-                    order: templateField.order,
-                    value: field.value
-                };
-            });
-
-            const submissionData = {
-                submissionType: SubmissionType.WorkOrder,
-                ownerId: new Types.ObjectId(id),
-                formId: new Types.ObjectId(submission.formId),
-                submittedBy: new Types.ObjectId(user._id.toString()),
-                fieldsData: fieldsData,
-                status: 'submitted',
-                submittedAt: new Date()
-            };
-
-            const newSubmission = new this.submissionModel(submissionData);
-            const saved = await newSubmission.save();
-            savedSubmissions.push(saved);
-        }
-
-        // Return full Work Order detail
-        return this.findOneInternal(id, user);
+  async markAsInProgress(id: string, user: AuthenticatedUser): Promise<any> {
+    if (!user.company || !user.company._id) {
+      throw new BadRequestException('User company information is missing');
     }
 
-    async markAsReady(id: string, user: AuthenticatedUser): Promise<any> {
-        if (!user.company || !user.company._id) {
-            throw new BadRequestException('User company information is missing');
-        }
+    const wo = await this.workOrderModel
+      .findOne({
+        _id: id,
+        companyId: user.company._id,
+      })
+      .populate('serviceId');
 
-        const wo = await this.workOrderModel.findOne({
-            _id: id,
-            companyId: user.company._id
-        }).populate('serviceId');
-
-        if (!wo) {
-            throw new NotFoundException('Work Order not found');
-        }
-
-        // Check if all required work order forms have submissions
-        if (wo.workOrderForms && wo.workOrderForms.length > 0) {
-            const submissions = await this.submissionModel
-                .find({
-                    ownerId: wo._id,
-                    submissionType: SubmissionType.WorkOrder
-                })
-                .exec();
-
-            const submittedFormIds = submissions.map(sub => sub.formId.toString());
-            const requiredFormIds = wo.workOrderForms.map(form => form.form._id.toString());
-
-            const missingForms = requiredFormIds.filter(formId => !submittedFormIds.includes(formId));
-
-            if (missingForms.length > 0) {
-                throw new BadRequestException('All required work order forms must be submitted before marking as ready');
-            }
-        }
-
-        wo.status = 'ready';
-        await wo.save();
-
-        // Refetch with populated fields to return full details
-        return this.findOneInternal(id, user);
+    if (!wo) {
+      throw new NotFoundException('Work Order not found');
     }
 
-    async markAsInProgress(id: string, user: AuthenticatedUser): Promise<any> {
-        if (!user.company || !user.company._id) {
-            throw new BadRequestException('User company information is missing');
-        }
-
-        const wo = await this.workOrderModel.findOne({
-            _id: id,
-            companyId: user.company._id
-        }).populate('serviceId');
-
-        if (!wo) {
-            throw new NotFoundException('Work Order not found');
-        }
-
-        // Validate work order is ready
-        if (wo.status !== 'ready') {
-            throw new BadRequestException('Work Order must be in ready status before starting');
-        }
-
-        wo.status = 'in_progress';
-        if (!wo.startedAt) {
-            wo.startedAt = new Date();
-        }
-        const savedWo = await wo.save();
-
-        // Automatically create work report
-        const service: any = wo.serviceId;
-        const reportForms = service?.reportForms || [];
-
-        await this.workReportService.create({
-            workOrderId: (savedWo._id as any).toString(),
-            companyId: user.company._id.toString(),
-            reportForms: reportForms.map((form: any) => ({
-                order: form.order,
-                fillableByRoles: form.fillableByRoles || [],
-                viewableByRoles: form.viewableByRoles || [],
-                fillableByPositionIds: form.fillableByPositionIds?.map((id: any) => id.toString()) || [],
-                viewableByPositionIds: form.viewableByPositionIds?.map((id: any) => id.toString()) || [],
-                form: {
-                    _id: form.formKey,
-                    title: '',
-                    description: '',
-                    formType: 'report'
-                }
-            })),
-            status: 'drafted'
-        });
-
-        // Refetch with populated fields to return full details
-        return this.findOneInternal(id, user);
+    // Validate work order is ready
+    if (wo.status !== 'ready') {
+      throw new BadRequestException(
+        'Work Order must be in ready status before starting',
+      );
     }
 
-    async remove(id: string, user: AuthenticatedUser): Promise<{ deletedAt: Date }> {
-        if (!user.company || !user.company._id) {
-            throw new BadRequestException('User company information is missing');
-        }
+    wo.status = 'in_progress';
+    if (!wo.startedAt) {
+      wo.startedAt = new Date();
+    }
+    const savedWo = await wo.save();
 
-        const wo = await this.workOrderModel.findOne({
-            _id: id,
-            companyId: user.company._id,
-            deletedAt: null
-        });
+    // Automatically create work report
+    const service: any = wo.serviceId;
+    const reportForms = service?.reportForms || [];
 
-        if (!wo) {
-            throw new NotFoundException('Work Order not found');
-        }
+    await this.workReportService.create({
+      workOrderId: (savedWo._id as any).toString(),
+      companyId: user.company._id.toString(),
+      reportForms: reportForms.map((form: any) => ({
+        order: form.order,
+        fillableByRoles: form.fillableByRoles || [],
+        viewableByRoles: form.viewableByRoles || [],
+        fillableByPositionIds:
+          form.fillableByPositionIds?.map((id: any) => id.toString()) || [],
+        viewableByPositionIds:
+          form.viewableByPositionIds?.map((id: any) => id.toString()) || [],
+        form: {
+          _id: form.formKey,
+          title: '',
+          description: '',
+          formType: 'report',
+        },
+      })),
+      status: 'drafted',
+    });
 
-        // Soft delete
-        const deletedAt = new Date();
-        wo.deletedAt = deletedAt;
-        await wo.save();
+    // Refetch with populated fields to return full details
+    return this.findOneInternal(id, user);
+  }
 
-        return { deletedAt };
+  async remove(
+    id: string,
+    user: AuthenticatedUser,
+  ): Promise<{ deletedAt: Date }> {
+    if (!user.company || !user.company._id) {
+      throw new BadRequestException('User company information is missing');
     }
 
-    async getReport(id: string, user: AuthenticatedUser): Promise<any> {
-        return this.workReportService.findByWorkOrderId(id, user);
+    const wo = await this.workOrderModel.findOne({
+      _id: id,
+      companyId: user.company._id,
+      deletedAt: null,
+    });
+
+    if (!wo) {
+      throw new NotFoundException('Work Order not found');
     }
 
-    async submitReportForm(id: string, dto: any, user: AuthenticatedUser): Promise<any> {
-        return this.workReportService.submitReportFormByWorkOrderId(id, dto, user);
-    }
+    // Soft delete
+    const deletedAt = new Date();
+    wo.deletedAt = deletedAt;
+    await wo.save();
+
+    return { deletedAt };
+  }
+
+  async getReport(id: string, user: AuthenticatedUser): Promise<any> {
+    return this.workReportService.findByWorkOrderId(id, user);
+  }
+
+  async submitReportForm(
+    id: string,
+    dto: any,
+    user: AuthenticatedUser,
+  ): Promise<any> {
+    return this.workReportService.submitReportFormByWorkOrderId(id, dto, user);
+  }
 }

@@ -1,4 +1,14 @@
-import { Controller, Post, Get, Delete, Body, UseGuards, Param, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Delete,
+  Body,
+  UseGuards,
+  Param,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { MembershipService } from './membership.service';
 import { GenerateMemberCodesDto } from './dto/generate-code.dto';
 import { ClaimMemberCodeDto } from './dto/claim-code.dto';
@@ -13,32 +23,35 @@ import { ResponseUtil } from 'src/common/utils/response.util';
 @Controller('memberships')
 @UseGuards(AuthGuard)
 export class MembershipController {
-    constructor(private readonly membershipService: MembershipService) { }
+  constructor(private readonly membershipService: MembershipService) {}
 
-    @Get()
-    @UseGuards(RolesGuard)
-    @Roles(Role.CompanyOwner, Role.CompanyManager, Role.AppAdmin) // Assume admin or managers manage this
-    async findAll() {
-        return this.membershipService.findAll();
-    }
+  @Get()
+  @UseGuards(RolesGuard)
+  @Roles(Role.CompanyOwner, Role.CompanyManager, Role.AppAdmin) // Assume admin or managers manage this
+  async findAll() {
+    return this.membershipService.findAll();
+  }
 
-    @Post('generate')
-    @UseGuards(RolesGuard)
-    @Roles(Role.CompanyOwner, Role.CompanyManager, Role.AppAdmin)
-    async generateCodes(@Body() dto: GenerateMemberCodesDto) {
-        return this.membershipService.generateCodes(dto);
-    }
+  @Post('generate')
+  @UseGuards(RolesGuard)
+  @Roles(Role.CompanyOwner, Role.CompanyManager, Role.AppAdmin)
+  async generateCodes(@Body() dto: GenerateMemberCodesDto) {
+    return this.membershipService.generateCodes(dto);
+  }
 
-    @Post('claim')
-    async claimCode(@Body() dto: ClaimMemberCodeDto, @GetUser() user: AuthenticatedUser) {
-        return this.membershipService.claimCode(dto, user);
-    }
+  @Post('claim')
+  async claimCode(
+    @Body() dto: ClaimMemberCodeDto,
+    @GetUser() user: AuthenticatedUser,
+  ) {
+    return this.membershipService.claimCode(dto, user);
+  }
 
-    @Delete(':id')
-    @HttpCode(HttpStatus.OK)
-    @Roles(Role.AppAdmin)
-    async remove(@Param('id') id: string) {
-        const data = await this.membershipService.remove(id);
-        return ResponseUtil.success('Membership code deleted successfully', data);
-    }
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  @Roles(Role.AppAdmin)
+  async remove(@Param('id') id: string) {
+    const data = await this.membershipService.remove(id);
+    return ResponseUtil.success('Membership code deleted successfully', data);
+  }
 }

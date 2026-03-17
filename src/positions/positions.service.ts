@@ -1,5 +1,9 @@
 // src/positions/positions.service.ts
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Position, PositionDocument } from './schemas/position.schema';
@@ -9,90 +13,126 @@ import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interf
 
 @Injectable()
 export class PositionsService {
-    constructor(
-        @InjectModel(Position.name) private positionModel: Model<PositionDocument>
-    ) { }
+  constructor(
+    @InjectModel(Position.name) private positionModel: Model<PositionDocument>,
+  ) {}
 
-    async findAll(user?: AuthenticatedUser) {
-        if (user && user.role !== 'admin_app') {
-            if (!user.company?._id) {
-                throw new ForbiddenException('User is not associated with any company.');
-            }
-            return this.positionModel.find({
-                deletedAt: null,
-                $or: [
-                    { companyId: user.company._id },
-                    { companyId: null } // Global positions
-                ]
-            }).sort({ createdAt: -1 }).exec();
-        }
-        return this.positionModel.find({ deletedAt: null }).sort({ createdAt: -1 }).exec();
+  async findAll(user?: AuthenticatedUser) {
+    if (user && user.role !== 'admin_app') {
+      if (!user.company?._id) {
+        throw new ForbiddenException(
+          'User is not associated with any company.',
+        );
+      }
+      return this.positionModel
+        .find({
+          deletedAt: null,
+          $or: [
+            { companyId: user.company._id },
+            { companyId: null }, // Global positions
+          ],
+        })
+        .sort({ createdAt: -1 })
+        .exec();
+    }
+    return this.positionModel
+      .find({ deletedAt: null })
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  async findById(id: string): Promise<PositionDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new NotFoundException(`Invalid position ID: ${id}`);
+    }
+    const position = await this.positionModel
+      .findOne({ _id: id, deletedAt: null })
+      .exec();
+    if (!position) {
+      throw new NotFoundException(`Position with ID ${id} not found`);
+    }
+    return position;
+  }
+
+  async create(
+    createPositionDto: CreatePositionDto,
+    user?: AuthenticatedUser,
+  ): Promise<PositionDocument> {
+    // If user is provided and not admin_app, add company context
+    if (user && user.role !== 'admin_app') {
+      if (!user.company?._id) {
+        throw new ForbiddenException(
+          'User is not associated with any company.',
+        );
+      }
+      const newPosition = new this.positionModel({
+        ...createPositionDto,
+        companyId: user.company._id,
+      });
+      return newPosition.save();
     }
 
-    async findById(id: string): Promise<PositionDocument> {
-        if (!Types.ObjectId.isValid(id)) {
-            throw new NotFoundException(`Invalid position ID: ${id}`);
-        }
-        const position = await this.positionModel.findOne({ _id: id, deletedAt: null }).exec();
-        if (!position) {
-            throw new NotFoundException(`Position with ID ${id} not found`);
-        }
-        return position;
+    // For admin_app or when no user context
+    const newPosition = new this.positionModel(createPositionDto);
+    return newPosition.save();
+  }
+
+  async update(
+    id: string,
+    updatePositionDto: UpdatePositionDto,
+    user?: AuthenticatedUser,
+  ): Promise<PositionDocument> {
+    const existingPosition = await this.findById(id);
+
+    // Check if user has permission to update this position
+    if (user && user.role !== 'admin_app') {
+      if (!user.company?._id) {
+        throw new ForbiddenException(
+          'User is not associated with any company.',
+        );
+      }
+      if (
+        existingPosition.companyId &&
+        existingPosition.companyId.toString() !== user.company._id.toString()
+      ) {
+        throw new ForbiddenException(
+          'You do not have permission to update this position.',
+        );
+      }
     }
 
-    async create(createPositionDto: CreatePositionDto, user?: AuthenticatedUser): Promise<PositionDocument> {
-        // If user is provided and not admin_app, add company context
-        if (user && user.role !== 'admin_app') {
-            if (!user.company?._id) {
-                throw new ForbiddenException('User is not associated with any company.');
-            }
-            const newPosition = new this.positionModel({
-                ...createPositionDto,
-                companyId: user.company._id,
-            });
-            return newPosition.save();
-        }
+    Object.assign(existingPosition, updatePositionDto);
+    return existingPosition.save();
+  }
 
-        // For admin_app or when no user context
-        const newPosition = new this.positionModel(createPositionDto);
-        return newPosition.save();
+  async remove(
+    id: string,
+    user?: AuthenticatedUser,
+  ): Promise<{ deletedAt: Date }> {
+    const existingPosition = await this.findById(id);
+
+    // Check if user has permission to delete this position
+    if (user && user.role !== 'admin_app') {
+      if (!user.company?._id) {
+        throw new ForbiddenException(
+          'User is not associated with any company.',
+        );
+      }
+      if (
+        existingPosition.companyId &&
+        existingPosition.companyId.toString() !== user.company._id.toString()
+      ) {
+        throw new ForbiddenException(
+          'You do not have permission to delete this position.',
+        );
+      }
     }
 
-    async update(id: string, updatePositionDto: UpdatePositionDto, user?: AuthenticatedUser): Promise<PositionDocument> {
-        const existingPosition = await this.findById(id);
+    // Soft delete: set deletedAt to current timestamp
+    const deletedAt = new Date();
+    existingPosition.deletedAt = deletedAt;
+    await existingPosition.save();
 
-        // Check if user has permission to update this position
-        if (user && user.role !== 'admin_app') {
-            if (!user.company?._id) {
-                throw new ForbiddenException('User is not associated with any company.');
-            }
-            if (existingPosition.companyId && existingPosition.companyId.toString() !== user.company._id.toString()) {
-                throw new ForbiddenException('You do not have permission to update this position.');
-            }
-        }
-
-        Object.assign(existingPosition, updatePositionDto);
-        return existingPosition.save();
-    }
-
-    async remove(id: string, user?: AuthenticatedUser): Promise<{ deletedAt: Date }> {
-        const existingPosition = await this.findById(id);
-
-        // Check if user has permission to delete this position
-        if (user && user.role !== 'admin_app') {
-            if (!user.company?._id) {
-                throw new ForbiddenException('User is not associated with any company.');
-            }
-            if (existingPosition.companyId && existingPosition.companyId.toString() !== user.company._id.toString()) {
-                throw new ForbiddenException('You do not have permission to delete this position.');
-            }
-        }
-
-        // Soft delete: set deletedAt to current timestamp
-        const deletedAt = new Date();
-        existingPosition.deletedAt = deletedAt;
-        await existingPosition.save();
-
-        return { deletedAt };
-    }
+    return { deletedAt };
+  }
 }

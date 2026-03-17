@@ -7,30 +7,30 @@ export type FormTemplateDocument = FormTemplate & Document;
 // Nonaktifkan versionKey otomatis dari Mongoose
 @Schema({ timestamps: true, versionKey: false })
 export class FormTemplate {
-    @Prop({ required: true, index: true })
-    formKey: string;
+  @Prop({ required: true, index: true })
+  formKey: string;
 
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Company', required: true })
-    companyId: MongooseSchema.Types.ObjectId;
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Company', required: true })
+  companyId: MongooseSchema.Types.ObjectId;
 
-    @Prop({ required: true })
-    title: string;
+  @Prop({ required: true })
+  title: string;
 
-    @Prop({ required: false })
-    description: string;
+  @Prop({ required: false })
+  description: string;
 
-    @Prop({ required: true, enum: ['work_order', 'report', 'intake'] })
-    formType: string;
+  @Prop({ required: true, enum: ['work_order', 'report', 'intake'] })
+  formType: string;
 
-    // Definisikan __v secara manual sebagai field biasa
-    @Prop({ required: true, default: 0 })
-    __v: number;
+  // Definisikan __v secara manual sebagai field biasa
+  @Prop({ required: true, default: 0 })
+  __v: number;
 
-    @Prop({ type: [FormField] })
-    fields: FormField[];
+  @Prop({ type: [FormField] })
+  fields: FormField[];
 
-    @Prop({ type: Date, default: null })
-    deletedAt: Date;
+  @Prop({ type: Date, default: null })
+  deletedAt: Date;
 }
 
-export const FormTemplateSchema = SchemaFactory.createForClass(FormTemplate);   
+export const FormTemplateSchema = SchemaFactory.createForClass(FormTemplate);

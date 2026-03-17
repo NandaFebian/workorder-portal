@@ -1,14 +1,14 @@
 // src/positions/positions.admin.controller.ts
 import {
-    Controller,
-    Post,
-    Body,
-    HttpCode,
-    HttpStatus,
-    Put,
-    Param,
-    Delete,
-    UseGuards,
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Put,
+  Param,
+  Delete,
+  UseGuards,
 } from '@nestjs/common';
 import { PositionsService } from './positions.service';
 import { CreatePositionDto } from './dto/create-position.dto';
@@ -25,42 +25,46 @@ import { ResponseUtil } from 'src/common/utils/response.util';
 @UseGuards(AuthGuard, RolesGuard)
 @Roles(Role.AppAdmin, Role.CompanyOwner, Role.CompanyManager)
 export class PositionsAdminController {
-    constructor(private readonly positionsService: PositionsService) { }
+  constructor(private readonly positionsService: PositionsService) {}
 
-    @Post()
-    @HttpCode(HttpStatus.CREATED)
-    async create(
-        @Body() createPositionDto: CreatePositionDto,
-        @GetUser() user: AuthenticatedUser
-    ) {
-        const position = await this.positionsService.create(createPositionDto, user);
-        return {
-            message: 'Position created successfully',
-            data: position,
-        };
-    }
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  async create(
+    @Body() createPositionDto: CreatePositionDto,
+    @GetUser() user: AuthenticatedUser,
+  ) {
+    const position = await this.positionsService.create(
+      createPositionDto,
+      user,
+    );
+    return {
+      message: 'Position created successfully',
+      data: position,
+    };
+  }
 
-    @Put(':id')
-    @HttpCode(HttpStatus.OK)
-    async update(
-        @Param('id') id: string,
-        @Body() updatePositionDto: UpdatePositionDto,
-        @GetUser() user: AuthenticatedUser
-    ) {
-        const position = await this.positionsService.update(id, updatePositionDto, user);
-        return {
-            message: 'Position updated successfully',
-            data: position,
-        };
-    }
+  @Put(':id')
+  @HttpCode(HttpStatus.OK)
+  async update(
+    @Param('id') id: string,
+    @Body() updatePositionDto: UpdatePositionDto,
+    @GetUser() user: AuthenticatedUser,
+  ) {
+    const position = await this.positionsService.update(
+      id,
+      updatePositionDto,
+      user,
+    );
+    return {
+      message: 'Position updated successfully',
+      data: position,
+    };
+  }
 
-    @Delete(':id')
-    @HttpCode(HttpStatus.OK)
-    async remove(
-        @Param('id') id: string,
-        @GetUser() user: AuthenticatedUser
-    ) {
-        const data = await this.positionsService.remove(id, user);
-        return ResponseUtil.success('Position deleted successfully', data);
-    }
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+    const data = await this.positionsService.remove(id, user);
+    return ResponseUtil.success('Position deleted successfully', data);
+  }
 }

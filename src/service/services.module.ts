@@ -9,30 +9,24 @@ import { ServicesClientController } from './services.client.controller';
 import { ServicesInternalService } from './services.internal.service';
 import { ServicesClientService } from './services.client.service';
 import { ClientServiceRequestModule } from 'src/client-service-request/client-service-request.module';
-import { FormSubmission, FormSubmissionSchema } from 'src/form/schemas/form-submissions.schema';
+import {
+  FormSubmission,
+  FormSubmissionSchema,
+} from 'src/form/schemas/form-submissions.schema';
 
 @Module({
-    imports: [
-        MongooseModule.forFeature([
-            { name: Service.name, schema: ServiceSchema },
-            { name: FormSubmission.name, schema: FormSubmissionSchema }
-        ]),
-        forwardRef(() => AuthModule),
-        UsersModule,
-        forwardRef(() => FormModule),
-        forwardRef(() => ClientServiceRequestModule),
-    ],
-    controllers: [
-        ServicesController,
-        ServicesClientController
-    ],
-    providers: [
-        ServicesInternalService,
-        ServicesClientService
-    ],
-    exports: [
-        ServicesInternalService,
-        ServicesClientService
-    ],
+  imports: [
+    MongooseModule.forFeature([
+      { name: Service.name, schema: ServiceSchema },
+      { name: FormSubmission.name, schema: FormSubmissionSchema },
+    ]),
+    forwardRef(() => AuthModule),
+    UsersModule,
+    forwardRef(() => FormModule),
+    forwardRef(() => ClientServiceRequestModule),
+  ],
+  controllers: [ServicesController, ServicesClientController],
+  providers: [ServicesInternalService, ServicesClientService],
+  exports: [ServicesInternalService, ServicesClientService],
 })
-export class ServicesModule { }
+export class ServicesModule {}

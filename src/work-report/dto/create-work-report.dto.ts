@@ -1,19 +1,25 @@
-import { IsMongoId, IsNotEmpty, IsOptional, IsEnum, IsArray } from 'class-validator';
+import {
+  IsMongoId,
+  IsNotEmpty,
+  IsOptional,
+  IsEnum,
+  IsArray,
+} from 'class-validator';
 
 export class CreateWorkReportDto {
-    @IsMongoId()
-    @IsNotEmpty()
-    workOrderId: string;
+  @IsMongoId()
+  @IsNotEmpty()
+  workOrderId: string;
 
-    @IsMongoId()
-    @IsNotEmpty()
-    companyId: string;
+  @IsMongoId()
+  @IsNotEmpty()
+  companyId: string;
 
-    @IsArray()
-    @IsOptional()
-    reportForms?: any[]; // Bisa disesuaikan validasinya jika perlu strict structure
+  @IsArray()
+  @IsOptional()
+  reportForms?: any[];
 
-    @IsEnum(['in_progress', 'completed', 'cancelled', 'rejected'])
-    @IsOptional()
-    status?: string;
+  @IsEnum(['in_progress', 'completed', 'cancelled', 'rejected'])
+  @IsOptional()
+  status?: string;
 }

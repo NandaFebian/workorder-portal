@@ -1,4 +1,14 @@
-import { Controller, Get, Put, Param, UseGuards, HttpCode, HttpStatus, ForbiddenException, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Put,
+  Param,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+  ForbiddenException,
+  Delete,
+} from '@nestjs/common';
 import { ClientServiceRequestService } from './client-service-request.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
@@ -12,44 +22,50 @@ import { ResponseUtil } from 'src/common/utils/response.util';
 @UseGuards(AuthGuard, RolesGuard)
 @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
 export class ClientServiceRequestInternalController {
-    constructor(private readonly csrService: ClientServiceRequestService) { }
+  constructor(private readonly csrService: ClientServiceRequestService) {}
 
-    @Get()
-    @HttpCode(HttpStatus.OK)
-    async findAll(@GetUser() user: AuthenticatedUser) {
-        if (!user.company?._id) throw new ForbiddenException('No company associated');
-        const data = await this.csrService.findAllByCompanyId(user.company._id.toString());
-        return ResponseUtil.success('Load data success', data);
-    }
+  @Get()
+  @HttpCode(HttpStatus.OK)
+  async findAll(@GetUser() user: AuthenticatedUser) {
+    if (!user.company?._id)
+      throw new ForbiddenException('No company associated');
+    const data = await this.csrService.findAllByCompanyId(
+      user.company._id.toString(),
+    );
+    return ResponseUtil.success('Load data success', data);
+  }
 
-    @Get(':id')
-    @HttpCode(HttpStatus.OK)
-    async findOne(@Param('id') id: string) {
-        const data = await this.csrService.findOneInternal(id);
-        return ResponseUtil.success('Load data success', data);
-    }
+  @Get(':id')
+  @HttpCode(HttpStatus.OK)
+  async findOne(@Param('id') id: string) {
+    const data = await this.csrService.findOneInternal(id);
+    return ResponseUtil.success('Load data success', data);
+  }
 
-    @Put(':id/approve')
-    @Roles(Role.CompanyOwner, Role.CompanyManager)
-    @HttpCode(HttpStatus.OK)
-    async approve(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-        const data = await this.csrService.updateStatus(id, 'approved', user);
-        return ResponseUtil.success('Request approved successfully', data);
-    }
+  @Put(':id/approve')
+  @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @HttpCode(HttpStatus.OK)
+  async approve(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+    const data = await this.csrService.updateStatus(id, 'approved', user);
+    return ResponseUtil.success('Request approved successfully', data);
+  }
 
-    @Put(':id/reject')
-    @Roles(Role.CompanyOwner, Role.CompanyManager)
-    @HttpCode(HttpStatus.OK)
-    async reject(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-        const data = await this.csrService.updateStatus(id, 'rejected', user);
-        return ResponseUtil.success('Request rejected successfully', data);
-    }
+  @Put(':id/reject')
+  @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @HttpCode(HttpStatus.OK)
+  async reject(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+    const data = await this.csrService.updateStatus(id, 'rejected', user);
+    return ResponseUtil.success('Request rejected successfully', data);
+  }
 
-    @Delete(':id')
-    @HttpCode(HttpStatus.OK)
-    @Roles(Role.CompanyOwner, Role.CompanyManager)
-    async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-        const data = await this.csrService.remove(id, user);
-        return ResponseUtil.success('Client service request deleted successfully', data);
-    }
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  @Roles(Role.CompanyOwner, Role.CompanyManager)
+  async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+    const data = await this.csrService.remove(id, user);
+    return ResponseUtil.success(
+      'Client service request deleted successfully',
+      data,
+    );
+  }
 }

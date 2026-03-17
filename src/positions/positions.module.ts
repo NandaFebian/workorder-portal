@@ -9,18 +9,18 @@ import { AuthModule } from 'src/auth/auth.module';
 import { UsersModule } from 'src/users/users.module';
 
 @Module({
-    imports: [
-        MongooseModule.forFeature([{ name: Position.name, schema: PositionSchema }]),
-        forwardRef(() => AuthModule),
-        UsersModule,
-    ],
-    controllers: [
-        PositionsController,       // Handles public GET requests
-        PositionsAdminController
-    ],
-    providers: [
-        PositionsService
-    ],
-    exports: [PositionsService],
+  imports: [
+    MongooseModule.forFeature([
+      { name: Position.name, schema: PositionSchema },
+    ]),
+    forwardRef(() => AuthModule),
+    UsersModule,
+  ],
+  controllers: [
+    PositionsController, // Handles public GET requests
+    PositionsAdminController,
+  ],
+  providers: [PositionsService],
+  exports: [PositionsService],
 })
-export class PositionsModule { }
+export class PositionsModule {}

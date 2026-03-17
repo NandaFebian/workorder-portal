@@ -5,34 +5,35 @@ import { RequiredStaffsResource } from '../../common/resources/required-staffs.r
  * Menangani transformasi data Service dengan required staffs dan forms
  */
 export class ServiceResource {
-    /**
-     * Transform service dengan populate required staffs
-     */
-    static transformService(service: any): any {
-        const serviceObj = service.toObject ? service.toObject() : { ...service };
+  /**
+   * Transform service dengan populate required staffs
+   */
+  static transformService(service: any): any {
+    const serviceObj = service.toObject ? service.toObject() : { ...service };
 
-        // Transform required staffs jika ada menggunakan centralized resource
-        if (serviceObj.requiredStaffs) {
-            serviceObj.requiredStaffs = RequiredStaffsResource.transformRequiredStaffs(
-                serviceObj.requiredStaffs,
-            );
-        }
-
-        return serviceObj;
+    // Transform required staffs jika ada menggunakan centralized resource
+    if (serviceObj.requiredStaffs) {
+      serviceObj.requiredStaffs =
+        RequiredStaffsResource.transformRequiredStaffs(
+          serviceObj.requiredStaffs,
+        );
     }
 
-    /**
-     * Transform required staff dengan position info
-     * @deprecated Use RequiredStaffsResource.transformRequiredStaff instead
-     */
-    static transformRequiredStaff(requiredStaff: any): any {
-        return RequiredStaffsResource.transformRequiredStaff(requiredStaff);
-    }
+    return serviceObj;
+  }
 
-    /**
-     * Transform list of services
-     */
-    static transformServiceList(services: any[]): any[] {
-        return services.map((service) => this.transformService(service));
-    }
+  /**
+   * Transform required staff dengan position info
+   * @deprecated Use RequiredStaffsResource.transformRequiredStaff instead
+   */
+  static transformRequiredStaff(requiredStaff: any): any {
+    return RequiredStaffsResource.transformRequiredStaff(requiredStaff);
+  }
+
+  /**
+   * Transform list of services
+   */
+  static transformServiceList(services: any[]): any[] {
+    return services.map((service) => this.transformService(service));
+  }
 }

@@ -6,48 +6,53 @@ export type ClientServiceRequestDocument = ClientServiceRequest & Document;
 // Schema untuk menyimpan snapshot form definition
 @Schema({ _id: false })
 class FormSnapshot {
-    @Prop()
-    _id: MongooseSchema.Types.ObjectId;
+  @Prop()
+  _id: MongooseSchema.Types.ObjectId;
 
-    @Prop()
-    title: string;
+  @Prop()
+  title: string;
 
-    @Prop()
-    description: string;
+  @Prop()
+  description: string;
 
-    @Prop()
-    formType: string;
+  @Prop()
+  formType: string;
 }
 
 @Schema({ _id: false })
 class OrderedFormSnapshot {
-    @Prop()
-    order: number;
+  @Prop()
+  order: number;
 
-    @Prop({ type: FormSnapshot })
-    form: FormSnapshot;
+  @Prop({ type: FormSnapshot })
+  form: FormSnapshot;
 }
 
 @Schema({ timestamps: true })
 export class ClientServiceRequest {
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Service', required: true })
-    serviceId: MongooseSchema.Types.ObjectId;
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Service', required: true })
+  serviceId: MongooseSchema.Types.ObjectId;
 
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
-    clientId: MongooseSchema.Types.ObjectId;
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
+  clientId: MongooseSchema.Types.ObjectId;
 
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Company', required: true })
-    companyId: MongooseSchema.Types.ObjectId;
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Company', required: true })
+  companyId: MongooseSchema.Types.ObjectId;
 
-    // Menyimpan snapshot struktur form intake saat request dibuat
-    @Prop({ type: [OrderedFormSnapshot], default: [] })
-    clientIntakeForm: OrderedFormSnapshot[];
+  // Menyimpan snapshot struktur form intake saat request dibuat
+  @Prop({ type: [OrderedFormSnapshot], default: [] })
+  clientIntakeForm: OrderedFormSnapshot[];
 
-    @Prop({ required: true, enum: ['received', 'approved', 'rejected'], default: 'received' })
-    status: string;
+  @Prop({
+    required: true,
+    enum: ['received', 'approved', 'rejected'],
+    default: 'received',
+  })
+  status: string;
 
-    @Prop({ type: Date, default: null })
-    deletedAt: Date;
+  @Prop({ type: Date, default: null })
+  deletedAt: Date;
 }
 
-export const ClientServiceRequestSchema = SchemaFactory.createForClass(ClientServiceRequest);
+export const ClientServiceRequestSchema =
+  SchemaFactory.createForClass(ClientServiceRequest);

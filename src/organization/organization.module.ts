@@ -4,15 +4,7 @@ import { PositionsModule } from '../positions/positions.module';
 import { InvitationsModule } from '../invitations/invitations.module';
 
 @Module({
-    imports: [
-        CompaniesModule,
-        PositionsModule,
-        InvitationsModule,
-    ],
-    exports: [
-        CompaniesModule,
-        PositionsModule,
-        InvitationsModule,
-    ],
+  imports: [CompaniesModule, PositionsModule, InvitationsModule],
+  exports: [CompaniesModule, PositionsModule, InvitationsModule],
 })
-export class OrganizationModule { }
+export class OrganizationModule {}

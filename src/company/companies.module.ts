@@ -13,27 +13,24 @@ import { CompaniesInternalService } from './companies.internal.service';
 import { CompaniesClientService } from './companies.client.service';
 
 @Module({
-    imports: [
-        MongooseModule.forFeature([
-            { name: Company.name, schema: CompanySchema },
-            { name: Invitation.name, schema: InvitationSchema }
-        ]),
-        UsersModule,
-        forwardRef(() => AuthModule),
-        PositionsModule,
-        ServicesModule,
-    ],
-    controllers: [
-        CompaniesInternalController,
-        CompaniesClientController
-    ],
-    providers: [
-        CompaniesInternalService, // Provide service internal
-        CompaniesClientService    // Provide service client
-    ],
-    exports: [
-        CompaniesInternalService, // Export service internal
-        CompaniesClientService    // Export service client
-    ],
+  imports: [
+    MongooseModule.forFeature([
+      { name: Company.name, schema: CompanySchema },
+      { name: Invitation.name, schema: InvitationSchema },
+    ]),
+    UsersModule,
+    forwardRef(() => AuthModule),
+    PositionsModule,
+    ServicesModule,
+  ],
+  controllers: [CompaniesInternalController, CompaniesClientController],
+  providers: [
+    CompaniesInternalService, // Provide service internal
+    CompaniesClientService, // Provide service client
+  ],
+  exports: [
+    CompaniesInternalService, // Export service internal
+    CompaniesClientService, // Export service client
+  ],
 })
-export class CompaniesModule { }
+export class CompaniesModule {}

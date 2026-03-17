@@ -7,51 +7,55 @@ import { CreateUserDto } from './dto/create-user.dto';
 
 @Injectable()
 export class UsersService {
-    constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) { }
+  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
-    async findOneByEmail(email: string): Promise<UserDocument | null> {
-        //password untuk perbandingan, jadi gunakan .select('+password')
-        return this.userModel.findOne({ email, deletedAt: null }).select('+password').exec();
-    }
-    // Method untuk membuat user baru (register)
-    async create(createUserDto: CreateUserDto): Promise<UserDocument> {
-        const newUser = new this.userModel(createUserDto);
-        return newUser.save();
-    }
-    // Method untuk mengupdate companyId user
-    async updateCompanyId(userId: Types.ObjectId, companyId: Types.ObjectId): Promise<void> {
-        await this.userModel.updateOne({ _id: userId }, { $set: { companyId: companyId } });
-    }
-    // Method untuk mencari user berdasarkan ID
-    findById(id: any) {
-        // Note: Sesuaikan populate jika diperlukan di guard atau tempat lain
-        return this.userModel.findOne({ _id: id, deletedAt: null });
+  async findOneByEmail(email: string): Promise<UserDocument | null> {
+    return this.userModel
+      .findOne({ email, deletedAt: null })
+      .select('+password')
+      .exec();
+  }
+  async create(createUserDto: CreateUserDto): Promise<UserDocument> {
+    const newUser = new this.userModel(createUserDto);
+    return newUser.save();
+  }
+
+  async updateCompanyId(
+    userId: Types.ObjectId,
+    companyId: Types.ObjectId,
+  ): Promise<void> {
+    await this.userModel.updateOne(
+      { _id: userId },
+      { $set: { companyId: companyId } },
+    );
+  }
+  findById(id: any) {
+    return this.userModel.findOne({ _id: id, deletedAt: null });
+  }
+
+  async findByPositionId(positionId: string): Promise<UserDocument[]> {
+    return this.userModel
+      .find({ positionId: new Types.ObjectId(positionId), deletedAt: null })
+      .select('-password -__v')
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  async findAllByCompanyId(
+    companyId: Types.ObjectId,
+    rolesToInclude?: string[],
+  ): Promise<UserDocument[]> {
+    const query: any = { companyId, deletedAt: null };
+
+    if (rolesToInclude && rolesToInclude.length > 0) {
+      query.role = { $in: rolesToInclude };
     }
 
-    // Method untuk mendapatkan list user berdasarkan positionId
-    async findByPositionId(positionId: string): Promise<UserDocument[]> {
-        return this.userModel.find({ positionId: new Types.ObjectId(positionId), deletedAt: null })
-            .select('-password -__v')
-            .sort({ createdAt: -1 })
-            .exec();
-    }
-
-    // Method untuk mendapatkan semua user berdasarkan companyId dengan filter role
-    async findAllByCompanyId(
-        companyId: Types.ObjectId,
-        rolesToInclude?: string[] // Tambahkan parameter opsional untuk filter role
-    ): Promise<UserDocument[]> {
-        const query: any = { companyId, deletedAt: null };
-
-        // Jika rolesToInclude diberikan dan tidak kosong, tambahkan filter $in
-        if (rolesToInclude && rolesToInclude.length > 0) {
-            query.role = { $in: rolesToInclude };
-        }
-
-        return this.userModel.find(query)
-            .populate('positionId', 'name') // Populate posisi agar lebih informatif
-            .select('-password') // Jangan sertakan password secara default
-            .sort({ createdAt: -1 })
-            .exec();
-    }
+    return this.userModel
+      .find(query)
+      .populate('positionId', 'name')
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .exec();
+  }
 }

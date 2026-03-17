@@ -5,20 +5,21 @@ export type MembershipCodeDocument = MembershipCode & Document;
 
 @Schema({ timestamps: true })
 export class MembershipCode {
-    @Prop({ required: true, unique: true })
-    code: string;
+  @Prop({ required: true, unique: true })
+  code: string;
 
-    @Prop({ default: false })
-    isClaimed: boolean;
+  @Prop({ default: false })
+  isClaimed: boolean;
 
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', default: null })
-    claimedBy: MongooseSchema.Types.ObjectId;
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', default: null })
+  claimedBy: MongooseSchema.Types.ObjectId;
 
-    @Prop({ default: null })
-    claimedAt: Date;
+  @Prop({ default: null })
+  claimedAt: Date;
 
-    @Prop({ type: Date, default: null })
-    deletedAt: Date;
+  @Prop({ type: Date, default: null })
+  deletedAt: Date;
 }
 
-export const MembershipCodeSchema = SchemaFactory.createForClass(MembershipCode);
+export const MembershipCodeSchema =
+  SchemaFactory.createForClass(MembershipCode);

@@ -5,17 +5,17 @@ import { ClientServiceRequestModule } from '../client-service-request/client-ser
 import { ServicesModule } from '../service/services.module';
 
 @Module({
-    imports: [
-        WorkOrderModule,
-        WorkReportModule,
-        ClientServiceRequestModule,
-        ServicesModule,
-    ],
-    exports: [
-        WorkOrderModule,
-        WorkReportModule,
-        ClientServiceRequestModule,
-        ServicesModule,
-    ],
+  imports: [
+    WorkOrderModule,
+    WorkReportModule,
+    ClientServiceRequestModule,
+    ServicesModule,
+  ],
+  exports: [
+    WorkOrderModule,
+    WorkReportModule,
+    ClientServiceRequestModule,
+    ServicesModule,
+  ],
 })
-export class OperationsModule { }
+export class OperationsModule {}

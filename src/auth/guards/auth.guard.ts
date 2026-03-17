@@ -5,7 +5,7 @@ import { AuthGuard as PassportAuthGuard } from '@nestjs/passport';
 /**
  * JWT Authentication Guard
  * Extends Passport's JWT strategy guard
- * 
+ *
  * This guard:
  * 1. Extracts JWT from Authorization header (Bearer <token>)
  * 2. Verifies JWT signature and expiration
@@ -14,6 +14,6 @@ import { AuthGuard as PassportAuthGuard } from '@nestjs/passport';
  */
 @Injectable()
 export class AuthGuard extends PassportAuthGuard('jwt') {
-    // Passport handles all the validation automatically
-    // No need for custom logic - JwtStrategy does the work
+  // Passport handles all the validation automatically
+  // No need for custom logic - JwtStrategy does the work
 }

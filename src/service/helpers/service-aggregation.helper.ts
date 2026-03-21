@@ -1,8 +1,6 @@
-// src/service/helpers/service-aggregation.helper.ts
 import { Model, PipelineStage, Types } from 'mongoose';
 import { ServiceDocument } from '../schemas/service.schema';
 import { FormsService } from 'src/form/form.service';
-import { RequiredStaffsResource } from 'src/common/resources/required-staffs.resource';
 
 export async function getServicesWithAggregation(
   serviceModel: Model<ServiceDocument>,
@@ -17,14 +15,12 @@ export async function getServicesWithAggregation(
     description: 1,
     accessType: 1,
     isActive: 1,
-    requiredStaffs: 1,
     serviceKey: 1,
   };
 
   if (includeForms) {
-    projectStage.clientIntakeForms = 1;
-    projectStage.workOrderForms = 1;
-    projectStage.reportForms = 1;
+    projectStage.serviceRequestConfig = 1;
+    projectStage.workOrdersConfig = 1;
   }
 
   const pipeline: PipelineStage[] = [
@@ -39,171 +35,81 @@ export async function getServicesWithAggregation(
     { $replaceRoot: { newRoot: '$latest_doc' } },
     { $sort: { createdAt: -1 } },
     { $project: projectStage },
-    {
-      $lookup: {
-        from: 'positions',
-        localField: 'requiredStaffs.positionId',
-        foreignField: '_id',
-        as: 'requiredStaffsPositions',
-      },
-    },
-    {
-      $addFields: {
-        requiredStaffs: {
-          $map: {
-            input: '$requiredStaffs',
-            as: 'rs',
-            in: {
-              $mergeObjects: [
-                '$$rs',
-                {
-                  positionId: {
-                    $arrayElemAt: [
-                      {
-                        $filter: {
-                          input: '$requiredStaffsPositions',
-                          as: 'pos',
-                          cond: { $eq: ['$$pos._id', '$$rs.positionId'] },
-                        },
-                      },
-                      0,
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        },
-      },
-    },
-    {
-      $project: {
-        requiredStaffsPositions: 0,
-      },
-    },
   ];
 
   const services = await serviceModel.aggregate(pipeline);
 
-  // Apply RequiredStaffsResource transformation to ensure consistency
-  const transformedServices = services.map((service) => {
-    if (service.requiredStaffs) {
-      service.requiredStaffs = RequiredStaffsResource.transformRequiredStaffs(
-        service.requiredStaffs,
-      );
-    }
-    return service;
-  });
-
-  if (includeForms) {
-    return Promise.all(
-      transformedServices.map(async (service) => {
-        const populateFormDetail = async (formInfo: any) => {
-          try {
-            const latestForm = await formsService.findLatestTemplateByKey(
-              formInfo.formKey,
-            );
-            if (!latestForm) return null;
-            return {
-              _id: latestForm._id,
-              title: latestForm.title,
-              description: latestForm.description,
-              formType: latestForm.formType,
-            };
-          } catch (error: any) {
-            console.error(
-              `Error processing formKey ${formInfo.formKey} in service ${service._id}: ${error.message}`,
-            );
-            return null;
-          }
-        };
-
-        const processFormArray = async (
-          formInfos: any[] | undefined,
-          includeAccessControl: boolean,
-        ) => {
-          if (!formInfos) return [];
-          const results = await Promise.all(
-            formInfos.map(async (formInfo) => {
-              const formDetail = await populateFormDetail(formInfo);
-              if (!formDetail) return null;
-
-              const baseResult = {
-                order: formInfo.order,
-                form: formDetail,
-              };
-
-              if (includeAccessControl) {
-                // Fetch full position data for fillableByPositionIds
-                const fillablePositions =
-                  formInfo.fillableByPositionIds &&
-                  formInfo.fillableByPositionIds.length > 0
-                    ? await serviceModel.db
-                        .collection('positions')
-                        .find({
-                          _id: {
-                            $in: formInfo.fillableByPositionIds.map(
-                              (id: any) => new Types.ObjectId(id),
-                            ),
-                          },
-                          deletedAt: null,
-                        })
-                        .toArray()
-                    : [];
-
-                // Fetch full position data for viewableByPositionIds
-                const viewablePositions =
-                  formInfo.viewableByPositionIds &&
-                  formInfo.viewableByPositionIds.length > 0
-                    ? await serviceModel.db
-                        .collection('positions')
-                        .find({
-                          _id: {
-                            $in: formInfo.viewableByPositionIds.map(
-                              (id: any) => new Types.ObjectId(id),
-                            ),
-                          },
-                          deletedAt: null,
-                        })
-                        .toArray()
-                    : [];
-
-                return {
-                  ...baseResult,
-                  fillableByRoles: formInfo.fillableByRoles,
-                  viewableByRoles: formInfo.viewableByRoles,
-                  fillableByPositions: fillablePositions,
-                  viewableByPositions: viewablePositions,
-                };
-              }
-              return baseResult;
-            }),
-          );
-          return results.filter((f) => f !== null);
-        };
-
-        const [
-          processedIntakeForms,
-          processedWorkOrderForms,
-          processedReportForms,
-        ] = await Promise.all([
-          processFormArray(service.clientIntakeForms, false),
-          processFormArray(service.workOrderForms, true),
-          processFormArray(service.reportForms, true),
-        ]);
-
-        delete service.clientIntakeForms;
-        delete service.workOrderForms;
-        delete service.reportForms;
-
-        return {
-          ...service,
-          clientIntakeForms: processedIntakeForms,
-          workOrderForms: processedWorkOrderForms,
-          reportForms: processedReportForms,
-        };
-      }),
-    );
+  if (!includeForms) {
+    return services;
   }
-  return transformedServices;
+
+  return Promise.all(
+    services.map(async (service) => {
+      const resolveForm = async (formKey: string | null | undefined) => {
+        if (!formKey) return null;
+        try {
+          const template = await formsService.findLatestTemplateByKey(formKey);
+          if (!template) return null;
+          const t = template.toObject ? template.toObject() : template;
+          return {
+            _id: t._id,
+            title: t.title,
+            description: t.description,
+            formType: t.formType,
+          };
+        } catch {
+          return null;
+        }
+      };
+
+      const resolvePosition = async (positionId: any) => {
+        if (!positionId) return null;
+        try {
+          const pos = await serviceModel.db
+            .collection('positions')
+            .findOne({ _id: new Types.ObjectId(positionId.toString()), deletedAt: null });
+          if (!pos) return null;
+          return {
+            _id: pos._id,
+            name: pos.name,
+            description: pos.description,
+            companyId: pos.companyId,
+          };
+        } catch {
+          return null;
+        }
+      };
+
+      // Hydrate serviceRequestConfig
+      const src = service.serviceRequestConfig || {};
+      const hydratedServiceRequestConfig = {
+        intakeForm: await resolveForm(src.intakeFormKey),
+        reviewForm: await resolveForm(src.reviewFormKey),
+        serviceRequestApprovalAccessType: src.serviceRequestApprovalAccessType ?? 'auto',
+        reviewNeed: src.reviewNeed ?? false,
+      };
+
+      // Hydrate workOrdersConfig[]
+      const rawConfigs: any[] = service.workOrdersConfig || [];
+      const hydratedWorkOrdersConfig = await Promise.all(
+        rawConfigs.map(async (cfg) => ({
+          workOrderForm: await resolveForm(cfg.workOrderFormKey),
+          workReportForm: await resolveForm(cfg.workReportFormKey),
+          positionsOnDuty: await resolvePosition(cfg.positionId),
+          workOrderApprovalAccessType: cfg.workOrderApprovalAccessType ?? 'auto',
+          workReportApprovalAccessType: cfg.workReportApprovalAccessType ?? 'auto',
+          minStaff: cfg.minStaff,
+          maxStaff: cfg.maxStaff,
+        })),
+      );
+
+      const { serviceRequestConfig: _src, workOrdersConfig: _woc, ...rest } = service;
+
+      return {
+        ...rest,
+        serviceRequestConfig: hydratedServiceRequestConfig,
+        workOrdersConfig: hydratedWorkOrdersConfig,
+      };
+    }),
+  );
 }

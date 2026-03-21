@@ -24,23 +24,17 @@ export class ServicesClientService {
     private readonly csrService: ClientServiceRequestService,
   ) {}
 
-  private async findAndValidatePublicService(
-    id: string,
-  ): Promise<ServiceDocument> {
+  private async findAndValidatePublicService(id: string): Promise<ServiceDocument> {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException(`Invalid service ID: ${id}`);
     }
     const service = await this.serviceModel
       .findById(id)
-      .select(
-        'companyId title description accessType isActive workOrderForms reportForms clientIntakeForms formKey',
-      )
+      .select('companyId title description accessType isActive serviceRequestConfig workOrdersConfig')
       .exec();
 
     if (!service || !service.isActive || service.accessType !== 'public') {
-      throw new NotFoundException(
-        `Service with ID ${id} not found or is not public`,
-      );
+      throw new NotFoundException(`Service with ID ${id} not found or is not public`);
     }
     return service;
   }
@@ -62,10 +56,7 @@ export class ServicesClientService {
 
   async findServiceDetailById(id: string): Promise<any> {
     const service = await this.findAndValidatePublicService(id);
-    const formQuantity =
-      (service.workOrderForms?.length || 0) +
-      (service.reportForms?.length || 0) +
-      (service.clientIntakeForms?.length || 0);
+    const configCount = (service as any).workOrdersConfig?.length || 0;
 
     return {
       service: {
@@ -76,105 +67,57 @@ export class ServicesClientService {
         accessType: service.accessType,
         isActive: service.isActive,
       },
-      formQuantity: formQuantity,
+      workOrderConfigCount: configCount,
     };
   }
 
   async getClientIntakeFormsForService(serviceId: string): Promise<any[]> {
     const service = await this.findAndValidatePublicService(serviceId);
-    const intakeFormsInfo = service.clientIntakeForms || [];
-    intakeFormsInfo.sort((a, b) => a.order - b.order);
+    const src = (service as any).serviceRequestConfig || {};
+    const intakeFormKey = src.intakeFormKey;
 
-    const populatedForms = await Promise.all(
-      intakeFormsInfo.map(async (formInfo) => {
-        try {
-          const latestForm = await this.formsService.findLatestTemplateByKey(
-            formInfo.formKey,
-          );
-          if (!latestForm) return null;
-          return { order: formInfo.order, form: latestForm };
-        } catch (error) {
-          return null;
-        }
-      }),
-    );
-    return populatedForms.filter((pf) => pf !== null);
+    if (!intakeFormKey) return [];
+
+    try {
+      const latestForm = await this.formsService.findLatestTemplateByKey(intakeFormKey);
+      if (!latestForm) return [];
+      return [{ form: latestForm }];
+    } catch {
+      return [];
+    }
   }
 
-  // === LOGIC POST SUBMISSION ===
-  async processIntakeSubmission(
-    serviceId: string,
-    user: AuthenticatedUser,
-    dto: any,
-  ) {
-    // 1. Validasi Service
+  async processIntakeSubmission(serviceId: string, user: AuthenticatedUser, dto: any) {
     const service = await this.findAndValidatePublicService(serviceId);
+    const src = (service as any).serviceRequestConfig || {};
 
-    // 2. Snapshot Client Intake Form
-    const intakeFormsInfo = service.clientIntakeForms || [];
-    const formSnapshots = await Promise.all(
-      intakeFormsInfo.map(async (item) => {
-        try {
-          const template = await this.formsService.findLatestTemplateByKey(
-            item.formKey,
-          );
-          if (!template) return null;
-          return {
-            order: item.order,
-            form: {
-              // FIX TS Error: Cast _id ke any atau ObjectId agar compatible dengan Schema Snapshot
-              _id: template._id as any,
-              title: template.title,
-              description: template.description,
-              formType: template.formType,
-            },
-          };
-        } catch (error) {
-          return null;
-        }
-      }),
-    );
-    const validFormSnapshots = formSnapshots.filter((f) => f !== null);
+    // Snapshot the intake form ID at time of request
+    let intakeFormId: any = null;
+    if (src.intakeFormKey) {
+      try {
+        const template = await this.formsService.findLatestTemplateByKey(src.intakeFormKey);
+        if (template) intakeFormId = template._id;
+      } catch {}
+    }
 
-    // 3. Create CSR (Tabel 1)
-    // FIX TS Error: Cast property ID ke 'any' untuk mengatasi strict type checking Mongoose/TS
     const newCSR = await this.csrService.create({
       serviceId: service._id as any,
-      clientId: user._id as any,
+      requestedBy: user._id as any,
       companyId: service.companyId as any,
-      status: 'received',
-      clientIntakeForm: validFormSnapshots as any, // Snapshot form structure at time of submission
+      intakeFormId,
     });
 
-    // 4. Create Submissions (Tabel 2)
-    // Handle array of submissions
     const submissions = dto.submissions || [];
-    const submissionDocs: Array<{
-      ownerId: any;
-      formId: Types.ObjectId;
-      submissionType: string;
-      submittedBy: Types.ObjectId;
-      fieldsData: any;
-      status: string;
-      submittedAt: Date;
-    }> = [];
+    const submissionDocs: any[] = [];
 
     for (const submission of submissions) {
-      // Fetch form template to validate fields
-      const formTemplate = await this.formsService.findTemplateById(
-        submission.formId,
-      );
+      const formTemplate = await this.formsService.findTemplateById(submission.formId);
       if (!formTemplate) {
-        throw new NotFoundException(
-          `Form template with ID ${submission.formId} not found`,
-        );
+        throw new NotFoundException(`Form template with ID ${submission.formId} not found`);
       }
-
-      // Validate field values (especially for single_select and multi_select)
       validateFormSubmission(formTemplate.fields, submission.fieldsData);
-
       submissionDocs.push({
-        ownerId: newCSR._id, // Link ke CSR
+        ownerId: newCSR._id,
         formId: new Types.ObjectId(submission.formId),
         submissionType: 'intake',
         submittedBy: new Types.ObjectId(user._id.toString()),

@@ -1,39 +1,65 @@
-// src/service/schemas/service.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 
 export type ServiceDocument = Service & Document;
 
-// Skema untuk menyimpan form yang terhubung dengan service beserta hak aksesnya
 @Schema({ _id: false })
-class OrderedForm {
-  @Prop({ required: true })
-  order: number;
+class ServiceRequestConfig {
+  @Prop({ type: String, default: null })
+  intakeFormKey: string | null;
 
-  // --- PERUBAHAN DI SINI ---
-  @Prop({ type: String, ref: 'FormTemplate', required: true })
-  formKey: string; // Mengganti 'formId' (ObjectId) menjadi 'formKey' (String)
-  // -------------------------
-
-  @Prop({ type: [String], required: true })
-  fillableByRoles: string[];
-
-  @Prop({ type: [String], required: true })
-  viewableByRoles: string[];
+  @Prop({ type: String, default: null })
+  reviewFormKey: string | null;
 
   @Prop({
-    type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Position' }],
-    required: true,
+    type: String,
+    enum: ['auto', 'manager'],
+    default: 'auto',
   })
-  fillableByPositionIds: MongooseSchema.Types.ObjectId[];
+  serviceRequestApprovalAccessType: string;
 
-  @Prop({
-    type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Position' }],
-    required: true,
-  })
-  viewableByPositionIds: MongooseSchema.Types.ObjectId[];
+  @Prop({ default: false })
+  reviewNeed: boolean;
 }
-export const OrderedFormSchema = SchemaFactory.createForClass(OrderedForm);
+const ServiceRequestConfigSchema =
+  SchemaFactory.createForClass(ServiceRequestConfig);
+
+@Schema({ _id: false })
+class WorkOrderConfig {
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Position',
+    required: true,
+  })
+  positionId: MongooseSchema.Types.ObjectId;
+
+  @Prop({ type: String, default: null })
+  workOrderFormKey: string | null;
+
+  @Prop({ type: String, default: null })
+  workReportFormKey: string | null;
+
+  @Prop({
+    type: String,
+    enum: ['auto', 'staff_pic'],
+    default: 'auto',
+  })
+  workOrderApprovalAccessType: string;
+
+  @Prop({
+    type: String,
+    enum: ['auto', 'manager'],
+    default: 'auto',
+  })
+  workReportApprovalAccessType: string;
+
+  @Prop({ required: true, min: 0 })
+  minStaff: number;
+
+  @Prop({ required: true, min: 1 })
+  maxStaff: number;
+}
+const WorkOrderConfigSchema = SchemaFactory.createForClass(WorkOrderConfig);
 
 @Schema({ timestamps: true, versionKey: false })
 export class Service {
@@ -49,37 +75,17 @@ export class Service {
   @Prop({ required: true })
   description: string;
 
-  @Prop([
-    {
-      positionId: {
-        type: MongooseSchema.Types.ObjectId,
-        ref: 'Position',
-        required: true,
-      }, // Mengganti 'position' menjadi 'positionId'
-      minimumStaff: { type: Number, required: true },
-      maximumStaff: { type: Number, required: true },
-    },
-  ])
-  requiredStaffs: {
-    positionId: MongooseSchema.Types.ObjectId;
-    minimumStaff: number;
-    maximumStaff: number;
-  }[];
-
-  @Prop({ type: [OrderedFormSchema], default: [] })
-  workOrderForms: OrderedForm[];
-
-  @Prop({ type: [OrderedFormSchema], default: [] })
-  reportForms: OrderedForm[];
-
-  @Prop({ type: [OrderedFormSchema], default: [] })
-  clientIntakeForms: OrderedForm[];
-
   @Prop({ required: true, enum: ['public', 'member_only', 'internal'] })
   accessType: string;
 
   @Prop({ default: true })
   isActive: boolean;
+
+  @Prop({ type: ServiceRequestConfigSchema, default: () => ({}) })
+  serviceRequestConfig: ServiceRequestConfig;
+
+  @Prop({ type: [WorkOrderConfigSchema], default: [] })
+  workOrdersConfig: WorkOrderConfig[];
 
   @Prop({ required: true, default: 0 })
   __v: number;

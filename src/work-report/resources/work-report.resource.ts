@@ -1,17 +1,26 @@
 import { WorkReportDocument } from '../schemas/work-report.schema';
 
 export class WorkReportResource {
-  /**
-   * Transform work report data
-   */
-  static transformWorkReport(doc: any): any {
+  static transformWorkReport(doc: WorkReportDocument | any): any {
     const report = doc.toObject ? doc.toObject() : { ...doc };
 
-    // Ensure workOrderId is a string, not an object
-    if (report.workOrderId && typeof report.workOrderId === 'object') {
-      report.workOrderId = report.workOrderId.toString();
-    }
-
-    return report;
+    return {
+      _id: report._id,
+      workOrderId: report.workOrderId,
+      companyId: report.companyId,
+      approvedBy: report.approvedBy
+        ? {
+            _id: report.approvedBy._id ?? report.approvedBy,
+            name: report.approvedBy.name,
+            email: report.approvedBy.email,
+            role: report.approvedBy.role,
+          }
+        : null,
+      status: report.status,
+      startedAt: report.startedAt,
+      completedAt: report.completedAt,
+      createdAt: report.createdAt,
+      updatedAt: report.updatedAt,
+    };
   }
 }

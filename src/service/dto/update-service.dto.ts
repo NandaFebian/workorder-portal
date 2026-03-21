@@ -1,13 +1,91 @@
-// src/service/dto/update-service.dto.ts
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateServiceDto, ClientIntakeFormDto } from './create-service.dto'; // Import ClientIntakeFormDto
-import { IsArray, IsOptional, ValidateNested } from 'class-validator'; // Import decorator yang diperlukan
+import {
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsMongoId,
+  IsNumber,
+  IsOptional,
+  IsString,
+  ValidateNested,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
-export class UpdateServiceDto extends PartialType(CreateServiceDto) {
+class UpdateServiceRequestConfigDto {
+  @IsMongoId()
+  @IsOptional()
+  intakeFormId?: string;
+
+  @IsMongoId()
+  @IsOptional()
+  reviewFormId?: string;
+
+  @IsEnum(['auto', 'manager'])
+  @IsOptional()
+  serviceRequestApprovalAccessType?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  reviewNeed?: boolean;
+}
+
+class UpdateWorkOrderConfigDto {
+  @IsMongoId()
+  @IsOptional()
+  positionId?: string;
+
+  @IsMongoId()
+  @IsOptional()
+  workOrderFormId?: string;
+
+  @IsMongoId()
+  @IsOptional()
+  workReportFormId?: string;
+
+  @IsEnum(['auto', 'staff_pic'])
+  @IsOptional()
+  workOrderApprovalAccessType?: string;
+
+  @IsEnum(['auto', 'manager'])
+  @IsOptional()
+  workReportApprovalAccessType?: string;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  minStaff?: number;
+
+  @IsNumber()
+  @Min(1)
+  @IsOptional()
+  maxStaff?: number;
+}
+
+export class UpdateServiceDto {
+  @IsString()
+  @IsOptional()
+  title?: string;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @IsEnum(['public', 'member_only', 'internal'])
+  @IsOptional()
+  accessType?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isActive?: boolean;
+
+  @ValidateNested()
+  @Type(() => UpdateServiceRequestConfigDto)
+  @IsOptional()
+  serviceRequestConfig?: UpdateServiceRequestConfigDto;
+
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => ClientIntakeFormDto)
+  @Type(() => UpdateWorkOrderConfigDto)
   @IsOptional()
-  clientIntakeForms?: ClientIntakeFormDto[];
+  workOrdersConfig?: UpdateWorkOrderConfigDto[];
 }

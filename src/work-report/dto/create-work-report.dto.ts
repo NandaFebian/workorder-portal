@@ -3,7 +3,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsEnum,
-  IsArray,
+  IsString,
 } from 'class-validator';
 
 export class CreateWorkReportDto {
@@ -15,11 +15,11 @@ export class CreateWorkReportDto {
   @IsNotEmpty()
   companyId: string;
 
-  @IsArray()
+  @IsString()
   @IsOptional()
-  reportForms?: any[];
+  reportFormKey?: string;
 
-  @IsEnum(['in_progress', 'completed', 'cancelled', 'rejected'])
+  @IsEnum(['drafted', 'in_progress', 'completed', 'cancelled', 'rejected'])
   @IsOptional()
   status?: string;
 }

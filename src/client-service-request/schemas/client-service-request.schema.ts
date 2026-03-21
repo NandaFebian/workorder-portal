@@ -3,55 +3,58 @@ import { Document, Schema as MongooseSchema } from 'mongoose';
 
 export type ClientServiceRequestDocument = ClientServiceRequest & Document;
 
-// Schema untuk menyimpan snapshot form definition
-@Schema({ _id: false })
-class FormSnapshot {
-  @Prop()
-  _id: MongooseSchema.Types.ObjectId;
-
-  @Prop()
-  title: string;
-
-  @Prop()
-  description: string;
-
-  @Prop()
-  formType: string;
-}
-
-@Schema({ _id: false })
-class OrderedFormSnapshot {
-  @Prop()
-  order: number;
-
-  @Prop({ type: FormSnapshot })
-  form: FormSnapshot;
-}
-
 @Schema({ timestamps: true })
 export class ClientServiceRequest {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Service', required: true })
   serviceId: MongooseSchema.Types.ObjectId;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
-  clientId: MongooseSchema.Types.ObjectId;
+  requestedBy: MongooseSchema.Types.ObjectId;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Company', required: true })
   companyId: MongooseSchema.Types.ObjectId;
 
-  // Menyimpan snapshot struktur form intake saat request dibuat
-  @Prop({ type: [OrderedFormSnapshot], default: [] })
-  clientIntakeForm: OrderedFormSnapshot[];
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', default: null })
+  approvedBy: MongooseSchema.Types.ObjectId | null;
 
   @Prop({
     required: true,
-    enum: ['received', 'approved', 'rejected'],
+    enum: ['received', 'cancelled', 'rejected', 'approved', 'workOrderCreated', 'completed', 'closed'],
     default: 'received',
   })
-  status: string;
+  serviceRequestStatus: string;
+
+  // Store snapshot form IDs at time of request creation
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormTemplate', default: null })
+  intakeFormId: MongooseSchema.Types.ObjectId | null;
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormTemplate', default: null })
+  reviewFormId: MongooseSchema.Types.ObjectId | null;
+
+  // Date tracking per status transition
+  @Prop({ type: Date, default: null })
+  receivedAt: Date | null;
 
   @Prop({ type: Date, default: null })
-  deletedAt: Date;
+  approvedAt: Date | null;
+
+  @Prop({ type: Date, default: null })
+  rejectedAt: Date | null;
+
+  @Prop({ type: Date, default: null })
+  cancelledAt: Date | null;
+
+  @Prop({ type: Date, default: null })
+  workOrderCreatedAt: Date | null;
+
+  @Prop({ type: Date, default: null })
+  completedAt: Date | null;
+
+  @Prop({ type: Date, default: null })
+  closedAt: Date | null;
+
+  @Prop({ type: Date, default: null })
+  deletedAt: Date | null;
 }
 
 export const ClientServiceRequestSchema =

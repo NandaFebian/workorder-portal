@@ -3,7 +3,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { WorkReport, WorkReportDocument } from './schemas/work-report.schema';
 import { CreateWorkReportDto } from './dto/create-work-report.dto';
-import { UpdateWorkReportDto } from './dto/update-work-report.dto';
 import { WorkReportResource } from './resources/work-report.resource';
 import {
   FormSubmission,
@@ -26,108 +25,64 @@ export class WorkReportService {
 
   async create(createDto: CreateWorkReportDto): Promise<WorkReportDocument> {
     const newReport = new this.workReportModel({
-      ...createDto,
-      status: createDto.status || 'in_progress', // Default sesuai request
+      workOrderId: createDto.workOrderId,
+      companyId: createDto.companyId,
+      reportFormKey: createDto.reportFormKey ?? null,
+      status: createDto.status ?? 'drafted',
     });
     return newReport.save();
   }
 
-  async findAll(): Promise<WorkReportDocument[]> {
-    return this.workReportModel
-      .find({ deletedAt: null })
-      .sort({ createdAt: -1 })
-      .exec();
-  }
-
   async findOne(id: string): Promise<any> {
     if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Invalid ID');
-    const report = await this.workReportModel
-      .findOne({ _id: id, deletedAt: null })
-      .exec();
+    const report = await this.workReportModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!report) throw new NotFoundException('Work Report not found');
-    return WorkReportResource.transformWorkReport(report);
+    return this._hydrateReport(report, null);
   }
 
-  async update(
-    id: string,
-    updateDto: UpdateWorkReportDto,
-  ): Promise<WorkReportDocument> {
-    if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Invalid ID');
+  async findByWorkOrderId(workOrderId: string, user: AuthenticatedUser): Promise<any> {
+    if (!Types.ObjectId.isValid(workOrderId)) throw new NotFoundException('Invalid Work Order ID');
 
-    const updatedReport = await this.workReportModel
-      .findByIdAndUpdate(id, updateDto, { new: true })
+    const report = await this.workReportModel
+      .findOne({ workOrderId: new Types.ObjectId(workOrderId), deletedAt: null })
       .exec();
 
-    if (!updatedReport) throw new NotFoundException('Work Report not found');
-    return updatedReport;
+    if (!report) throw new NotFoundException('Work Report not found');
+    return this._hydrateReport(report, user);
   }
 
-  async submitReportForm(dto: any, user: any): Promise<any> {
-    const { workReportId, submissions } = dto;
+  private async _hydrateReport(report: WorkReportDocument, user: AuthenticatedUser | null): Promise<any> {
+    const base = WorkReportResource.transformWorkReport(report);
 
-    // Validate work report exists
-    if (!Types.ObjectId.isValid(workReportId)) {
-      throw new NotFoundException('Invalid work report ID');
-    }
-
-    const workReport = await this.workReportModel
-      .findOne({
-        _id: workReportId,
-        deletedAt: null,
-      })
-      .exec();
-
-    if (!workReport) {
-      throw new NotFoundException('Work report not found');
-    }
-
-    // Authorization check - verify user belongs to the same company
-    if (user.company?._id?.toString() !== workReport.companyId.toString()) {
-      throw new NotFoundException(
-        'Unauthorized to submit this work report form',
-      );
-    }
-
-    const savedSubmissions: FormSubmissionDocument[] = [];
-
-    // Iterate over submissions
-    if (submissions && Array.isArray(submissions)) {
-      for (const item of submissions) {
-        const { formId, fieldsData } = item;
-
-        // Validate formId
-        if (!Types.ObjectId.isValid(formId)) {
-          continue; // Skip invalid forms or throw error
+    // Hydrate the single report form
+    let reportForm: any = null;
+    if (report.reportFormKey) {
+      try {
+        const template = await this.formsService.findLatestTemplateByKey(report.reportFormKey);
+        if (template) {
+          const t = template.toObject ? template.toObject() : template;
+          reportForm = {
+            _id: t._id,
+            title: t.title,
+            description: t.description,
+            formType: t.formType,
+            fields: t.fields,
+          };
         }
-
-        // Fetch form template to validate fields
-        const formTemplate = await this.formsService.findTemplateById(formId);
-        if (!formTemplate) {
-          throw new NotFoundException(
-            `Form template with ID ${formId} not found`,
-          );
-        }
-
-        // Validate field values (especially for single_select and multi_select)
-        validateFormSubmission(formTemplate.fields, fieldsData);
-
-        // Create form submission
-        const submission = new this.formSubmissionModel({
-          submissionType: SubmissionType.Report,
-          ownerId: new Types.ObjectId(workReportId),
-          formId: new Types.ObjectId(formId),
-          submittedBy: user._id,
-          fieldsData: fieldsData,
-          status: 'submitted',
-          submittedAt: new Date(),
-        });
-
-        const saved = await submission.save();
-        savedSubmissions.push(saved);
+      } catch {
+        // template not found
       }
     }
 
-    return savedSubmissions;
+    const submissions = await this.formSubmissionModel
+      .find({ ownerId: report._id, submissionType: SubmissionType.Report })
+      .exec();
+
+    return {
+      ...base,
+      reportForm,
+      submissions,
+    };
   }
 
   async submitReportFormByWorkOrderId(
@@ -135,218 +90,108 @@ export class WorkReportService {
     dto: any,
     user: AuthenticatedUser,
   ): Promise<any> {
-    // Validate work order ID
     if (!Types.ObjectId.isValid(workOrderId)) {
       throw new NotFoundException('Invalid work order ID');
     }
 
-    // Find work report by work order ID
     const workReport = await this.workReportModel
-      .findOne({
-        workOrderId: new Types.ObjectId(workOrderId),
-        deletedAt: null,
-      })
+      .findOne({ workOrderId: new Types.ObjectId(workOrderId), deletedAt: null })
       .exec();
 
-    if (!workReport) {
-      throw new NotFoundException('Work report not found for this work order');
-    }
+    if (!workReport) throw new NotFoundException('Work report not found for this work order');
 
-    // Authorization check - verify user belongs to the same company
     if (user.company?._id?.toString() !== workReport.companyId.toString()) {
-      throw new NotFoundException(
-        'Unauthorized to submit this work report form',
-      );
+      throw new NotFoundException('Unauthorized to submit this work report form');
     }
 
     const { submissions } = dto;
-    const savedSubmissions: FormSubmissionDocument[] = [];
 
-    // Iterate over submissions
     if (submissions && Array.isArray(submissions)) {
       for (const item of submissions) {
         const { formId, fieldsData } = item;
+        if (!Types.ObjectId.isValid(formId)) continue;
 
-        // Validate formId
-        if (!Types.ObjectId.isValid(formId)) {
-          continue; // Skip invalid forms
+        // Validate that this form matches the report form
+        const reportFormTemplate = workReport.reportFormKey
+          ? await this.formsService.findLatestTemplateByKey(workReport.reportFormKey)
+          : null;
+
+        if (!reportFormTemplate || (reportFormTemplate._id as any).toString() !== formId) {
+          throw new NotFoundException(`Form ${formId} is not the report form for this work report`);
         }
 
-        // Validate that the form exists in the work report's reportForms
-        const formExists = workReport.reportForms.some(
-          (rf: any) => rf.form._id.toString() === formId,
-        );
+        validateFormSubmission(reportFormTemplate.fields, fieldsData);
 
-        if (!formExists) {
-          throw new NotFoundException(
-            `Form ${formId} is not part of this work report`,
-          );
-        }
-
-        // Fetch form template to validate fields
-        const formTemplate = await this.formsService.findTemplateById(formId);
-        if (!formTemplate) {
-          throw new NotFoundException(
-            `Form template with ID ${formId} not found`,
-          );
-        }
-
-        // Validate field values (especially for single_select and multi_select)
-        validateFormSubmission(formTemplate.fields, fieldsData);
-
-        // Create form submission
         const submission = new this.formSubmissionModel({
           submissionType: SubmissionType.Report,
           ownerId: workReport._id,
           formId: new Types.ObjectId(formId),
           submittedBy: user._id,
-          fieldsData: fieldsData,
+          fieldsData,
           status: 'submitted',
           submittedAt: new Date(),
         });
-
-        const saved = await submission.save();
-        savedSubmissions.push(saved);
+        await submission.save();
       }
     }
 
-    // Return full work report object with updated submissions
     return this.findByWorkOrderId(workOrderId, user);
   }
 
-  async findByWorkOrderId(
-    workOrderId: string,
-    user: AuthenticatedUser,
-  ): Promise<any> {
-    if (!Types.ObjectId.isValid(workOrderId))
-      throw new NotFoundException('Invalid Work Order ID');
-
-    const report = await this.workReportModel
-      .findOne({
-        workOrderId: new Types.ObjectId(workOrderId),
-        deletedAt: null,
-      })
+  async update(id: string, updateDto: any): Promise<WorkReportDocument> {
+    if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Invalid ID');
+    const updatedReport = await this.workReportModel
+      .findByIdAndUpdate(id, updateDto, { new: true })
       .exec();
+    if (!updatedReport) throw new NotFoundException('Work Report not found');
+    return updatedReport;
+  }
 
-    if (!report) throw new NotFoundException('Work Report not found');
-
-    // Transform and Filter based on Role and Position
-    const transformedReport = WorkReportResource.transformWorkReport(report);
-
-    // Filter AND Hydrate reportForms
-    if (transformedReport.reportForms) {
-      const filteredForms = transformedReport.reportForms.filter(
-        (item: any) => {
-          // Company owner can view all report forms
-          if (user.role === 'owner_company') {
-            return true;
-          }
-
-          // If viewableByRoles is empty or undefined, allow all roles
-          const viewableRoles = item.viewableByRoles || [];
-          const hasRole =
-            viewableRoles.length === 0 || viewableRoles.includes(user.role);
-
-          if (!hasRole) return false;
-
-          // If viewableByPositionIds is empty or undefined, allow all positions
-          const positionIds = item.viewableByPositionIds || [];
-          if (positionIds.length === 0) {
-            return true;
-          }
-
-          // Check if user's position is in the allowed list
-          if (user.position && user.position._id) {
-            return positionIds.includes(user.position._id.toString());
-          } else if (user.position) {
-            return positionIds.includes((user.position as any).toString());
-          }
-
-          return false;
-        },
-      );
-
-      // Hydrate forms with full details from FormsService
-      transformedReport.reportForms = await Promise.all(
-        filteredForms.map(async (item: any) => {
-          const formId = item.form._id;
-
-          try {
-            const template = await this.formsService.findTemplateById(
-              formId.toString(),
-            );
-            if (!template) {
-              throw new NotFoundException(
-                `Form template with ID ${formId} not found`,
-              );
-            }
-
-            // Convert template to plain object to ensure all fields are included
-            const templateObj = template.toObject
-              ? template.toObject()
-              : template;
-
-            // Populate all fields from template
-            const fullFormData = {
-              _id: templateObj._id,
-              formKey: templateObj.formKey,
-              companyId: templateObj.companyId,
-              title: templateObj.title,
-              description: templateObj.description,
-              formType: templateObj.formType,
-              __v: templateObj.__v,
-              fields: templateObj.fields || [],
-              createdAt: templateObj.createdAt,
-              updatedAt: templateObj.updatedAt,
-            };
-
-            return {
-              ...item,
-              form: fullFormData,
-            };
-          } catch (e) {
-            // Log the error but continue processing other forms
-            console.error(`Failed to hydrate form ${formId}: ${e.message}`);
-            // Return the item with minimal form data
-            return {
-              ...item,
-              form: {
-                _id: formId,
-                fields: [],
-              },
-            };
-          }
-        }),
-      );
+  async submitReportForm(dto: any, user: any): Promise<any> {
+    const { workReportId, submissions } = dto;
+    if (!Types.ObjectId.isValid(workReportId)) {
+      throw new NotFoundException('Invalid work report ID');
+    }
+    const workReport = await this.workReportModel
+      .findOne({ _id: workReportId, deletedAt: null })
+      .exec();
+    if (!workReport) throw new NotFoundException('Work report not found');
+    if (user.company?._id?.toString() !== workReport.companyId.toString()) {
+      throw new NotFoundException('Unauthorized to submit this work report form');
     }
 
-    // Fetch submissions for this work report
-    const submissions = await this.formSubmissionModel
-      .find({
-        ownerId: report._id,
-        submissionType: SubmissionType.Report,
-      })
-      .exec();
+    if (submissions && Array.isArray(submissions)) {
+      for (const item of submissions) {
+        const { formId, fieldsData } = item;
+        if (!Types.ObjectId.isValid(formId)) continue;
+        const formTemplate = await this.formsService.findLatestTemplateByKey(
+          workReport.reportFormKey ?? '',
+        );
+        if (!formTemplate) throw new NotFoundException(`Form template not found`);
+        validateFormSubmission(formTemplate.fields, fieldsData);
+        const submission = new this.formSubmissionModel({
+          submissionType: SubmissionType.Report,
+          ownerId: workReport._id,
+          formId: new Types.ObjectId(formId),
+          submittedBy: user._id,
+          fieldsData,
+          status: 'submitted',
+          submittedAt: new Date(),
+        });
+        await submission.save();
+      }
+    }
 
-    // Add submissions to the response
-    transformedReport.submissions = submissions;
-
-    return transformedReport;
+    return this.findOne((workReport._id as any).toString());
   }
 
   async remove(id: string): Promise<{ deletedAt: Date }> {
     if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Invalid ID');
-
-    const report = await this.workReportModel
-      .findOne({ _id: id, deletedAt: null })
-      .exec();
+    const report = await this.workReportModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!report) throw new NotFoundException('Work Report not found');
-
-    // Soft delete
     const deletedAt = new Date();
     report.deletedAt = deletedAt;
     await report.save();
-
     return { deletedAt };
   }
 }

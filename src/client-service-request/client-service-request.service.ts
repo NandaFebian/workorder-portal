@@ -20,7 +20,6 @@ import { FormsService } from 'src/form/form.service';
 import { WorkOrderService } from 'src/work-order/work-order.service';
 import { ServicesInternalService } from 'src/service/services.internal.service';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
-import { WorkOrderDocument } from 'src/work-order/schemas/work-order.schema';
 import { WorkReportService } from 'src/work-report/work-report.service';
 import { CsrResponseUtil } from './utils/csr-response.util';
 
@@ -32,132 +31,150 @@ export class ClientServiceRequestService {
     @InjectModel(FormSubmission.name)
     private submissionModel: Model<FormSubmissionDocument>,
     private readonly formsService: FormsService,
-    private readonly workOrderService: WorkOrderService, // Inject WO Service
-    @Inject(forwardRef(() => ServicesInternalService)) // Inject Internal Service untuk ambil data raw service
+    private readonly workOrderService: WorkOrderService,
+    @Inject(forwardRef(() => ServicesInternalService))
     private readonly servicesInternalService: ServicesInternalService,
-    private readonly workReportService: WorkReportService, // Inject Work Report Service
+    private readonly workReportService: WorkReportService,
   ) {}
 
   async create(data: any): Promise<ClientServiceRequestDocument> {
-    const newRequest = new this.csrModel(data);
+    const newRequest = new this.csrModel({
+      ...data,
+      serviceRequestStatus: 'received',
+      receivedAt: new Date(),
+    });
     return newRequest.save();
   }
 
   async findAllByClientId(userId: string): Promise<any[]> {
     const requests = await this.csrModel
-      .find({ clientId: new Types.ObjectId(userId), deletedAt: null })
+      .find({ requestedBy: new Types.ObjectId(userId), deletedAt: null })
       .populate('serviceId', 'companyId title description accessType isActive')
-      .populate('clientId', 'name email role positionId')
+      .populate('requestedBy', 'name email role')
+      .populate('approvedBy', 'name email role')
       .sort({ createdAt: -1 })
       .exec();
 
-    return Promise.all(
-      requests.map((request) => this._enrichAndFormat(request)),
-    );
+    return Promise.all(requests.map((r) => this._enrichAndFormat(r)));
   }
 
   async findOneForClient(id: string, userId: string): Promise<any> {
-    if (!Types.ObjectId.isValid(id))
-      throw new BadRequestException('Invalid ID');
+    if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
 
     const csr = await this.csrModel
-      .findOne({
-        _id: id,
-        clientId: new Types.ObjectId(userId),
-        deletedAt: null,
-      })
+      .findOne({ _id: id, requestedBy: new Types.ObjectId(userId), deletedAt: null })
       .populate('serviceId', 'companyId title description accessType isActive')
-      .populate('clientId', 'name email role positionId')
+      .populate('requestedBy', 'name email role')
+      .populate('approvedBy', 'name email role')
       .exec();
 
     if (!csr) throw new NotFoundException('Service Request not found');
-
     return this._enrichAndFormat(csr);
-  }
-
-  private async _enrichAndFormat(csr: any): Promise<any> {
-    const submissions = await this.submissionModel
-      .find({ ownerId: csr._id })
-      .exec();
-
-    const clientIntakeFormsWithFields = await Promise.all(
-      csr.clientIntakeForm.map(async (item) => {
-        const snapshotForm = item.form;
-        let fields: any[] = [];
-        try {
-          const template = await this.formsService.findTemplateById(
-            snapshotForm._id.toString(),
-          );
-          if (template) {
-            fields = template.fields;
-          }
-        } catch (error) {
-          console.warn(
-            `Form template not found for snapshot id: ${snapshotForm._id}`,
-          );
-        }
-        return {
-          order: item.order,
-          form: {
-            _id: snapshotForm._id,
-            title: snapshotForm.title,
-            formType: snapshotForm.formType,
-            description: snapshotForm.description,
-            fields: fields,
-          },
-        };
-      }),
-    );
-
-    const doc = csr.toObject ? csr.toObject() : csr;
-    return CsrResponseUtil.formatOne(
-      doc,
-      clientIntakeFormsWithFields,
-      submissions,
-    );
   }
 
   async findAllByCompanyId(companyId: string): Promise<any[]> {
     const requests = await this.csrModel
       .find({ companyId: new Types.ObjectId(companyId), deletedAt: null })
       .populate('serviceId', 'companyId title description accessType isActive')
-      .populate('clientId', 'name email role positionId')
+      .populate('requestedBy', 'name email role')
+      .populate('approvedBy', 'name email role')
       .sort({ createdAt: -1 })
       .exec();
 
-    return Promise.all(
-      requests.map((request) => this._enrichAndFormat(request)),
-    );
+    return Promise.all(requests.map((r) => this._enrichAndFormat(r)));
   }
 
   async findOneInternal(id: string): Promise<any> {
-    if (!Types.ObjectId.isValid(id))
-      throw new BadRequestException('Invalid ID');
+    if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
+
     const csr = await this.csrModel
       .findOne({ _id: id, deletedAt: null })
       .populate('serviceId', 'companyId title description accessType isActive')
-      .populate('clientId', 'name email role positionId')
+      .populate('requestedBy', 'name email role')
+      .populate('approvedBy', 'name email role')
       .exec();
+
     if (!csr) throw new NotFoundException('Service Request not found');
     return this._enrichAndFormat(csr);
   }
 
+  private async _enrichAndFormat(csr: any): Promise<any> {
+    const doc = csr.toObject ? csr.toObject() : csr;
+
+    // Hydrate intake form
+    let intakeForm: any = null;
+    if (doc.intakeFormId) {
+      try {
+        const template = await this.formsService.findTemplateById(doc.intakeFormId.toString());
+        if (template) {
+          const t = template.toObject ? template.toObject() : template;
+          intakeForm = { _id: t._id, title: t.title, description: t.description, formType: t.formType, fields: t.fields };
+        }
+      } catch {}
+    }
+
+    // Hydrate review form
+    let reviewForm: any = null;
+    if (doc.reviewFormId) {
+      try {
+        const template = await this.formsService.findTemplateById(doc.reviewFormId.toString());
+        if (template) {
+          const t = template.toObject ? template.toObject() : template;
+          reviewForm = { _id: t._id, title: t.title, description: t.description, formType: t.formType, fields: t.fields };
+        }
+      } catch {}
+    }
+
+    // Find intake and review submissions
+    const intakeSubmission = doc.intakeFormId
+      ? await this.submissionModel
+          .findOne({ ownerId: doc._id, formId: doc.intakeFormId })
+          .exec()
+      : null;
+
+    const reviewSubmission = doc.reviewFormId
+      ? await this.submissionModel
+          .findOne({ ownerId: doc._id, formId: doc.reviewFormId })
+          .exec()
+      : null;
+
+    return CsrResponseUtil.formatOne(doc, intakeForm, reviewForm, intakeSubmission, reviewSubmission);
+  }
+
   async updateStatus(
     id: string,
-    status: 'approved' | 'rejected',
+    status: string,
     user: AuthenticatedUser,
   ): Promise<any> {
-    if (!Types.ObjectId.isValid(id))
-      throw new BadRequestException('Invalid ID');
+    if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
 
-    const csr = await this.csrModel
-      .findByIdAndUpdate(id, { status }, { new: true })
-      .exec();
-
+    const csr = await this.csrModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!csr) throw new NotFoundException('Service Request not found');
 
-    let createdWorkOrder: WorkOrderDocument | null = null;
-    let createdReport: any = null;
+    const now = new Date();
+    const updateData: any = { serviceRequestStatus: status };
+
+    switch (status) {
+      case 'approved':
+        updateData.approvedBy = user._id;
+        updateData.approvedAt = now;
+        break;
+      case 'rejected':
+        updateData.rejectedAt = now;
+        break;
+      case 'cancelled':
+        updateData.cancelledAt = now;
+        break;
+      case 'completed':
+        updateData.completedAt = now;
+        break;
+      case 'closed':
+        updateData.closedAt = now;
+        break;
+    }
+
+    Object.assign(csr, updateData);
+    await csr.save();
 
     if (status === 'approved') {
       const serviceData = await this.servicesInternalService.findByVersionId(
@@ -165,113 +182,56 @@ export class ClientServiceRequestService {
         user,
       );
 
-      // 1. Prepare Work Order Forms
-      const workOrderForms = serviceData.workOrderForms || [];
-      const validWOForms = workOrderForms.map((item) => ({
-        order: item.order,
-        fillableByRoles: item.fillableByRoles || [],
-        viewableByRoles: item.viewableByRoles || [],
-        fillableByPositionIds: item.fillableByPositionIds || [],
-        viewableByPositionIds: item.viewableByPositionIds || [],
-        form: {
-          _id: item.form._id,
-          fillableByRoles: item.fillableByRoles || [],
-          viewableByRoles: item.viewableByRoles || [],
-          fillableByPositionIds: item.fillableByPositionIds || [],
-          viewableByPositionIds: item.viewableByPositionIds || [],
-          form: {
-            _id: item.form._id,
-            title: item.form.title,
-            description: item.form.description,
-            formType: item.form.formType,
-          },
-        },
-      }));
+      // Pick the first workOrdersConfig entry to determine the work order form
+      const firstConfig = serviceData.workOrdersConfig?.[0];
+      const workOrderFormId = firstConfig?.workOrderForm?._id ?? null;
+      const reportFormId = firstConfig?.workReportForm?._id ?? null;
 
-      // 2. Create Work Order
-      const createWorkOrderData = {
+      const createdWorkOrder = await this.workOrderService.createInternal({
         companyId: csr.companyId,
         serviceId: csr.serviceId,
         clientServiceRequestId: csr._id,
-        clientId: csr.clientId,
-        priority: 'medium', // Default priority
-        status: 'drafted',
-        workOrderForms: validWOForms,
+        workOrderFormId,
         createdBy: user._id,
-      };
+        status: 'drafted',
+      });
 
-      createdWorkOrder =
-        await this.workOrderService.createInternal(createWorkOrderData);
-
-      // 3. Prepare Work Report Forms
-      const reportForms = serviceData.reportForms || [];
-      const validReportForms = reportForms.map((item) => ({
-        order: item.order,
-        fillableByRoles: item.fillableByRoles || [],
-        viewableByRoles: item.viewableByRoles || [],
-        fillableByPositionIds: item.fillableByPositionIds || [],
-        viewableByPositionIds: item.viewableByPositionIds || [],
-        form: {
-          _id: item.form._id,
-          fillableByRoles: item.fillableByRoles || [],
-          viewableByRoles: item.viewableByRoles || [],
-          fillableByPositionIds: item.fillableByPositionIds || [],
-          viewableByPositionIds: item.viewableByPositionIds || [],
-          form: {
-            _id: item.form._id,
-            title: item.form.title,
-            description: item.form.description,
-            formType: item.form.formType,
-          },
-        },
-      }));
-
-      // 4. Create Work Report (AUTO CREATE)
-      if (createdWorkOrder && createdWorkOrder._id) {
-        createdReport = await this.workReportService.create({
+      if (createdWorkOrder?._id && reportFormId) {
+        await this.workReportService.create({
           workOrderId: createdWorkOrder._id.toString(),
           companyId: csr.companyId.toString(),
-          reportForms: validReportForms, // Simpan snapshot form laporan
-          status: 'in_progress', // Status default sesuai request
-        });
+          reportFormKey: firstConfig?.workReportForm ? firstConfig.workOrderForm?._id?.toString() : null,
+          status: 'drafted',
+        } as any);
       }
-    }
 
-    if (status === 'approved' && createdWorkOrder) {
-      // Return full Work Order details
+      // Update CSR status to workOrderCreated
+      csr.serviceRequestStatus = 'workOrderCreated';
+      csr.workOrderCreatedAt = now;
+      await csr.save();
+
       return this.workOrderService.findOneInternal(
         (createdWorkOrder as any)._id.toString(),
         user,
       );
     }
 
-    // Return enriched CSR for rejection or other statuses
     return this.findOneInternal(id);
   }
 
-  async remove(
-    id: string,
-    user: AuthenticatedUser,
-  ): Promise<{ deletedAt: Date }> {
-    if (!Types.ObjectId.isValid(id))
-      throw new BadRequestException('Invalid ID');
+  async remove(id: string, user: AuthenticatedUser): Promise<{ deletedAt: Date }> {
+    if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
 
-    const csr = await this.csrModel
-      .findOne({ _id: id, deletedAt: null })
-      .exec();
+    const csr = await this.csrModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!csr) throw new NotFoundException('Client service request not found');
 
-    // Validate company ownership
     if (!user.company?._id) {
       throw new ForbiddenException('User is not associated with any company.');
     }
     if (csr.companyId.toString() !== user.company._id.toString()) {
-      throw new ForbiddenException(
-        'You do not have permission to delete this request.',
-      );
+      throw new ForbiddenException('You do not have permission to delete this request.');
     }
 
-    // Soft delete
     const deletedAt = new Date();
     csr.deletedAt = deletedAt;
     await csr.save();

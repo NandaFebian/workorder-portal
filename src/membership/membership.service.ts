@@ -3,6 +3,7 @@ import {
   BadRequestException,
   ConflictException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -13,7 +14,7 @@ import {
 import { GenerateMemberCodesDto } from './dto/generate-code.dto';
 import { ClaimMemberCodeDto } from './dto/claim-code.dto';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
-import { v4 as uuidv4 } from 'uuid';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class MembershipService {
@@ -24,21 +25,24 @@ export class MembershipService {
 
   async generateCodes(
     dto: GenerateMemberCodesDto,
+    user: AuthenticatedUser,
   ): Promise<MembershipCodeDocument[]> {
+    if (!user.company?._id) {
+      throw new ForbiddenException('User is not associated with any company.');
+    }
+
     const codes: any[] = [];
     const prefix = dto.prefix ? dto.prefix.toUpperCase() : 'MEM';
 
     for (let i = 0; i < dto.amount; i++) {
-      // Simple unique code generation: PREFIX-RANDOM-TIMESTAMP_PART
-      const randomPart = Math.random()
-        .toString(36)
-        .substring(2, 8)
-        .toUpperCase();
+      // Secure unique code generation: PREFIX-8HEXCHARS
+      const randomPart = crypto.randomBytes(4).toString('hex').toUpperCase();
       const uniqueCode = `${prefix}-${randomPart}`;
 
       codes.push({
         code: uniqueCode,
         isClaimed: false,
+        companyId: user.company._id,
       });
     }
 
@@ -52,12 +56,39 @@ export class MembershipService {
     }
   }
 
-  async findAll(): Promise<MembershipCodeDocument[]> {
+  async findAll(user: AuthenticatedUser): Promise<MembershipCodeDocument[]> {
+    if (!user.company?._id) {
+      throw new ForbiddenException('User is not associated with any company.');
+    }
     return this.membershipCodeModel
-      .find({ deletedAt: null })
-      .populate('claimedBy', 'name email')
+      .find({ companyId: user.company._id, deletedAt: null })
+      .populate('claimedBy', 'name email role')
       .sort({ createdAt: -1 })
       .exec();
+  }
+
+  async findAllSubscribedClients(user: AuthenticatedUser): Promise<any[]> {
+    if (!user.company?._id) {
+      throw new ForbiddenException('User is not associated with any company.');
+    }
+    
+    // Find all claimed codes for this company, populate the client data
+    const memberships = await this.membershipCodeModel
+      .find({
+        companyId: user.company._id,
+        isClaimed: true,
+        deletedAt: null,
+      })
+      .populate('claimedBy', 'name email role')
+      .sort({ claimedAt: -1 })
+      .exec();
+      
+    // Extract and format the clients
+    return memberships.map((membership) => ({
+      membershipCode: membership.code,
+      claimedAt: membership.claimedAt,
+      client: membership.claimedBy,
+    }));
   }
 
   async claimCode(

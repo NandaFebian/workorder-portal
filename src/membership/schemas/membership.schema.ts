@@ -14,6 +14,9 @@ export class MembershipCode {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', default: null })
   claimedBy: MongooseSchema.Types.ObjectId;
 
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Company', required: true })
+  companyId: MongooseSchema.Types.ObjectId;
+
   @Prop({ default: null })
   claimedAt: Date;
 

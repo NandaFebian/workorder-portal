@@ -23,20 +23,33 @@ import { ResponseUtil } from 'src/common/utils/response.util';
 @Controller('memberships')
 @UseGuards(AuthGuard)
 export class MembershipController {
-  constructor(private readonly membershipService: MembershipService) {}
+  constructor(private readonly membershipService: MembershipService) { }
 
   @Get()
   @UseGuards(RolesGuard)
-  @Roles(Role.CompanyOwner, Role.CompanyManager, Role.AppAdmin) // Assume admin or managers manage this
-  async findAll() {
-    return this.membershipService.findAll();
+  @Roles(Role.CompanyOwner, Role.CompanyManager, Role.AppAdmin)
+  async findAll(@GetUser() user: AuthenticatedUser) {
+    const data = await this.membershipService.findAll(user);
+    return ResponseUtil.success('Membership codes loaded successfully', data);
+  }
+
+  @Get('clients')
+  @UseGuards(RolesGuard)
+  @Roles(Role.CompanyOwner, Role.CompanyManager, Role.AppAdmin)
+  async getSubscribedClients(@GetUser() user: AuthenticatedUser) {
+    const data = await this.membershipService.findAllSubscribedClients(user);
+    return ResponseUtil.success('Subscribed clients loaded successfully', data);
   }
 
   @Post('generate')
   @UseGuards(RolesGuard)
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.AppAdmin)
-  async generateCodes(@Body() dto: GenerateMemberCodesDto) {
-    return this.membershipService.generateCodes(dto);
+  async generateCodes(
+    @Body() dto: GenerateMemberCodesDto,
+    @GetUser() user: AuthenticatedUser,
+  ) {
+    const data = await this.membershipService.generateCodes(dto, user);
+    return ResponseUtil.success('Codes generated successfully', data);
   }
 
   @Post('claim')

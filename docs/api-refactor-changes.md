@@ -649,6 +649,79 @@
 
 ---
 
+## 5. Membership
+
+### Perubahan Schema
+
+| Lama | Baru |
+|---|---|
+| Random string dengan `Math.random` | Menggunakan `crypto.randomBytes(4).toString('hex')` untuk mencegah tabrakan kode antar company |
+| Tidak ada `companyId` | `companyId: ObjectId` (ref Company, required) |
+
+### GET `/memberships` — List Codes (Company Scoped)
+
+> Dulu mengembalikan **semua** kode dari semua company. Sekarang difilter **hanya kode milik company user yang me-request**.
+
+**Response Body:**
+```json
+{
+  "message": "Membership codes loaded successfully",
+  "data": [
+    {
+      "_id": "64f1a2b3c4d5e6f7a8b9c0c1",
+      "code": "MEM-A1B2C3D4",
+      "isClaimed": true,
+      "claimedBy": {
+        "_id": "64f1a2b3c4d5e6f7a8b9c0u1",
+        "name": "Budi Klien",
+        "email": "budi@client.com",
+        "role": "client"
+      },
+      "companyId": "64f1a2b3c4d5e6f7a8b9c010",
+      "claimedAt": "2026-03-21T10:00:00.000Z",
+      "createdAt": "2026-03-21T09:00:00.000Z"
+    }
+  ]
+}
+```
+
+### POST `/memberships/generate`
+
+> Otomatis memasukkan `companyId` milik admin/manager yang men-generate kode. Format `PREFIX-8HEXCHARS` yang benar-benar unik.
+
+**Request Body:**
+```json
+{
+  "amount": 5,
+  "prefix": "VIP"
+}
+```
+
+### GET `/memberships/clients` — List Subscribed Clients [NEW]
+
+> Menampilkan data semua **klien** yang telah berlangganan (meng-claim kode) ke perusahaan Anda.
+
+**Response Body:**
+```json
+{
+  "message": "Subscribed clients loaded successfully",
+  "data": [
+    {
+      "membershipCode": "VIP-9F8E7D6C",
+      "claimedAt": "2026-03-21T11:00:00.000Z",
+      "client": {
+        "_id": "64f1a2b3c4d5e6f7a8b9c0u2",
+        "name": "Andi Pelanggan",
+        "email": "andi@client.com",
+        "role": "client"
+      }
+    }
+  ]
+}
+```
+
+---
+
 ## Alur Status Lengkap
 
 ### Service Request Status Flow

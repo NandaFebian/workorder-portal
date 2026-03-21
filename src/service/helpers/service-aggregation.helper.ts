@@ -56,6 +56,7 @@ export async function getServicesWithAggregation(
             title: t.title,
             description: t.description,
             formType: t.formType,
+            fields: t.fields,
           };
         } catch {
           return null;

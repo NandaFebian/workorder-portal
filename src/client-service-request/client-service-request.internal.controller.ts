@@ -37,8 +37,10 @@ export class ClientServiceRequestInternalController {
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
-  async findOne(@Param('id') id: string) {
-    const data = await this.csrService.findOneInternal(id);
+  async findOne(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+    if (!user.company?._id)
+      throw new ForbiddenException('No company associated');
+    const data = await this.csrService.findOneInternal(id, user);
     return ResponseUtil.success('Load data success', data);
   }
 

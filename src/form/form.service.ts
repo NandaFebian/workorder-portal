@@ -70,12 +70,25 @@ export class FormsService {
     ]);
   }
 
-  async findTemplateById(id: string): Promise<FormTemplateDocument> {
+  async findTemplateById(
+    id: string,
+    user?: AuthenticatedUser,
+  ): Promise<FormTemplateDocument> {
     const template = await this.formTemplateModel
       .findOne({ _id: id, deletedAt: null })
       .exec();
     if (!template) {
       throw new NotFoundException(`Form template with ID ${id} not found`);
+    }
+    // Enforce company scope for non-admin company users
+    if (user && user.role !== 'admin_app') {
+      if (!user.company?._id) {
+        throw new ForbiddenException('User is not associated with any company.');
+      }
+      if (template.companyId.toString() !== user.company._id.toString()) {
+        // Return 404 to avoid leaking existence of other company's forms
+        throw new NotFoundException(`Form template with ID ${id} not found`);
+      }
     }
     return template;
   }

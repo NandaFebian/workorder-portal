@@ -84,11 +84,16 @@ export class ClientServiceRequestService {
     return Promise.all(requests.map((r) => this._enrichAndFormat(r)));
   }
 
-  async findOneInternal(id: string): Promise<any> {
+  async findOneInternal(id: string, user?: AuthenticatedUser): Promise<any> {
     if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
 
+    const query: any = { _id: id, deletedAt: null };
+    if (user?.company?._id) {
+      query.companyId = new Types.ObjectId(user.company._id.toString());
+    }
+
     const csr = await this.csrModel
-      .findOne({ _id: id, deletedAt: null })
+      .findOne(query)
       .populate('serviceId', 'companyId title description accessType isActive')
       .populate('requestedBy', 'name email role')
       .populate('approvedBy', 'name email role')

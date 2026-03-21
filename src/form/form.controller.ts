@@ -52,8 +52,11 @@ export class FormsController {
   }
 
   @Get(':id')
-  async findTemplateById(@Param('id') id: string) {
-    const template = await this.formsService.findTemplateById(id);
+  async findTemplateById(
+    @Param('id') id: string,
+    @GetUser() user: AuthenticatedUser,
+  ) {
+    const template = await this.formsService.findTemplateById(id, user);
     return ResponseUtil.success(
       'Form template retrieved successfully',
       template,

@@ -41,7 +41,7 @@ export class PositionsService {
       .exec();
   }
 
-  async findById(id: string): Promise<PositionDocument> {
+  async findById(id: string, user?: AuthenticatedUser): Promise<PositionDocument> {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException(`Invalid position ID: ${id}`);
     }
@@ -50,6 +50,19 @@ export class PositionsService {
       .exec();
     if (!position) {
       throw new NotFoundException(`Position with ID ${id} not found`);
+    }
+    // For non-admin users, enforce company scope
+    if (user && user.role !== 'admin_app') {
+      if (!user.company?._id) {
+        throw new ForbiddenException('User is not associated with any company.');
+      }
+      // Allow if position belongs to user's company OR is a global position (companyId null)
+      if (
+        position.companyId &&
+        position.companyId.toString() !== user.company._id.toString()
+      ) {
+        throw new NotFoundException(`Position with ID ${id} not found`);
+      }
     }
     return position;
   }

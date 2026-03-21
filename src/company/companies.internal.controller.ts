@@ -52,17 +52,15 @@ export class CompaniesInternalController {
         // Should not happen for a valid owner, but good to handle
         return ResponseUtil.success(
           'No company associated with this owner',
-          [],
+          null,
         );
       }
       const company = await this.companiesInternalService.findInternalById(
         user.company._id.toString(),
       );
       const transformedCompany = CompanyResource.transformCompany(company);
-      // Return as array to be consistent with admin response
-      return ResponseUtil.success('Company retrieved successfully', [
-        transformedCompany,
-      ]);
+      
+      return ResponseUtil.success('Company retrieved successfully', transformedCompany);
     }
   }
 

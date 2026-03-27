@@ -15,6 +15,7 @@ import {
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { Role } from '../common/enums/role.enum'; // Impor enum Role
+import { InvitationResource } from './resources/invitation.resource';
 
 @Injectable()
 export class InvitationsService {
@@ -59,22 +60,7 @@ export class InvitationsService {
       .sort({ createdAt: -1 })
       .exec();
 
-    const transformedInvitations = pendingInvitationsDocs.map((inv) => {
-      // Konversi Mongoose document ke plain object
-      const invObject: any = inv.toObject();
-
-      return {
-        _id: invObject._id,
-        company: invObject.companyId,
-        role: invObject.role,
-        position: invObject.positionId,
-        status: invObject.status,
-        expiresAt: invObject.expiresAt,
-        createdAt: invObject.createdAt,
-        updatedAt: invObject.updatedAt,
-        __v: invObject.__v,
-      };
-    });
+    const transformedInvitations = InvitationResource.transformInvitationList(pendingInvitationsDocs);
 
     // Handle undangan yang sudah expired
     const expiredPending = await this.invitationModel
@@ -272,6 +258,6 @@ export class InvitationsService {
     (invitation as any).deletedAt = deletedAt;
     await invitation.save();
 
-    return { deletedAt };
+    return InvitationResource.transformInvitation(invitation);
   }
 }

@@ -1,12 +1,12 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import {
-  ClientServiceRequest,
-  ClientServiceRequestSchema,
-} from './schemas/client-service-request.schema';
-import { ClientServiceRequestService } from './client-service-request.service';
-import { ClientServiceRequestPublicController } from './client-service-request.public.controller';
-import { ClientServiceRequestInternalController } from './client-service-request.internal.controller';
+  ServiceRequest,
+  ServiceRequestSchema,
+} from './schemas/service-request.schema';
+import { ServiceRequestService } from './service-request.service';
+import { ServiceRequestPublicController } from './service-request.public.controller';
+import { ServiceRequestInternalController } from './service-request.internal.controller';
 import { AuthModule } from 'src/auth/auth.module';
 import { UsersModule } from 'src/users/users.module';
 import { FormModule } from 'src/form/form.module';
@@ -21,7 +21,7 @@ import { WorkReportModule } from 'src/work-report/work-report.module';
 @Module({
   imports: [
     MongooseModule.forFeature([
-      { name: ClientServiceRequest.name, schema: ClientServiceRequestSchema },
+      { name: ServiceRequest.name, schema: ServiceRequestSchema },
       { name: FormSubmission.name, schema: FormSubmissionSchema },
     ]),
     forwardRef(() => AuthModule),
@@ -32,10 +32,10 @@ import { WorkReportModule } from 'src/work-report/work-report.module';
     WorkReportModule,
   ],
   controllers: [
-    ClientServiceRequestPublicController,
-    ClientServiceRequestInternalController,
+    ServiceRequestPublicController,
+    ServiceRequestInternalController,
   ],
-  providers: [ClientServiceRequestService],
-  exports: [ClientServiceRequestService],
+  providers: [ServiceRequestService],
+  exports: [ServiceRequestService],
 })
-export class ClientServiceRequestModule {}
+export class ServiceRequestModule {}

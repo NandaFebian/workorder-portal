@@ -10,6 +10,8 @@ import {
   HttpStatus,
   Put,
   Delete,
+  Patch,
+  BadRequestException,
 } from '@nestjs/common';
 // Import Service Internal
 import { ServicesInternalService } from './services.internal.service';
@@ -77,6 +79,29 @@ export class ServicesController {
     );
     return ResponseUtil.success(
       'New service version created successfully',
+      populatedUpdatedService,
+    );
+  }
+
+  @Patch(':id/toggle-active')
+  @HttpCode(HttpStatus.OK)
+  @Roles(Role.CompanyOwner, Role.CompanyManager)
+  async toggleActive(
+    @Param('id') id: string,
+    @Body('isActive') isActive: boolean,
+    @GetUser() user: AuthenticatedUser,
+  ) {
+    if (typeof isActive !== 'boolean') {
+      throw new BadRequestException('isActive must be a boolean value');
+    }
+    
+    const populatedUpdatedService = await this.internalService.toggleActive(
+      id,
+      isActive,
+      user,
+    );
+    return ResponseUtil.success(
+      'Service status updated successfully',
       populatedUpdatedService,
     );
   }

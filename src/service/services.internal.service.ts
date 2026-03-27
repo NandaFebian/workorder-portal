@@ -172,6 +172,45 @@ export class ServicesInternalService {
     return this.update(service.serviceKey, dto, user);
   }
 
+  async toggleActive(id: string, isActive: boolean, user: AuthenticatedUser): Promise<any> {
+    if (!user.company?._id) {
+      throw new ForbiddenException('User is not associated with any company.');
+    }
+
+    if (!Types.ObjectId.isValid(id)) {
+      throw new NotFoundException(`Invalid service ID: ${id}`);
+    }
+
+    const service = await this.serviceModel
+      .findOne({ _id: new Types.ObjectId(id), companyId: user.company._id, deletedAt: null })
+      .exec();
+
+    if (!service) {
+      throw new NotFoundException(`Service with ID ${id} not found`);
+    }
+
+    // Update all versions of this service key to match the active state
+    // (or just the latest version depending on preference, but usually business logic 
+    // dictates that if a service is deactivated, all its versions are deactivated/hidden)
+    await this.serviceModel.updateMany(
+      { serviceKey: service.serviceKey, companyId: user.company._id },
+      { $set: { isActive } }
+    );
+
+    const populatedServices = await getServicesWithAggregation(
+      this.serviceModel,
+      this.formsService,
+      { _id: new Types.ObjectId(id) },
+      true,
+    );
+
+    if (populatedServices.length > 0) {
+      return populatedServices[0];
+    }
+
+    return service;
+  }
+
   async findAll(user: AuthenticatedUser): Promise<any[]> {
     if (!user.company?._id) {
       throw new ForbiddenException('User is not associated with any company.');

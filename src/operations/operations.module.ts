@@ -1,20 +1,20 @@
 import { Module } from '@nestjs/common';
 import { WorkOrderModule } from '../work-order/work-order.module';
 import { WorkReportModule } from '../work-report/work-report.module';
-import { ClientServiceRequestModule } from '../client-service-request/client-service-request.module';
+import { ServiceRequestModule } from '../service-request/service-request.module';
 import { ServicesModule } from '../service/services.module';
 
 @Module({
   imports: [
     WorkOrderModule,
     WorkReportModule,
-    ClientServiceRequestModule,
+    ServiceRequestModule,
     ServicesModule,
   ],
   exports: [
     WorkOrderModule,
     WorkReportModule,
-    ClientServiceRequestModule,
+    ServiceRequestModule,
     ServicesModule,
   ],
 })

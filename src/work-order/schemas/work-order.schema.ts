@@ -7,10 +7,10 @@ export type WorkOrderDocument = WorkOrder & Document;
 export class WorkOrder {
   @Prop({
     type: MongooseSchema.Types.ObjectId,
-    ref: 'ClientServiceRequest',
+    ref: 'ServiceRequest',
     default: null,
   })
-  clientServiceRequestId: MongooseSchema.Types.ObjectId | null;
+  serviceRequestId: MongooseSchema.Types.ObjectId | null;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
   createdBy: MongooseSchema.Types.ObjectId;

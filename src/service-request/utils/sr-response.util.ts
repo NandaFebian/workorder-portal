@@ -1,4 +1,4 @@
-export class CsrResponseUtil {
+export class SrResponseUtil {
   static formatOne(
     doc: any,
     intakeForm: any,
@@ -17,6 +17,8 @@ export class CsrResponseUtil {
             description: doc.serviceId.description,
             accessType: doc.serviceId.accessType,
             isActive: doc.serviceId.isActive,
+            serviceRequestConfig: doc.serviceId.serviceRequestConfig,
+            workOrdersConfig: doc.serviceId.workOrdersConfig,
           }
         : null,
       requestedBy: doc.requestedBy
@@ -46,8 +48,6 @@ export class CsrResponseUtil {
       workOrderCreatedAt: doc.workOrderCreatedAt,
       completedAt: doc.completedAt,
       closedAt: doc.closedAt,
-      createdAt: doc.createdAt,
-      updatedAt: doc.updatedAt,
     };
   }
 }

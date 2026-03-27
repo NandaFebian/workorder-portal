@@ -74,10 +74,6 @@ export class UpdateServiceDto {
   @IsOptional()
   accessType?: string;
 
-  @IsBoolean()
-  @IsOptional()
-  isActive?: boolean;
-
   @ValidateNested()
   @Type(() => UpdateServiceRequestConfigDto)
   @IsOptional()

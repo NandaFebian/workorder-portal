@@ -4,7 +4,7 @@ export class WorkOrderResource {
 
     return {
       _id: wo._id,
-      clientServiceRequestId: wo.clientServiceRequestId,
+      serviceRequestId: wo.serviceRequestId,
       companyId: wo.companyId,
       service: wo.serviceId
         ? {

@@ -16,6 +16,9 @@ export async function getServicesWithAggregation(
     accessType: 1,
     isActive: 1,
     serviceKey: 1,
+    createdAt: 1,
+    updatedAt: 1,
+    __v: 1,
   };
 
   if (includeForms) {

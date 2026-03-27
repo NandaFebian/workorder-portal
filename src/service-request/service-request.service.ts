@@ -9,9 +9,9 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
-  ClientServiceRequest,
-  ClientServiceRequestDocument,
-} from './schemas/client-service-request.schema';
+  ServiceRequest,
+  ServiceRequestDocument,
+} from './schemas/service-request.schema';
 import {
   FormSubmission,
   FormSubmissionDocument,
@@ -21,13 +21,13 @@ import { WorkOrderService } from 'src/work-order/work-order.service';
 import { ServicesInternalService } from 'src/service/services.internal.service';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { WorkReportService } from 'src/work-report/work-report.service';
-import { CsrResponseUtil } from './utils/csr-response.util';
+import { SrResponseUtil } from './utils/sr-response.util';
 
 @Injectable()
-export class ClientServiceRequestService {
+export class ServiceRequestService {
   constructor(
-    @InjectModel(ClientServiceRequest.name)
-    private csrModel: Model<ClientServiceRequestDocument>,
+    @InjectModel(ServiceRequest.name)
+    private csrModel: Model<ServiceRequestDocument>,
     @InjectModel(FormSubmission.name)
     private submissionModel: Model<FormSubmissionDocument>,
     private readonly formsService: FormsService,
@@ -37,7 +37,7 @@ export class ClientServiceRequestService {
     private readonly workReportService: WorkReportService,
   ) {}
 
-  async create(data: any): Promise<ClientServiceRequestDocument> {
+  async create(data: any): Promise<ServiceRequestDocument> {
     const newRequest = new this.csrModel({
       ...data,
       serviceRequestStatus: 'received',
@@ -49,7 +49,7 @@ export class ClientServiceRequestService {
   async findAllByClientId(userId: string): Promise<any[]> {
     const requests = await this.csrModel
       .find({ requestedBy: new Types.ObjectId(userId), deletedAt: null })
-      .populate('serviceId', 'companyId title description accessType isActive')
+      .populate('serviceId', 'companyId title description accessType isActive serviceRequestConfig workOrdersConfig')
       .populate('requestedBy', 'name email role')
       .populate('approvedBy', 'name email role')
       .sort({ createdAt: -1 })
@@ -61,21 +61,21 @@ export class ClientServiceRequestService {
   async findOneForClient(id: string, userId: string): Promise<any> {
     if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
 
-    const csr = await this.csrModel
+    const sr = await this.csrModel
       .findOne({ _id: id, requestedBy: new Types.ObjectId(userId), deletedAt: null })
-      .populate('serviceId', 'companyId title description accessType isActive')
+      .populate('serviceId', 'companyId title description accessType isActive serviceRequestConfig workOrdersConfig')
       .populate('requestedBy', 'name email role')
       .populate('approvedBy', 'name email role')
       .exec();
 
-    if (!csr) throw new NotFoundException('Service Request not found');
-    return this._enrichAndFormat(csr);
+    if (!sr) throw new NotFoundException('Service Request not found');
+    return this._enrichAndFormat(sr);
   }
 
   async findAllByCompanyId(companyId: string): Promise<any[]> {
     const requests = await this.csrModel
       .find({ companyId: new Types.ObjectId(companyId), deletedAt: null })
-      .populate('serviceId', 'companyId title description accessType isActive')
+      .populate('serviceId', 'companyId title description accessType isActive serviceRequestConfig workOrdersConfig')
       .populate('requestedBy', 'name email role')
       .populate('approvedBy', 'name email role')
       .sort({ createdAt: -1 })
@@ -92,19 +92,19 @@ export class ClientServiceRequestService {
       query.companyId = new Types.ObjectId(user.company._id.toString());
     }
 
-    const csr = await this.csrModel
+    const sr = await this.csrModel
       .findOne(query)
-      .populate('serviceId', 'companyId title description accessType isActive')
+      .populate('serviceId', 'companyId title description accessType isActive serviceRequestConfig workOrdersConfig')
       .populate('requestedBy', 'name email role')
       .populate('approvedBy', 'name email role')
       .exec();
 
-    if (!csr) throw new NotFoundException('Service Request not found');
-    return this._enrichAndFormat(csr);
+    if (!sr) throw new NotFoundException('Service Request not found');
+    return this._enrichAndFormat(sr);
   }
 
-  private async _enrichAndFormat(csr: any): Promise<any> {
-    const doc = csr.toObject ? csr.toObject() : csr;
+  private async _enrichAndFormat(sr: any): Promise<any> {
+    const doc = sr.toObject ? sr.toObject() : sr;
 
     // Hydrate intake form
     let intakeForm: any = null;
@@ -143,7 +143,7 @@ export class ClientServiceRequestService {
           .exec()
       : null;
 
-    return CsrResponseUtil.formatOne(doc, intakeForm, reviewForm, intakeSubmission, reviewSubmission);
+    return SrResponseUtil.formatOne(doc, intakeForm, reviewForm, intakeSubmission, reviewSubmission);
   }
 
   async updateStatus(
@@ -153,8 +153,8 @@ export class ClientServiceRequestService {
   ): Promise<any> {
     if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
 
-    const csr = await this.csrModel.findOne({ _id: id, deletedAt: null }).exec();
-    if (!csr) throw new NotFoundException('Service Request not found');
+    const sr = await this.csrModel.findOne({ _id: id, deletedAt: null }).exec();
+    if (!sr) throw new NotFoundException('Service Request not found');
 
     const now = new Date();
     const updateData: any = { serviceRequestStatus: status };
@@ -178,12 +178,12 @@ export class ClientServiceRequestService {
         break;
     }
 
-    Object.assign(csr, updateData);
-    await csr.save();
+    Object.assign(sr, updateData);
+    await sr.save();
 
     if (status === 'approved') {
       const serviceData = await this.servicesInternalService.findByVersionId(
-        csr.serviceId.toString(),
+        sr.serviceId.toString(),
         user,
       );
 
@@ -193,9 +193,9 @@ export class ClientServiceRequestService {
       const reportFormId = firstConfig?.workReportForm?._id ?? null;
 
       const createdWorkOrder = await this.workOrderService.createInternal({
-        companyId: csr.companyId,
-        serviceId: csr.serviceId,
-        clientServiceRequestId: csr._id,
+        companyId: sr.companyId,
+        serviceId: sr.serviceId,
+        serviceRequestId: sr._id,
         workOrderFormId,
         createdBy: user._id,
         status: 'drafted',
@@ -204,16 +204,16 @@ export class ClientServiceRequestService {
       if (createdWorkOrder?._id && reportFormId) {
         await this.workReportService.create({
           workOrderId: createdWorkOrder._id.toString(),
-          companyId: csr.companyId.toString(),
+          companyId: sr.companyId.toString(),
           reportFormKey: firstConfig?.workReportForm ? firstConfig.workOrderForm?._id?.toString() : null,
           status: 'drafted',
         } as any);
       }
 
-      // Update CSR status to workOrderCreated
-      csr.serviceRequestStatus = 'workOrderCreated';
-      csr.workOrderCreatedAt = now;
-      await csr.save();
+      // Update sr status to workOrderCreated
+      sr.serviceRequestStatus = 'workOrderCreated';
+      sr.workOrderCreatedAt = now;
+      await sr.save();
 
       return this.workOrderService.findOneInternal(
         (createdWorkOrder as any)._id.toString(),
@@ -227,19 +227,19 @@ export class ClientServiceRequestService {
   async remove(id: string, user: AuthenticatedUser): Promise<{ deletedAt: Date }> {
     if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
 
-    const csr = await this.csrModel.findOne({ _id: id, deletedAt: null }).exec();
-    if (!csr) throw new NotFoundException('Client service request not found');
+    const sr = await this.csrModel.findOne({ _id: id, deletedAt: null }).exec();
+    if (!sr) throw new NotFoundException('Client service request not found');
 
     if (!user.company?._id) {
       throw new ForbiddenException('User is not associated with any company.');
     }
-    if (csr.companyId.toString() !== user.company._id.toString()) {
+    if (sr.companyId.toString() !== user.company._id.toString()) {
       throw new ForbiddenException('You do not have permission to delete this request.');
     }
 
     const deletedAt = new Date();
-    csr.deletedAt = deletedAt;
-    await csr.save();
+    sr.deletedAt = deletedAt;
+    await sr.save();
 
     return { deletedAt };
   }

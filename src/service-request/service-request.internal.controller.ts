@@ -9,7 +9,7 @@ import {
   ForbiddenException,
   Delete,
 } from '@nestjs/common';
-import { ClientServiceRequestService } from './client-service-request.service';
+import { ServiceRequestService } from './service-request.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
@@ -18,11 +18,11 @@ import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { ResponseUtil } from 'src/common/utils/response.util';
 
-@Controller('client-service-request')
+@Controller('service-request')
 @UseGuards(AuthGuard, RolesGuard)
 @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
-export class ClientServiceRequestInternalController {
-  constructor(private readonly csrService: ClientServiceRequestService) {}
+export class ServiceRequestInternalController {
+  constructor(private readonly csrService: ServiceRequestService) {}
 
   @Get()
   @HttpCode(HttpStatus.OK)
@@ -66,7 +66,7 @@ export class ClientServiceRequestInternalController {
   async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const data = await this.csrService.remove(id, user);
     return ResponseUtil.success(
-      'Client service request deleted successfully',
+      'Service request deleted successfully',
       data,
     );
   }

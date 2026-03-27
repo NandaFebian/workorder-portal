@@ -1,13 +1,13 @@
 # API Changes Documentation — Service Refactor
 
-> Dokumentasi ini mencakup seluruh perubahan schema, request body, dan response body hasil refactor pada modul **Service**, **ServiceRequest (CSR)**, **WorkOrder**, dan **WorkReport**.
+> Dokumentasi ini mencakup seluruh perubahan schema, request body, dan response body hasil refactor pada modul **Service**, **ServiceRequest (SR)**, **WorkOrder**, dan **WorkReport**.
 
 ---
 
 ## Daftar Isi
 
 - [Service](#1-service)
-- [Service Request (CSR)](#2-service-request-csr)
+- [Service Request (SR)](#2-service-request-SR)
 - [Work Order](#3-work-order)
 - [Work Report](#4-work-report)
 
@@ -279,7 +279,7 @@
 
 ---
 
-## 2. Service Request (CSR)
+## 2. Service Request (SR)
 
 ### Perubahan Schema
 
@@ -444,7 +444,7 @@
 ```json
 {
   "_id": "64f1a2b3c4d5e6f7a8b9c003",
-  "clientServiceRequestId": "64f1a2b3c4d5e6f7a8b9c002",
+  "ServiceRequestId": "64f1a2b3c4d5e6f7a8b9c002",
   "companyId": "64f1a2b3c4d5e6f7a8b9c010",
   "service": {
     "_id": "64f1a2b3c4d5e6f7a8b9c001",
@@ -741,8 +741,8 @@ drafted → ready → inProgress → completed
 
 ## Catatan Penting
 
-> **Database Migration:** Refactor ini mengubah struktur schema secara fundamental. Data lama di MongoDB **tidak kompatibel** dengan schema baru. Untuk development, drop dan re-seed koleksi: `services`, `clientservicerequests`, `workorders`, `workreports`.
+> **Database Migration:** Refactor ini mengubah struktur schema secara fundamental. Data lama di MongoDB **tidak kompatibel** dengan schema baru. Untuk development, drop dan re-seed koleksi: `services`, `ServiceRequests`, `workorders`, `workreports`.
 
 > **Form Storage:** DB hanya menyimpan `formKey` (string referensi ke FormTemplate). Response API akan selalu menampilkan form yang sudah di-*hydrate* (data lengkap form template).
 
-> **Approval Flow:** Saat CSR di-approve, sistem otomatis membuat WorkOrder dan WorkReport (draft). Status CSR langsung berubah ke `workOrderCreated`.
+> **Approval Flow:** Saat SR di-approve, sistem otomatis membuat WorkOrder dan WorkReport (draft). Status SR langsung berubah ke `workOrderCreated`.

@@ -1,5 +1,5 @@
 export class CreateWorkOrderDto {
-  clientServiceRequestId: string;
+  serviceRequestId: string;
   serviceId: string;
   description?: string;
   priority?: string; // low, medium, high

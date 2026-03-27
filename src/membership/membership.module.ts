@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { MembershipController } from './membership.controller';
+import { MembershipController, MembershipCodeController } from './membership.controller';
 import { MembershipService } from './membership.service';
 import {
   MembershipCode,
@@ -17,7 +17,7 @@ import { UsersModule } from 'src/users/users.module';
     AuthModule,
     UsersModule,
   ],
-  controllers: [MembershipController],
+  controllers: [MembershipController, MembershipCodeController],
   providers: [MembershipService],
 })
 export class MembershipModule {}

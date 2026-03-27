@@ -6,15 +6,15 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ClientServiceRequestService } from './client-service-request.service';
+import { ServiceRequestService } from './service-request.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 
-@Controller('public/client-service-request')
+@Controller('public/service-request')
 @UseGuards(AuthGuard) // Client harus login
-export class ClientServiceRequestPublicController {
-  constructor(private readonly csrService: ClientServiceRequestService) {}
+export class ServiceRequestPublicController {
+  constructor(private readonly csrService: ServiceRequestService) {}
 
   @Get()
   @HttpCode(HttpStatus.OK)

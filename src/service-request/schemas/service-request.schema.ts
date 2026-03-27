@@ -1,21 +1,21 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
+import { Document, Schema as MongooseSchema, Types } from 'mongoose';
 
-export type ClientServiceRequestDocument = ClientServiceRequest & Document;
+export type ServiceRequestDocument = ServiceRequest & Document;
 
 @Schema({ timestamps: true })
-export class ClientServiceRequest {
+export class ServiceRequest {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Service', required: true })
-  serviceId: MongooseSchema.Types.ObjectId;
+  serviceId: Types.ObjectId;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
-  requestedBy: MongooseSchema.Types.ObjectId;
+  requestedBy: Types.ObjectId;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Company', required: true })
-  companyId: MongooseSchema.Types.ObjectId;
+  companyId: Types.ObjectId;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', default: null })
-  approvedBy: MongooseSchema.Types.ObjectId | null;
+  approvedBy: Types.ObjectId | null;
 
   @Prop({
     required: true,
@@ -26,10 +26,16 @@ export class ClientServiceRequest {
 
   // Store snapshot form IDs at time of request creation
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormTemplate', default: null })
-  intakeFormId: MongooseSchema.Types.ObjectId | null;
+  intakeFormId: Types.ObjectId | null;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormTemplate', default: null })
-  reviewFormId: MongooseSchema.Types.ObjectId | null;
+  reviewFormId: Types.ObjectId | null;
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormSubmission', default: null })
+  intakeSubmissionId: Types.ObjectId | null;
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormSubmission', default: null })
+  reviewSubmissionId: Types.ObjectId | null;
 
   // Date tracking per status transition
   @Prop({ type: Date, default: null })
@@ -57,5 +63,5 @@ export class ClientServiceRequest {
   deletedAt: Date | null;
 }
 
-export const ClientServiceRequestSchema =
-  SchemaFactory.createForClass(ClientServiceRequest);
+export const ServiceRequestSchema =
+  SchemaFactory.createForClass(ServiceRequest);

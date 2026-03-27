@@ -8,7 +8,7 @@ import { ServicesController } from './services.internal.controller';
 import { ServicesClientController } from './services.client.controller';
 import { ServicesInternalService } from './services.internal.service';
 import { ServicesClientService } from './services.client.service';
-import { ClientServiceRequestModule } from 'src/client-service-request/client-service-request.module';
+import { ServiceRequestModule } from 'src/service-request/service-request.module';
 import {
   FormSubmission,
   FormSubmissionSchema,
@@ -23,7 +23,7 @@ import {
     forwardRef(() => AuthModule),
     UsersModule,
     forwardRef(() => FormModule),
-    forwardRef(() => ClientServiceRequestModule),
+    forwardRef(() => ServiceRequestModule),
   ],
   controllers: [ServicesController, ServicesClientController],
   providers: [ServicesInternalService, ServicesClientService],

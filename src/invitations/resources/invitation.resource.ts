@@ -1,5 +1,6 @@
 import { PositionResource } from '../../positions/resources/position.resource';
 import { CompanyResource } from '../../company/resources/company.resource';
+import { UserResource } from '../../users/resources/user.resource';
 
 /**
  * Invitation Resource
@@ -30,13 +31,15 @@ export class InvitationResource {
       delete invObj.companyId;
     }
 
+    // Transform user if populated
+    if (invObj.userId && invObj.userId._id) {
+      invObj.user = UserResource.transformUserMinimal(invObj.userId);
+      delete invObj.userId;
+    }
+
     return invObj;
   }
 
-  /**
-   * Transform invitation with full details
-   * Use when company and position are populated
-   */
   static transformInvitationWithDetails(invitation: any): any {
     if (!invitation) return null;
 
@@ -54,6 +57,12 @@ export class InvitationResource {
     if (invObj.companyId && typeof invObj.companyId === 'object') {
       invObj.company = CompanyResource.transformCompany(invObj.companyId);
       delete invObj.companyId;
+    }
+
+    // Transform user
+    if (invObj.userId && invObj.userId._id) {
+      invObj.user = UserResource.transformUserMinimal(invObj.userId);
+      delete invObj.userId;
     }
 
     return invObj;

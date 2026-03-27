@@ -5,7 +5,7 @@ import { Model, Types } from 'mongoose';
 import { Service, type ServiceDocument } from './schemas/service.schema';
 import { FormsService } from 'src/form/form.service';
 import { getServicesWithAggregation } from './helpers/service-aggregation.helper';
-import { ClientServiceRequestService } from 'src/client-service-request/client-service-request.service';
+import { ServiceRequestService } from 'src/service-request/service-request.service';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { SubmitIntakeFormDto } from './dto/submit-intake-forms.dto'; // DTO Baru
 import {
@@ -21,7 +21,7 @@ export class ServicesClientService {
     @InjectModel(FormSubmission.name)
     private submissionModel: Model<FormSubmissionDocument>,
     private readonly formsService: FormsService,
-    private readonly csrService: ClientServiceRequestService,
+    private readonly csrService: ServiceRequestService,
   ) {}
 
   private async findAndValidatePublicService(id: string): Promise<ServiceDocument> {
@@ -91,12 +91,21 @@ export class ServicesClientService {
     const service = await this.findAndValidatePublicService(serviceId);
     const src = (service as any).serviceRequestConfig || {};
 
-    // Snapshot the intake form ID at time of request
+    // Snapshot both intake and review form IDs
     let intakeFormId: any = null;
+    let reviewFormId: any = null;
+    
     if (src.intakeFormKey) {
       try {
         const template = await this.formsService.findLatestTemplateByKey(src.intakeFormKey);
         if (template) intakeFormId = template._id;
+      } catch {}
+    }
+    
+    if (src.reviewFormKey && src.reviewNeed) {
+      try {
+        const template = await this.formsService.findLatestTemplateByKey(src.reviewFormKey);
+        if (template) reviewFormId = template._id;
       } catch {}
     }
 
@@ -105,10 +114,12 @@ export class ServicesClientService {
       requestedBy: user._id as any,
       companyId: service.companyId as any,
       intakeFormId,
+      reviewFormId,
     });
 
     const submissions = dto.submissions || [];
     const submissionDocs: any[] = [];
+    let savedIntakeSubmissionId: Types.ObjectId | null = null;
 
     for (const submission of submissions) {
       const formTemplate = await this.formsService.findTemplateById(submission.formId);
@@ -116,7 +127,14 @@ export class ServicesClientService {
         throw new NotFoundException(`Form template with ID ${submission.formId} not found`);
       }
       validateFormSubmission(formTemplate.fields, submission.fieldsData);
+      
+      const subDocId = new Types.ObjectId();
+      if (intakeFormId && submission.formId === intakeFormId.toString()) {
+        savedIntakeSubmissionId = subDocId;
+      }
+      
       submissionDocs.push({
+        _id: subDocId,
         ownerId: newCSR._id,
         formId: new Types.ObjectId(submission.formId),
         submissionType: 'intake',
@@ -129,6 +147,12 @@ export class ServicesClientService {
 
     if (submissionDocs.length > 0) {
       await this.submissionModel.insertMany(submissionDocs);
+      
+      // Update the Service Request with the new submission ID
+      if (savedIntakeSubmissionId) {
+        newCSR.intakeSubmissionId = savedIntakeSubmissionId;
+        await newCSR.save();
+      }
     }
 
     return newCSR;

@@ -28,17 +28,23 @@ export class MembershipController {
   @Get()
   @UseGuards(RolesGuard)
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.AppAdmin)
-  async findAll(@GetUser() user: AuthenticatedUser) {
-    const data = await this.membershipService.findAll(user);
-    return ResponseUtil.success('Membership codes loaded successfully', data);
-  }
-
-  @Get('clients')
-  @UseGuards(RolesGuard)
-  @Roles(Role.CompanyOwner, Role.CompanyManager, Role.AppAdmin)
   async getSubscribedClients(@GetUser() user: AuthenticatedUser) {
     const data = await this.membershipService.findAllSubscribedClients(user);
     return ResponseUtil.success('Subscribed clients loaded successfully', data);
+  }
+}
+
+@Controller('membership-code')
+@UseGuards(AuthGuard)
+export class MembershipCodeController {
+  constructor(private readonly membershipService: MembershipService) { }
+
+  @Get()
+  @UseGuards(RolesGuard)
+  @Roles(Role.CompanyOwner, Role.CompanyManager, Role.AppAdmin)
+  async findAll(@GetUser() user: AuthenticatedUser) {
+    const data = await this.membershipService.findAll(user);
+    return ResponseUtil.success('Membership codes loaded successfully', data);
   }
 
   @Post('generate')

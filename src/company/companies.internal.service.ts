@@ -21,6 +21,7 @@ import { PositionsService } from 'src/positions/positions.service';
 import { UserDocument } from 'src/users/schemas/user.schema';
 import { Role } from 'src/common/enums/role.enum';
 import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
+import { InvitationResource } from '../invitations/resources/invitation.resource';
 
 @Injectable()
 export class CompaniesInternalService {
@@ -275,18 +276,7 @@ export class CompaniesInternalService {
       ])
       .exec();
 
-    const transformedInvitations = invitations.map((inv) => {
-      const invObject: any = inv.toObject();
-      return {
-        ...invObject,
-        company: invObject.companyId,
-        user: invObject.userId,
-        position: invObject.positionId,
-        companyId: undefined,
-        userId: undefined,
-        positionId: undefined,
-      };
-    });
+    const transformedInvitations = InvitationResource.transformInvitationList(invitations);
 
     return {
       message: 'Invitations retrieved successfully',

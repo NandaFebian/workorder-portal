@@ -24,7 +24,7 @@ export class FormSubmission {
   })
   submissionType: string; // 'intake', 'work_order', 'report'
 
-  // Owner ID merujuk ke _id dari ClientServiceRequest
+  // Owner ID merujuk ke _id dari ServiceRequest
   @Prop({
     type: MongooseSchema.Types.ObjectId,
     required: false,

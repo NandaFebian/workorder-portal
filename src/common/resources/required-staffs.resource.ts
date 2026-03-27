@@ -46,6 +46,7 @@ export class RequiredStaffsResource {
       ...(serviceObj.__v !== undefined && { __v: serviceObj.__v }),
       ...(serviceObj.createdAt && { createdAt: serviceObj.createdAt }),
       ...(serviceObj.updatedAt && { updatedAt: serviceObj.updatedAt }),
+      ...(serviceObj.deletedAt && { deletedAt: serviceObj.deletedAt }),
     };
   }
 }

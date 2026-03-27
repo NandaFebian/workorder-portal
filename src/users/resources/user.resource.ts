@@ -59,6 +59,9 @@ export class UserResource {
       name: userObj.name,
       email: userObj.email,
       role: userObj.role,
+      createdAt: userObj.createdAt,
+      updatedAt: userObj.updatedAt,
+      deletedAt: userObj.deletedAt,
     };
 
     // Include position if exists

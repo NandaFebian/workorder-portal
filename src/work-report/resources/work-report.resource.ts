@@ -21,6 +21,7 @@ export class WorkReportResource {
       completedAt: report.completedAt,
       createdAt: report.createdAt,
       updatedAt: report.updatedAt,
+      deletedAt: report.deletedAt,
     };
   }
 }

@@ -48,6 +48,9 @@ export class SrResponseUtil {
       workOrderCreatedAt: doc.workOrderCreatedAt,
       completedAt: doc.completedAt,
       closedAt: doc.closedAt,
+      createdAt: doc.createdAt,
+      updatedAt: doc.updatedAt,
+      deletedAt: doc.deletedAt,
     };
   }
 }

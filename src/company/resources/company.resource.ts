@@ -42,6 +42,9 @@ export class CompanyResource {
       name: companyObj.name,
       address: companyObj.address,
       description: companyObj.description,
+      createdAt: companyObj.createdAt,
+      updatedAt: companyObj.updatedAt,
+      deletedAt: companyObj.deletedAt,
     };
   }
 

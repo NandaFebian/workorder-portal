@@ -24,6 +24,9 @@ export class PositionResource {
       _id: posObj._id,
       name: posObj.name,
       description: posObj.description,
+      createdAt: posObj.createdAt,
+      updatedAt: posObj.updatedAt,
+      deletedAt: posObj.deletedAt,
     };
   }
 

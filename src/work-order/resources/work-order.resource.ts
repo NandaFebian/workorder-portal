@@ -32,6 +32,7 @@ export class WorkOrderResource {
       cancelledAt: wo.cancelledAt,
       createdAt: wo.createdAt,
       updatedAt: wo.updatedAt,
+      deletedAt: wo.deletedAt,
     };
   }
 

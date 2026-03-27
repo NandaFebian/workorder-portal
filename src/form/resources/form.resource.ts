@@ -27,6 +27,9 @@ export class FormResource {
       title: templateObj.title,
       description: templateObj.description,
       formType: templateObj.formType,
+      createdAt: templateObj.createdAt,
+      updatedAt: templateObj.updatedAt,
+      deletedAt: templateObj.deletedAt,
     };
   }
 

@@ -60,6 +60,30 @@ export class ServiceRequestInternalController {
     return ResponseUtil.success('Request rejected successfully', data);
   }
 
+  @Put(':id/cancel')
+  @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @HttpCode(HttpStatus.OK)
+  async cancel(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+    const data = await this.csrService.updateStatus(id, 'cancelled', user);
+    return ResponseUtil.success('Request cancelled successfully', data);
+  }
+
+  @Put(':id/complete')
+  @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @HttpCode(HttpStatus.OK)
+  async complete(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+    const data = await this.csrService.updateStatus(id, 'completed', user);
+    return ResponseUtil.success('Request completed successfully', data);
+  }
+
+  @Put(':id/close')
+  @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @HttpCode(HttpStatus.OK)
+  async close(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+    const data = await this.csrService.updateStatus(id, 'closed', user);
+    return ResponseUtil.success('Request closed successfully', data);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @Roles(Role.CompanyOwner, Role.CompanyManager)

@@ -43,7 +43,7 @@ export class InvitationsController {
   }
 
   @Put(':id/accept')
-  @UseGuards(RolesGuard) // Tambahkan RolesGuard
+  @UseGuards(RolesGuard)
   @Roles(Role.UnassignedStaff)
   @HttpCode(HttpStatus.OK)
   async acceptInvitation(
@@ -54,22 +54,11 @@ export class InvitationsController {
       throw new ForbiddenException('You already belong to a company.');
     }
 
-    const updatedUser = await this.invitationsService.acceptInvitation(
+    const data = await this.invitationsService.acceptInvitation(
       invitationId,
       user,
     );
-    return {
-      message: 'Invitation accepted successfully',
-      data: {
-        // Kirim data user yang relevan (tanpa password)
-        _id: updatedUser._id,
-        name: updatedUser.name,
-        email: updatedUser.email,
-        role: updatedUser.role,
-        companyId: updatedUser.companyId,
-        positionId: updatedUser.positionId,
-      },
-    };
+    return ResponseUtil.success('Invitation accepted successfully', data);
   }
 
   @Put(':id/reject')
@@ -80,11 +69,8 @@ export class InvitationsController {
     @Param('id') invitationId: string,
     @GetUser() user: AuthenticatedUser,
   ) {
-    await this.invitationsService.rejectInvitation(invitationId, user);
-    return {
-      message: 'Invitation rejected successfully',
-      // data tidak perlu dikirim karena hanya update status invite
-    };
+    const data = await this.invitationsService.rejectInvitation(invitationId, user);
+    return ResponseUtil.success('Invitation rejected successfully', data);
   }
 
   @Delete(':id')

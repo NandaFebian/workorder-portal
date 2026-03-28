@@ -87,7 +87,7 @@ export class InvitationsService {
   async acceptInvitation(
     invitationId: string,
     acceptingUser: AuthenticatedUser,
-  ): Promise<UserDocument> {
+  ): Promise<any> {
     // 1. Validasi Input & Cari Undangan
     if (!Types.ObjectId.isValid(invitationId)) {
       throw new BadRequestException(
@@ -118,7 +118,6 @@ export class InvitationsService {
 
     // 3. Cek Kedaluwarsa
     if (invitation.expiresAt < new Date()) {
-      // Update status jadi expired jika belum
       if (invitation.status === 'pending') {
         invitation.status = 'expired';
         await invitation.save();
@@ -126,13 +125,12 @@ export class InvitationsService {
       throw new BadRequestException('This invitation has expired.');
     }
 
-    // 4. Cek apakah user masih eligible (misal, belum tergabung ke company lain)
-    // Kita bisa refetch user data terbaru untuk memastikan
+    // 4. Cek apakah user masih eligible
     const currentUserState = await this.userModel
       .findById(acceptingUser._id)
       .exec();
     if (!currentUserState) {
-      throw new InternalServerErrorException('Accepting user not found.'); // Seharusnya tidak terjadi jika user terautentikasi
+      throw new InternalServerErrorException('Accepting user not found.');
     }
     if (currentUserState.companyId) {
       invitation.status = 'rejected';
@@ -172,7 +170,13 @@ export class InvitationsService {
         );
       }
 
-      return updatedUser;
+      await invitation.populate([
+        { path: 'companyId', select: 'name' },
+        { path: 'positionId', select: 'name' },
+        { path: 'userId', select: 'name email' },
+      ]);
+
+      return InvitationResource.transformInvitation(invitation);
     } catch (error) {
       console.error('Error accepting invitation:', error);
       if (invitation.status === 'accepted') {
@@ -192,7 +196,7 @@ export class InvitationsService {
   async rejectInvitation(
     invitationId: string,
     rejectingUser: AuthenticatedUser,
-  ): Promise<void> {
+  ): Promise<any> {
     // 1. Validasi & Cari Undangan (mirip accept)
     if (!Types.ObjectId.isValid(invitationId)) {
       throw new BadRequestException(
@@ -226,6 +230,14 @@ export class InvitationsService {
     // 3. Update Status Undangan
     invitation.status = 'rejected';
     await invitation.save();
+
+    await invitation.populate([
+      { path: 'companyId', select: 'name' },
+      { path: 'positionId', select: 'name' },
+      { path: 'userId', select: 'name email' },
+    ]);
+
+    return InvitationResource.transformInvitation(invitation);
   }
 
   async remove(

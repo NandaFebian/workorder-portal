@@ -94,32 +94,35 @@ export class FormsService {
   }
 
   async updateTemplate(
-    formKey: string,
+    formId: string,
     dto: UpdateFormTemplateDto,
     user: AuthenticatedUser,
   ): Promise<FormTemplateDocument> {
+    if (!Types.ObjectId.isValid(formId)) {
+      throw new NotFoundException('Invalid form template ID');
+    }
+
     if (!user.company?._id) {
       throw new ForbiddenException('User is not associated with any company.');
     }
 
-    const latestVersion = await this.formTemplateModel
+    const existingForm = await this.formTemplateModel
       .findOne({
-        formKey,
+        _id: new Types.ObjectId(formId),
         companyId: user.company._id,
         deletedAt: null,
       })
-      .sort({ __v: -1 })
       .exec();
 
-    if (!latestVersion) {
-      throw new NotFoundException(`Form with key ${formKey} not found`);
+    if (!existingForm) {
+      throw new NotFoundException(`Form template with ID ${formId} not found`);
     }
 
     const newVersionData = {
-      ...latestVersion.toObject(),
+      ...existingForm.toObject(),
       ...dto,
       _id: undefined,
-      __v: latestVersion.__v + 1,
+      __v: existingForm.__v + 1,
     };
 
     const newVersion = new this.formTemplateModel(newVersionData);

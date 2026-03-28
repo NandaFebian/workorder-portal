@@ -63,16 +63,16 @@ export class FormsController {
     );
   }
 
-  @Put(':formKey')
+  @Put(':id')
   @UseGuards(RolesGuard)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
   async updateTemplate(
-    @Param('formKey') formKey: string,
+    @Param('id') formId: string,
     @Body() updateFormTemplateDto: UpdateFormTemplateDto,
     @GetUser() user: AuthenticatedUser,
   ) {
     const newVersion = await this.formsService.updateTemplate(
-      formKey,
+      formId,
       updateFormTemplateDto,
       user,
     );

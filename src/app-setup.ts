@@ -13,21 +13,13 @@ export function setupApp(app: INestApplication) {
       whitelist: true,
       transform: true,
       exceptionFactory: (errors: ValidationError[]) => {
-        const formattedErrors = errors.reduce((acc, error) => {
-          const constraints = error.constraints
-            ? Object.values(error.constraints)
-            : ['Unknown validation error'];
-
-          if (!acc.field) {
-            acc.field = [];
-          }
-
-          constraints.forEach((constraint) => {
-            acc.field.push({ [error.property]: constraint });
-          });
-
-          return acc;
-        }, {} as any);
+        const formattedErrors = {
+          field: errors.map((error) => ({
+            [error.property]: error.constraints
+              ? Object.values(error.constraints).join('\n')
+              : 'Unknown validation error',
+          })),
+        };
 
         return new BadRequestException({
           message: 'Validation failed',

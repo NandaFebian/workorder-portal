@@ -25,16 +25,5 @@ export interface InviteError {
 
 export interface InviteEmployeesResponse {
   message: string;
-  meta: {
-    successCount: number;
-    errorCount: number;
-  };
-  data: {
-    company: {
-      _id: string;
-      name: string;
-    };
-    invited: SuccessfulInvite[];
-  };
-  errors?: InviteError[];
+  data: any[];
 }

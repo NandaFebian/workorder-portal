@@ -87,7 +87,6 @@ export class CompaniesInternalService {
     inviteEmployeesDto: InviteEmployeesDto,
   ): Promise<InviteEmployeesResponse> {
     const company = await this.findInternalById(companyId); // Gunakan find internal
-    const successfulInvites: SuccessfulInvite[] = [];
     const errors: InviteError[] = [];
 
     // 1. First Pass: Validate all users and gather errors
@@ -217,12 +216,13 @@ export class CompaniesInternalService {
     }
 
     // 2. Second Pass: Create invitations for valid users
+    const newlyCreatedInviteIds: any[] = [];
     for (const validInvite of usersToInvite) {
       try {
         const { inviteData, user, position } = validInvite;
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + 7);
-        await this.invitationModel.create({
+        const newInvitation = await this.invitationModel.create({
           companyId: new Types.ObjectId(companyId),
           userId: user._id,
           role: inviteData.role,
@@ -232,13 +232,7 @@ export class CompaniesInternalService {
           status: 'pending',
           expiresAt,
         });
-        successfulInvites.push({
-          user: { name: user.name, email: user.email },
-          role_offered: inviteData.role,
-          position_offered: position
-            ? { _id: position.id, name: position.name }
-            : null,
-        });
+        newlyCreatedInviteIds.push(newInvitation._id);
       } catch (error) {
         errors.push({
           user: { email: validInvite.inviteData.email },
@@ -251,17 +245,20 @@ export class CompaniesInternalService {
       }
     }
 
+    const newlyCreatedInvitations = await this.invitationModel
+      .find({ _id: { $in: newlyCreatedInviteIds } })
+      .populate([
+        { path: 'companyId', select: 'name' },
+        { path: 'positionId', select: 'name' },
+        { path: 'userId', select: 'name email' },
+      ])
+      .exec();
+
+    const transformedData = InvitationResource.transformInvitationList(newlyCreatedInvitations);
+
     return {
       message: 'Invite process finished',
-      meta: {
-        successCount: successfulInvites.length,
-        errorCount: errors.length,
-      },
-      data: {
-        company: { _id: company.id, name: company.name },
-        invited: successfulInvites,
-      },
-      ...(errors.length > 0 && { errors }),
+      data: transformedData,
     };
   }
 
@@ -280,7 +277,7 @@ export class CompaniesInternalService {
 
     return {
       message: 'Invitations retrieved successfully',
-      data: { invitations: transformedInvitations },
+      data: transformedInvitations,
     };
   }
 

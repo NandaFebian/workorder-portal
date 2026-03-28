@@ -231,7 +231,7 @@ export class InvitationsService {
   async remove(
     id: string,
     user: AuthenticatedUser,
-  ): Promise<{ deletedAt: Date }> {
+  ): Promise<any> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException(`Invalid invitation ID format: ${id}`);
     }
@@ -257,6 +257,12 @@ export class InvitationsService {
     const deletedAt = new Date();
     (invitation as any).deletedAt = deletedAt;
     await invitation.save();
+
+    await invitation.populate([
+      { path: 'companyId', select: 'name' },
+      { path: 'positionId', select: 'name' },
+      { path: 'userId', select: 'name email' },
+    ]);
 
     return InvitationResource.transformInvitation(invitation);
   }

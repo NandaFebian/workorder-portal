@@ -1,7 +1,7 @@
 import {
   INestApplication,
   ValidationPipe,
-  BadRequestException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { ValidationError } from 'class-validator';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
@@ -21,7 +21,7 @@ export function setupApp(app: INestApplication) {
           })),
         };
 
-        return new BadRequestException({
+        return new UnprocessableEntityException({
           message: 'Validation failed',
           code: 'VALIDATION_ERROR',
           errors: formattedErrors,

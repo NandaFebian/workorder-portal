@@ -34,7 +34,7 @@ export class MembershipController {
   }
 }
 
-@Controller('membership-code')
+@Controller('memberships/codes')
 @UseGuards(AuthGuard)
 export class MembershipCodeController {
   constructor(private readonly membershipService: MembershipService) { }
@@ -47,7 +47,7 @@ export class MembershipCodeController {
     return ResponseUtil.success('Membership codes loaded successfully', data);
   }
 
-  @Post('generate')
+  @Post()
   @UseGuards(RolesGuard)
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.AppAdmin)
   async generateCodes(

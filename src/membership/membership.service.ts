@@ -115,7 +115,7 @@ export class MembershipService {
     return codeDoc.save() as any;
   }
 
-  async remove(id: string): Promise<{ deletedAt: Date }> {
+  async remove(id: string): Promise<any> {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException('Invalid membership code ID');
     }
@@ -132,6 +132,6 @@ export class MembershipService {
     code.deletedAt = deletedAt;
     await code.save();
 
-    return { deletedAt };
+    return code.toObject ? code.toObject() : { ...code };
   }
 }

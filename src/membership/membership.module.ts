@@ -8,11 +8,13 @@ import {
 } from './schemas/membership.schema';
 import { AuthModule } from 'src/auth/auth.module';
 import { UsersModule } from 'src/users/users.module';
+import { Company, CompanySchema } from 'src/company/schemas/company.schemas';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: MembershipCode.name, schema: MembershipCodeSchema },
+      { name: Company.name, schema: CompanySchema },
     ]),
     AuthModule,
     UsersModule,

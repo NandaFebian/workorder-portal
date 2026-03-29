@@ -5,6 +5,7 @@ import {
   IsEnum,
   IsMongoId,
   IsNotEmpty,
+  IsOptional,
   ValidateNested,
 } from 'class-validator';
 import { Role } from 'src/common/enums/role.enum';
@@ -21,9 +22,9 @@ class InviteDto {
   @IsNotEmpty({ message: 'Role cannot be empty in an invite' })
   role: string;
 
+  @IsOptional()
   @IsMongoId({ message: 'Position ID must be a valid MongoDB ObjectId' })
-  @IsNotEmpty({ message: 'Position ID cannot be empty in an invite' })
-  positionId: string;
+  positionId?: string;
 }
 
 // Validasi untuk DTO utama

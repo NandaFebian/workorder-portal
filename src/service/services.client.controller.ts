@@ -12,6 +12,7 @@ import {
 import { ServicesClientService } from './services.client.service';
 import { SubmitIntakeFormDto } from './dto/submit-intake-forms.dto'; // Import DTO Baru
 import { AuthGuard } from 'src/auth/guards/auth.guard';
+import { OptionalAuthGuard } from 'src/auth/guards/optional-auth.guard';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 
@@ -21,9 +22,13 @@ export class ServicesClientController {
 
   // GET Detail Service (sesuai mock router.get("/:id"))
   @Get(':id')
+  @UseGuards(OptionalAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async findById(@Param('id') id: string) {
-    const data = await this.clientService.findServiceDetailById(id);
+  async findById(
+    @Param('id') id: string,
+    @GetUser() user: AuthenticatedUser | null,
+  ) {
+    const data = await this.clientService.findServiceDetailById(id, user);
     // Mock response structure: { message, data: { service: ..., formQuantity: ... } }
     return {
       message: 'Load data success',
@@ -33,9 +38,13 @@ export class ServicesClientController {
 
   // GET Intake Forms (sesuai mock router.get("/:id/intake-forms"))
   @Get(':id/intake-forms')
+  @UseGuards(OptionalAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async getClientIntakeForms(@Param('id') id: string) {
-    const forms = await this.clientService.getClientIntakeFormsForService(id);
+  async getClientIntakeForms(
+    @Param('id') id: string,
+    @GetUser() user: AuthenticatedUser | null,
+  ) {
+    const forms = await this.clientService.getClientIntakeFormsForService(id, user);
     return {
       message: 'Load data success',
       data: forms,
@@ -66,9 +75,13 @@ export class ServicesClientController {
   }
 
   @Get('company/:companyId')
+  @UseGuards(OptionalAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async findAllByCompanyId(@Param('companyId') companyId: string) {
-    const services = await this.clientService.findAllByCompanyId(companyId);
+  async findAllByCompanyId(
+    @Param('companyId') companyId: string,
+    @GetUser() user: AuthenticatedUser | null,
+  ) {
+    const services = await this.clientService.findAllByCompanyId(companyId, user);
     return {
       message: 'Load data success',
       data: services,

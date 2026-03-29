@@ -2,7 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
-  BadRequestException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -29,7 +29,7 @@ export class ServicesInternalService {
       return template.formKey;
     } catch (error) {
       if (error instanceof NotFoundException) {
-        throw new BadRequestException(`Form template with ID ${formId} not found.`);
+        throw new UnprocessableEntityException(`Form template with ID ${formId} not found.`);
       }
       throw error;
     }
@@ -169,6 +169,17 @@ export class ServicesInternalService {
       throw new NotFoundException(`Service with ID ${id} not found`);
     }
 
+    const latestVersion = (await this.serviceModel
+      .findOne({ serviceKey: service.serviceKey, companyId: user.company._id })
+      .sort({ __v: -1 })
+      .exec()) as any;
+
+    if (latestVersion && latestVersion._id.toString() !== id) {
+      throw new UnprocessableEntityException(
+        `Cannot edit this service. A newer version exists. Please refresh to edit the latest version.`,
+      );
+    }
+
     return this.update(service.serviceKey, dto, user);
   }
 
@@ -245,7 +256,7 @@ export class ServicesInternalService {
     return services[0];
   }
 
-  async removeById(id: string, user: AuthenticatedUser): Promise<{ deletedAt: Date }> {
+  async removeById(id: string, user: AuthenticatedUser): Promise<any> {
     if (!user.company?._id) {
       throw new ForbiddenException('User is not associated with any company.');
     }
@@ -253,6 +264,20 @@ export class ServicesInternalService {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException(`Invalid service ID: ${id}`);
     }
+
+    // Capture the populated service before soft-deleting it
+    const services = await getServicesWithAggregation(
+      this.serviceModel,
+      this.formsService,
+      { _id: new Types.ObjectId(id), companyId: user.company._id },
+      true,
+    );
+
+    if (services.length === 0) {
+      throw new NotFoundException(`Service with ID ${id} not found`);
+    }
+
+    const serviceDetails = services[0];
 
     const service = await this.serviceModel
       .findOne({ _id: new Types.ObjectId(id), companyId: user.company._id, deletedAt: null })
@@ -266,6 +291,9 @@ export class ServicesInternalService {
     service.deletedAt = deletedAt;
     await service.save();
 
-    return { deletedAt };
+    return {
+      ...serviceDetails,
+      deletedAt,
+    };
   }
 }

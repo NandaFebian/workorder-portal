@@ -26,4 +26,5 @@ export interface InviteError {
 export interface InviteEmployeesResponse {
   message: string;
   data: any[];
+  errors: InviteError[];
 }

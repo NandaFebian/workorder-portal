@@ -8,6 +8,7 @@ import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { Role } from '../common/enums/role.enum';
@@ -136,12 +137,12 @@ describe('InvitationsService', () => {
       // Act & Assert
       await expect(
         service.acceptInvitation('507f1f77bcf86cd799439020', mockUser as any),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(UnprocessableEntityException);
       expect(mockInvitation.status).toBe('rejected');
       expect(mockInvitation.save).toHaveBeenCalled();
     });
 
-    it('UT-INV-003: should throw BadRequestException when invitation expired', async () => {
+    it('UT-INV-003: should throw UnprocessableEntityException when invitation expired', async () => {
       // Arrange
       const expiredInvitation = {
         ...mockInvitation,
@@ -153,12 +154,12 @@ describe('InvitationsService', () => {
       // Act & Assert
       await expect(
         service.acceptInvitation('507f1f77bcf86cd799439020', mockUser as any),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(UnprocessableEntityException);
       expect(expiredInvitation.status).toBe('expired');
       expect(expiredInvitation.save).toHaveBeenCalled();
     });
 
-    it('UT-INV-004: should throw BadRequestException when invitation already accepted', async () => {
+    it('UT-INV-004: should throw UnprocessableEntityException when invitation already accepted', async () => {
       // Arrange
       const acceptedInvitation = {
         ...mockInvitation,
@@ -170,7 +171,7 @@ describe('InvitationsService', () => {
       // Act & Assert
       await expect(
         service.acceptInvitation('507f1f77bcf86cd799439020', mockUser as any),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(UnprocessableEntityException);
     });
 
     it('UT-INV-005: should throw ForbiddenException when wrong user tries to accept', async () => {

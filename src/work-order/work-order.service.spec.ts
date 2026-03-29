@@ -11,6 +11,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { Types } from 'mongoose';
 
@@ -249,7 +250,7 @@ describe('WorkOrderService', () => {
       expect(workOrderModel.findOne).toHaveBeenCalled();
     });
 
-    it('UT-WO-009: should throw BadRequestException when user company info is missing', async () => {
+    it('UT-WO-009: should throw ForbiddenException when user company info is missing', async () => {
       // Arrange
       const userWithoutCompany = { ...mockUser, company: null };
 
@@ -260,7 +261,7 @@ describe('WorkOrderService', () => {
           { status: 'ready' },
           userWithoutCompany as any,
         ),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -349,7 +350,7 @@ describe('WorkOrderService', () => {
       expect(mockWorkOrder.save).toHaveBeenCalled();
     });
 
-    it('UT-WO-013: should throw BadRequestException when staff is from different company', async () => {
+    it('UT-WO-013: should throw UnprocessableEntityException when staff is from different company', async () => {
       // Arrange
       const staffFromDifferentCompany = {
         ...mockStaff,
@@ -367,7 +368,7 @@ describe('WorkOrderService', () => {
           { staffEmail: ['staff@test.com'] },
           mockUser as any,
         ),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(UnprocessableEntityException);
     });
 
     it('UT-WO-014: should handle empty staffIds array', async () => {

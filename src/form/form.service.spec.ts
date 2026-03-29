@@ -5,7 +5,7 @@ import { getModelToken } from '@nestjs/mongoose';
 import { FormTemplate } from './schemas/form-template.schema';
 import { FormSubmission } from '../service/schemas/form-submission.schema';
 import { CompaniesInternalService } from '../company/companies.internal.service';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import * as formValidationHelper from './helpers/form-validation.helper';
 
 describe('FormsService', () => {
@@ -175,7 +175,7 @@ describe('FormsService', () => {
       );
     });
 
-    it('UT-FRM-004: should throw BadRequestException for invalid type on number field', async () => {
+    it('UT-FRM-004: should throw UnprocessableEntityException for invalid type on number field', async () => {
       // Arrange
       const templateWithNumberField = {
         ...mockTemplate,
@@ -186,7 +186,7 @@ describe('FormsService', () => {
       jest
         .spyOn(formValidationHelper, 'validateFormSubmission')
         .mockImplementation(() => {
-          throw new BadRequestException('Invalid type for number field');
+          throw new UnprocessableEntityException('Invalid type for number field');
         });
 
       const submissionDto = {
@@ -197,10 +197,10 @@ describe('FormsService', () => {
       // Act & Assert
       await expect(
         service.submitForm(mockUser as any, submissionDto),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(UnprocessableEntityException);
     });
 
-    it('UT-FRM-005: should throw BadRequestException when required field is missing', async () => {
+    it('UT-FRM-005: should throw UnprocessableEntityException when required field is missing', async () => {
       // Arrange
       const templateWithRequiredField = {
         ...mockTemplate,
@@ -211,7 +211,7 @@ describe('FormsService', () => {
       jest
         .spyOn(formValidationHelper, 'validateFormSubmission')
         .mockImplementation(() => {
-          throw new BadRequestException('Required field missing');
+          throw new UnprocessableEntityException('Required field missing');
         });
 
       const submissionDto = {
@@ -222,7 +222,7 @@ describe('FormsService', () => {
       // Act & Assert
       await expect(
         service.submitForm(mockUser as any, submissionDto),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(UnprocessableEntityException);
     });
 
     it('UT-FRM-006: should validate single_select with valid option', async () => {
@@ -263,7 +263,7 @@ describe('FormsService', () => {
       );
     });
 
-    it('UT-FRM-007: should throw BadRequestException for invalid single_select option', async () => {
+    it('UT-FRM-007: should throw UnprocessableEntityException for invalid single_select option', async () => {
       // Arrange
       const templateWithSelect = {
         ...mockTemplate,
@@ -282,7 +282,7 @@ describe('FormsService', () => {
       jest
         .spyOn(formValidationHelper, 'validateFormSubmission')
         .mockImplementation(() => {
-          throw new BadRequestException('Invalid option for single_select');
+          throw new UnprocessableEntityException('Invalid option for single_select');
         });
 
       const submissionDto = {
@@ -293,7 +293,7 @@ describe('FormsService', () => {
       // Act & Assert
       await expect(
         service.submitForm(mockUser as any, submissionDto),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(UnprocessableEntityException);
     });
 
     it('UT-FRM-008: should validate multi_select with valid options', async () => {

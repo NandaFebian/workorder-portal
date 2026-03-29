@@ -4,6 +4,7 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -86,10 +87,10 @@ export class CompaniesInternalService {
     companyId: string,
     inviteEmployeesDto: InviteEmployeesDto,
   ): Promise<InviteEmployeesResponse> {
-    const company = await this.findInternalById(companyId); // Gunakan find internal
+    await this.findInternalById(companyId);
     const errors: InviteError[] = [];
 
-    // 1. First Pass: Validate all users and gather errors
+    // First Pass: Validate ALL entries first — collect every error before doing anything
     const usersToInvite: {
       inviteData: any;
       user: UserDocument;
@@ -97,7 +98,7 @@ export class CompaniesInternalService {
     }[] = [];
 
     for (const invite of inviteEmployeesDto.invites) {
-      // Check if role is valid first
+      // Validate role
       if (
         ![Role.CompanyStaff, Role.CompanyManager].includes(invite.role as Role)
       ) {
@@ -122,8 +123,9 @@ export class CompaniesInternalService {
             });
             continue;
           }
-          position = await this.positionsService.findById(invite.positionId);
-          if (!position) {
+          try {
+            position = await this.positionsService.findById(invite.positionId);
+          } catch {
             errors.push({
               user: { email: invite.email },
               role_offered: invite.role,
@@ -134,6 +136,7 @@ export class CompaniesInternalService {
           }
         }
       } else {
+        // company_staff — positionId wajib
         if (!invite.positionId) {
           errors.push({
             user: { email: invite.email },
@@ -152,8 +155,9 @@ export class CompaniesInternalService {
           });
           continue;
         }
-        position = await this.positionsService.findById(invite.positionId);
-        if (!position) {
+        try {
+          position = await this.positionsService.findById(invite.positionId);
+        } catch {
           errors.push({
             user: { email: invite.email },
             role_offered: invite.role,
@@ -170,20 +174,9 @@ export class CompaniesInternalService {
           user: { email: invite.email },
           role_offered: invite.role,
           position_offered: position
-            ? { _id: position.id, name: position.name }
+            ? { _id: position._id, name: position.name }
             : null,
           message: 'User not found',
-        });
-        continue;
-      }
-      if (user.role !== Role.UnassignedStaff) {
-        errors.push({
-          user: { email: invite.email, name: user.name },
-          role_offered: invite.role,
-          position_offered: position
-            ? { _id: position.id, name: position.name }
-            : null,
-          message: 'User is not available for invitation',
         });
         continue;
       }
@@ -192,9 +185,20 @@ export class CompaniesInternalService {
           user: { email: invite.email, name: user.name },
           role_offered: invite.role,
           position_offered: position
-            ? { _id: position.id, name: position.name }
+            ? { _id: position._id, name: position.name }
             : null,
-          message: `User ${user.email} already belongs to a company.`,
+          message: 'User already belongs to a company',
+        });
+        continue;
+      }
+      if (user.role !== Role.UnassignedStaff) {
+        errors.push({
+          user: { email: invite.email, name: user.name },
+          role_offered: invite.role,
+          position_offered: position
+            ? { _id: position._id, name: position.name }
+            : null,
+          message: 'User is not available for invitation',
         });
         continue;
       }
@@ -202,47 +206,43 @@ export class CompaniesInternalService {
       usersToInvite.push({ inviteData: invite, user, position });
     }
 
-    // Check if there are any critical errors preventing the whole batch
-    const alreadyEmployedErrors = errors.filter((e) =>
-      e.message.includes('already belongs to a company'),
-    );
-    if (alreadyEmployedErrors.length > 0) {
-      const employedUsersDetails = alreadyEmployedErrors
-        .map((e) => e.user.email)
-        .join(', ');
-      throw new BadRequestException(
-        `Invitation process aborted because the following users already belong to a company: ${employedUsersDetails}`,
-      );
+    // If ANY entry failed validation — abort the entire batch (all-or-nothing)
+    if (errors.length > 0) {
+      throw new UnprocessableEntityException({
+        message: 'Invitation process aborted. Fix all errors and try again.',
+        errors,
+      });
     }
 
-    // 2. Second Pass: Create invitations for valid users
+    // Second Pass: All entries valid — safely create all invitations
     const newlyCreatedInviteIds: any[] = [];
     for (const validInvite of usersToInvite) {
-      try {
-        const { inviteData, user, position } = validInvite;
-        const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + 7);
-        const newInvitation = await this.invitationModel.create({
-          companyId: new Types.ObjectId(companyId),
+      const { inviteData, user } = validInvite;
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      // Cancel any existing pending invitation for the same user+company
+      await this.invitationModel.updateMany(
+        {
           userId: user._id,
-          role: inviteData.role,
-          positionId: inviteData.positionId
-            ? new Types.ObjectId(inviteData.positionId)
-            : null,
+          companyId: new Types.ObjectId(companyId),
           status: 'pending',
-          expiresAt,
-        });
-        newlyCreatedInviteIds.push(newInvitation._id);
-      } catch (error) {
-        errors.push({
-          user: { email: validInvite.inviteData.email },
-          role_offered: validInvite.inviteData.role,
-          position_offered: validInvite.position
-            ? validInvite.position.name
-            : 'Unknown',
-          message: error.message,
-        });
-      }
+          deletedAt: null,
+        },
+        { $set: { status: 'cancelled' } },
+      );
+
+      const newInvitation = await this.invitationModel.create({
+        companyId: new Types.ObjectId(companyId),
+        userId: user._id,
+        role: inviteData.role,
+        positionId: inviteData.positionId
+          ? new Types.ObjectId(inviteData.positionId)
+          : null,
+        status: 'pending',
+        expiresAt,
+      });
+      newlyCreatedInviteIds.push(newInvitation._id);
     }
 
     const newlyCreatedInvitations = await this.invitationModel
@@ -257,8 +257,9 @@ export class CompaniesInternalService {
     const transformedData = InvitationResource.transformInvitationList(newlyCreatedInvitations);
 
     return {
-      message: 'Invite process finished',
+      message: `Successfully invited ${transformedData.length} member(s)`,
       data: transformedData,
+      errors: [],
     };
   }
 

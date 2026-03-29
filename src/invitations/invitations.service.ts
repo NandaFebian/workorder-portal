@@ -4,6 +4,7 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  UnprocessableEntityException,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -39,7 +40,7 @@ export class InvitationsService {
     }
 
     if (user.companyId) {
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         'You already belong to a company. You cannot view or receive new invitations.',
       );
     }
@@ -111,7 +112,7 @@ export class InvitationsService {
     }
 
     if (invitation.status !== 'pending') {
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         `This invitation is no longer pending (current status: ${invitation.status}).`,
       );
     }
@@ -122,7 +123,7 @@ export class InvitationsService {
         invitation.status = 'expired';
         await invitation.save();
       }
-      throw new BadRequestException('This invitation has expired.');
+      throw new UnprocessableEntityException('This invitation has expired.');
     }
 
     // 4. Cek apakah user masih eligible
@@ -135,12 +136,12 @@ export class InvitationsService {
     if (currentUserState.companyId) {
       invitation.status = 'rejected';
       await invitation.save();
-      throw new BadRequestException('You already belong to a company.');
+      throw new UnprocessableEntityException('You already belong to a company.');
     }
     if (currentUserState.role !== Role.UnassignedStaff) {
       invitation.status = 'rejected';
       await invitation.save();
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         'Your current role is not eligible to accept this type of invitation.',
       );
     }
@@ -217,14 +218,14 @@ export class InvitationsService {
       );
     }
     if (invitation.status !== 'pending') {
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         `This invitation is no longer pending (current status: ${invitation.status}).`,
       );
     }
     if (invitation.expiresAt < new Date()) {
       invitation.status = 'expired';
       await invitation.save();
-      throw new BadRequestException('This invitation has expired.');
+      throw new UnprocessableEntityException('This invitation has expired.');
     }
 
     // 3. Update Status Undangan

@@ -14,6 +14,7 @@ import {
 import { GenerateMemberCodesDto } from './dto/generate-code.dto';
 import { ClaimMemberCodeDto } from './dto/claim-code.dto';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
+import { Company, CompanyDocument } from 'src/company/schemas/company.schemas';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -21,6 +22,8 @@ export class MembershipService {
   constructor(
     @InjectModel(MembershipCode.name)
     private membershipCodeModel: Model<MembershipCodeDocument>,
+    @InjectModel(Company.name)
+    private companyModel: Model<CompanyDocument>,
   ) {}
 
   async generateCodes(
@@ -111,8 +114,21 @@ export class MembershipService {
     codeDoc.isClaimed = true;
     codeDoc.claimedBy = user._id as any;
     codeDoc.claimedAt = new Date();
+    await codeDoc.save();
 
-    return codeDoc.save() as any;
+    // Re-fetch with full company object populated
+    const populated = await this.membershipCodeModel
+      .findById(codeDoc._id)
+      .populate('claimedBy', 'name email role')
+      .populate('companyId', 'name address')
+      .exec();
+
+    const doc = populated!.toObject() as any;
+    const { companyId, ...rest } = doc;
+    return {
+      ...rest,
+      company: companyId,
+    } as any;
   }
 
   async remove(id: string): Promise<any> {

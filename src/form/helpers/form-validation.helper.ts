@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { UnprocessableEntityException } from '@nestjs/common';
 import { FormField } from '../schemas/form-field.schema';
 
 /**
@@ -8,7 +8,7 @@ import { FormField } from '../schemas/form-field.schema';
  * @param field - The form field definition from the template
  * @param value - The submitted value to validate
  * @param fieldOrder - The order of the field (for error messages)
- * @throws BadRequestException if validation fails
+ * @throws UnprocessableEntityException if validation fails
  */
 export function validateFieldValue(
   field: FormField,
@@ -18,7 +18,7 @@ export function validateFieldValue(
   // Validate single_select fields
   if (field.type === 'single_select') {
     if (!field.options || field.options.length === 0) {
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         `Field at order ${fieldOrder} (${field.label}) has no options defined`,
       );
     }
@@ -26,7 +26,7 @@ export function validateFieldValue(
     const validKeys = field.options.map((opt) => opt.key);
 
     if (!validKeys.includes(value)) {
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         `Invalid key "${value}" for field "${field.label}" (order ${fieldOrder}). Valid keys: ${validKeys.join(', ')}`,
       );
     }
@@ -35,13 +35,13 @@ export function validateFieldValue(
   // Validate multi_select fields
   if (field.type === 'multi_select') {
     if (!Array.isArray(value)) {
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         `Field "${field.label}" (order ${fieldOrder}) must be an array for multi_select type`,
       );
     }
 
     if (!field.options || field.options.length === 0) {
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         `Field at order ${fieldOrder} (${field.label}) has no options defined`,
       );
     }
@@ -50,7 +50,7 @@ export function validateFieldValue(
     const invalidKeys = value.filter((v: any) => !validKeys.includes(v));
 
     if (invalidKeys.length > 0) {
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         `Invalid keys for field "${field.label}" (order ${fieldOrder}): ${invalidKeys.join(', ')}. Valid keys: ${validKeys.join(', ')}`,
       );
     }
@@ -62,7 +62,7 @@ export function validateFieldValue(
  *
  * @param templateFields - Array of form fields from the template
  * @param submittedFields - Array of submitted field data with order and value
- * @throws BadRequestException if any field validation fails
+ * @throws UnprocessableEntityException if any field validation fails
  */
 export function validateFormSubmission(
   templateFields: FormField[],
@@ -74,7 +74,7 @@ export function validateFormSubmission(
     );
 
     if (!templateField) {
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         `Field with order ${submittedField.order} not found in form template`,
       );
     }

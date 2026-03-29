@@ -8,6 +8,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { CompaniesInternalService } from '../company/companies.internal.service';
+import { PositionsService } from '../positions/positions.service';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { RegisterAuthDto } from './dto/register-auth.dto';
 import { RegisterCompanyDto } from './dto/register-company.dto';
@@ -20,6 +21,7 @@ export class AuthService {
   constructor(
     private usersService: UsersService,
     private companiesService: CompaniesInternalService,
+    private positionsService: PositionsService,
     private jwtService: JwtService,
   ) {}
 
@@ -162,8 +164,22 @@ export class AuthService {
       role: user.role,
     };
 
-    if (user.role === Role.CompanyStaff) {
-      userResponse.positionId = user.positionId;
+    if (user.role === Role.CompanyStaff && user.positionId) {
+      try {
+        const position = await this.positionsService.findById(
+          (user.positionId as any).toString(),
+        );
+        const p = position.toObject ? position.toObject() : position;
+        userResponse.position = {
+          _id: p._id,
+          name: p.name,
+          description: p.description,
+          isActive: p.isActive,
+          companyId: p.companyId,
+        };
+      } catch {
+        userResponse.position = null;
+      }
     }
 
     return {

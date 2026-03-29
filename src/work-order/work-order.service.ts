@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -45,7 +46,7 @@ export class WorkOrderService {
 
   async create(createWorkOrderDto: any, user: AuthenticatedUser): Promise<any> {
     if (!user.company?._id) {
-      throw new BadRequestException('User company information is missing');
+      throw new ForbiddenException('User company information is missing');
     }
     const newWorkOrder = new this.workOrderModel({
       ...createWorkOrderDto,
@@ -60,7 +61,7 @@ export class WorkOrderService {
 
   async update(id: string, updateWorkOrderDto: any, user: AuthenticatedUser): Promise<any> {
     if (!user.company?._id) {
-      throw new BadRequestException('User company information is missing');
+      throw new ForbiddenException('User company information is missing');
     }
     const wo = await this.workOrderModel.findOne({
       _id: id,
@@ -76,7 +77,7 @@ export class WorkOrderService {
 
   async findAllInternal(user: AuthenticatedUser, filterDto: WorkOrderFilterDto): Promise<any[]> {
     if (!user.company?._id) {
-      throw new BadRequestException('User company information is missing');
+      throw new ForbiddenException('User company information is missing');
     }
 
     const query: any = { companyId: user.company._id, deletedAt: null };
@@ -172,7 +173,7 @@ export class WorkOrderService {
   }
 
   async updateStatus(id: string, updateStatusDto: any, user: AuthenticatedUser): Promise<any> {
-    if (!user.company?._id) throw new BadRequestException('User company information is missing');
+    if (!user.company?._id) throw new ForbiddenException('User company information is missing');
 
     const wo = await this.workOrderModel.findOne({
       _id: id,
@@ -204,7 +205,7 @@ export class WorkOrderService {
   }
 
   async assignStaff(id: string, assignStaffDto: AssignStaffDto, user: AuthenticatedUser): Promise<any> {
-    if (!user.company?._id) throw new BadRequestException('User company information is missing');
+    if (!user.company?._id) throw new ForbiddenException('User company information is missing');
 
     const wo = await this.workOrderModel.findOne({
       _id: id,
@@ -233,7 +234,7 @@ export class WorkOrderService {
       staffIds.push(staff._id as Types.ObjectId);
     }
 
-    if (errors.length > 0) throw new BadRequestException(errors.join(', '));
+    if (errors.length > 0) throw new UnprocessableEntityException(errors.join(', '));
 
     wo.assignedStaff = staffIds as any;
     await wo.save();
@@ -241,7 +242,7 @@ export class WorkOrderService {
   }
 
   async markAsReady(id: string, user: AuthenticatedUser): Promise<any> {
-    if (!user.company?._id) throw new BadRequestException('User company information is missing');
+    if (!user.company?._id) throw new ForbiddenException('User company information is missing');
 
     const wo = await this.workOrderModel.findOne({ _id: id, companyId: user.company._id });
     if (!wo) throw new NotFoundException('Work Order not found');
@@ -256,7 +257,7 @@ export class WorkOrderService {
           submissionType: SubmissionType.WorkOrder,
         });
         if (!submission) {
-          throw new BadRequestException('Work order form must be submitted before marking as ready');
+          throw new UnprocessableEntityException('Work order form must be submitted before marking as ready');
         }
       }
     }
@@ -268,13 +269,13 @@ export class WorkOrderService {
   }
 
   async markAsInProgress(id: string, user: AuthenticatedUser): Promise<any> {
-    if (!user.company?._id) throw new BadRequestException('User company information is missing');
+    if (!user.company?._id) throw new ForbiddenException('User company information is missing');
 
     const wo = await this.workOrderModel.findOne({ _id: id, companyId: user.company._id });
     if (!wo) throw new NotFoundException('Work Order not found');
 
     if (wo.status !== 'ready') {
-      throw new BadRequestException('Work Order must be in ready status before starting');
+      throw new UnprocessableEntityException('Work Order must be in ready status before starting');
     }
 
     wo.status = 'inProgress';
@@ -304,7 +305,7 @@ export class WorkOrderService {
       const fieldsData = submission.fieldsData.map((field) => {
         const templateField = formTemplate.fields.find((f) => f.order === field.order);
         if (!templateField) {
-          throw new BadRequestException(`Field with order ${field.order} not found in form template`);
+          throw new UnprocessableEntityException(`Field with order ${field.order} not found in form template`);
         }
         return { order: templateField.order, value: field.value };
       });
@@ -325,7 +326,7 @@ export class WorkOrderService {
   }
 
   async remove(id: string, user: AuthenticatedUser): Promise<{ deletedAt: Date }> {
-    if (!user.company?._id) throw new BadRequestException('User company information is missing');
+    if (!user.company?._id) throw new ForbiddenException('User company information is missing');
 
     const wo = await this.workOrderModel.findOne({
       _id: id,

@@ -10,11 +10,13 @@ import { CompaniesModule } from '../company/companies.module';
 import { ActiveToken, ActiveTokenSchema } from './schemas/active-token.schema';
 import { AuthGuard } from './guards/auth.guard';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { PositionsModule } from '../positions/positions.module';
 
 @Module({
   imports: [
     UsersModule,
     forwardRef(() => CompaniesModule),
+    forwardRef(() => PositionsModule),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],

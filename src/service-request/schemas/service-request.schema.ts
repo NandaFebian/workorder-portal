@@ -5,6 +5,9 @@ export type ServiceRequestDocument = ServiceRequest & Document;
 
 @Schema({ timestamps: true })
 export class ServiceRequest {
+  @Prop({ type: String, unique: true, sparse: true })
+  code: string;
+
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Service', required: true })
   serviceId: Types.ObjectId;
 

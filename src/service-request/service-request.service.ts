@@ -6,6 +6,7 @@ import {
   forwardRef,
   ForbiddenException,
 } from '@nestjs/common';
+import { generateCode } from 'src/common/utils/generate-code.util';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
@@ -40,6 +41,7 @@ export class ServiceRequestService {
   async create(data: any): Promise<ServiceRequestDocument> {
     const newRequest = new this.csrModel({
       ...data,
+      code: `SR-${generateCode()}`,
       serviceRequestStatus: 'received',
       receivedAt: new Date(),
     });

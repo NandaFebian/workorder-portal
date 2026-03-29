@@ -8,6 +8,7 @@ export class SrResponseUtil {
   ) {
     return {
       _id: doc._id,
+      code: doc.code,
       serviceRequestStatus: doc.serviceRequestStatus,
       service: doc.serviceId
         ? {

@@ -7,6 +7,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { WorkOrder, WorkOrderDocument } from './schemas/work-order.schema';
+import { generateCode } from 'src/common/utils/generate-code.util';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { FormsService } from 'src/form/form.service';
 import { UsersService } from 'src/users/users.service';
@@ -35,7 +36,10 @@ export class WorkOrderService {
   ) {}
 
   async createInternal(data: any): Promise<WorkOrderDocument> {
-    const newWorkOrder = new this.workOrderModel(data);
+    const newWorkOrder = new this.workOrderModel({
+      ...data,
+      code: `WO-${generateCode()}`,
+    });
     return newWorkOrder.save();
   }
 
@@ -45,6 +49,7 @@ export class WorkOrderService {
     }
     const newWorkOrder = new this.workOrderModel({
       ...createWorkOrderDto,
+      code: `WO-${generateCode()}`,
       companyId: user.company._id,
       createdBy: user._id,
       status: 'drafted',

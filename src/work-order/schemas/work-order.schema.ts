@@ -5,6 +5,9 @@ export type WorkOrderDocument = WorkOrder & Document;
 
 @Schema({ timestamps: true })
 export class WorkOrder {
+  @Prop({ type: String, unique: true, sparse: true })
+  code: string;
+
   @Prop({
     type: MongooseSchema.Types.ObjectId,
     ref: 'ServiceRequest',

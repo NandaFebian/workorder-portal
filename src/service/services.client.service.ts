@@ -90,7 +90,7 @@ export class ServicesClientService {
       }
     }
 
-    return getServicesWithAggregation(
+    const rawServices = await getServicesWithAggregation(
       this.serviceModel,
       this.formsService,
       {
@@ -100,6 +100,15 @@ export class ServicesClientService {
       },
       false,
     );
+
+    return rawServices.map((svc) => ({
+      _id: svc._id,
+      companyId: svc.companyId,
+      title: svc.title,
+      description: svc.description,
+      accessType: svc.accessType,
+      isActive: svc.isActive,
+    }));
   }
 
   async findServiceDetailById(

@@ -10,6 +10,7 @@ import {
   ValidateNested,
   Min,
   ArrayMinSize,
+  ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -18,9 +19,10 @@ class ServiceRequestConfigDto {
   @IsOptional()
   intakeFormId?: string;
 
+  @ValidateIf((o) => o.reviewNeed === true || (o.reviewFormId !== null && o.reviewFormId !== undefined && o.reviewFormId !== ''))
+  @IsNotEmpty({ message: 'reviewFormId is required when reviewNeed is true' })
   @IsMongoId({ message: 'reviewFormId must be a valid MongoDB ObjectId' })
-  @IsOptional()
-  reviewFormId?: string;
+  reviewFormId?: string | null;
 
   @IsEnum(['auto', 'manager'])
   @IsOptional()

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { MembershipController, MembershipCodeController } from './membership.controller';
 import { MembershipService } from './membership.service';
@@ -16,10 +16,12 @@ import { Company, CompanySchema } from 'src/company/schemas/company.schemas';
       { name: MembershipCode.name, schema: MembershipCodeSchema },
       { name: Company.name, schema: CompanySchema },
     ]),
-    AuthModule,
-    UsersModule,
+
+    forwardRef(() => AuthModule),
+    forwardRef(() => UsersModule),
   ],
   controllers: [MembershipController, MembershipCodeController],
   providers: [MembershipService],
+  exports: [MembershipService],
 })
-export class MembershipModule {}
+export class MembershipModule { }

@@ -1,6 +1,9 @@
 // src/company/companies.client.controller.ts
-import { Controller, Get, HttpCode, HttpStatus, Param } from '@nestjs/common';
-import { CompaniesClientService } from './companies.client.service'; // Import service client
+import { Controller, Get, HttpCode, HttpStatus, Param, UseGuards } from '@nestjs/common';
+import { CompaniesClientService } from './companies.client.service';
+import { OptionalAuthGuard } from 'src/auth/guards/optional-auth.guard';
+import { GetUser } from 'src/common/decorators/get-user.decorator';
+import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 
 @Controller('public/companies')
 export class CompaniesClientController {
@@ -18,9 +21,13 @@ export class CompaniesClientController {
 
   // Endpoint: {{base_url}}/public/companies/{{companyId}}
   @Get(':id')
+  @UseGuards(OptionalAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async findById(@Param('id') id: string) {
-    const company = await this.clientService.findPublicById(id);
+  async findById(
+    @Param('id') id: string,
+    @GetUser() user: AuthenticatedUser | null,
+  ) {
+    const company = await this.clientService.findPublicById(id, user);
     return {
       message: 'Company retrieved successfully',
       data: company,
@@ -29,9 +36,13 @@ export class CompaniesClientController {
 
   // Endpoint: {{base_url}}/public/companies/{{companyId}}/services
   @Get(':id/services')
+  @UseGuards(OptionalAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async findServicesByCompanyId(@Param('id') id: string) {
-    const services = await this.clientService.findPublicServicesByCompanyId(id);
+  async findServicesByCompanyId(
+    @Param('id') id: string,
+    @GetUser() user: AuthenticatedUser | null,
+  ) {
+    const services = await this.clientService.findPublicServicesByCompanyId(id, user);
     return {
       message: 'Services retrieved successfully',
       data: services,

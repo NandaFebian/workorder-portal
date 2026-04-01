@@ -4,6 +4,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Company, CompanyDocument } from './schemas/company.schemas';
 import { ServicesClientService } from 'src/service/services.client.service';
+import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 
 @Injectable()
 export class CompaniesClientService {
@@ -23,7 +24,7 @@ export class CompaniesClientService {
       .exec();
   }
 
-  async findPublicById(id: string): Promise<any> {
+  async findPublicById(id: string, user?: AuthenticatedUser | null): Promise<any> {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException(`Invalid company ID: ${id}`);
     }
@@ -34,7 +35,7 @@ export class CompaniesClientService {
         isActive: true,
         deletedAt: null,
       })
-      .select('_id name address description ownerId') // Select specific fields exactly like findAllPublic
+      .select('_id name address description ownerId')
       .exec();
 
     if (!company) {
@@ -43,16 +44,17 @@ export class CompaniesClientService {
       );
     }
 
-    const services = await this.servicesClientService.findAllByCompanyId(id);
+    const { isSubscribed, services } = await this.servicesClientService.findAllByCompanyId(id, user);
     const companyData = company.toObject();
 
     return {
       ...companyData,
+      isSubscribed,
       services,
     };
   }
 
-  async findPublicServicesByCompanyId(id: string): Promise<any[]> {
+  async findPublicServicesByCompanyId(id: string, user?: AuthenticatedUser | null): Promise<{ isSubscribed: boolean; services: any[] }> {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException(`Invalid company ID: ${id}`);
     }
@@ -67,6 +69,6 @@ export class CompaniesClientService {
       );
     }
 
-    return this.servicesClientService.findAllByCompanyId(id);
+    return this.servicesClientService.findAllByCompanyId(id, user);
   }
 }

@@ -17,6 +17,13 @@ export class ServiceRequest {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Company', required: true })
   companyId: Types.ObjectId;
 
+  // Snapshot config values from Service at time of SR creation
+  @Prop({ type: String, enum: ['auto', 'manager'], default: 'auto' })
+  serviceRequestApprovalAccessType: string;
+
+  @Prop({ type: Boolean, default: false })
+  reviewNeed: boolean;
+
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', default: null })
   approvedBy: Types.ObjectId | null;
 

@@ -18,9 +18,22 @@ import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interf
 
 @Controller('public/services')
 export class ServicesClientController {
-  constructor(private readonly clientService: ServicesClientService) {}
+  constructor(private readonly clientService: ServicesClientService) { }
 
-  // GET Detail Service (sesuai mock router.get("/:id"))
+  @Get('company/:companyId')
+  @UseGuards(OptionalAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async findAllByCompanyId(
+    @Param('companyId') companyId: string,
+    @GetUser() user: AuthenticatedUser | null,
+  ) {
+    const data = await this.clientService.findAllByCompanyId(companyId, user);
+    return {
+      message: 'Load data success',
+      data: data,
+    };
+  }
+
   @Get(':id')
   @UseGuards(OptionalAuthGuard)
   @HttpCode(HttpStatus.OK)
@@ -29,14 +42,12 @@ export class ServicesClientController {
     @GetUser() user: AuthenticatedUser | null,
   ) {
     const data = await this.clientService.findServiceDetailById(id, user);
-    // Mock response structure: { message, data: { service: ..., formQuantity: ... } }
     return {
       message: 'Load data success',
       data: data,
     };
   }
 
-  // GET Intake Forms (sesuai mock router.get("/:id/intake-forms"))
   @Get(':id/intake-forms')
   @UseGuards(OptionalAuthGuard)
   @HttpCode(HttpStatus.OK)
@@ -71,20 +82,6 @@ export class ServicesClientController {
     return {
       message: 'Client service request created successfully',
       data: result,
-    };
-  }
-
-  @Get('company/:companyId')
-  @UseGuards(OptionalAuthGuard)
-  @HttpCode(HttpStatus.OK)
-  async findAllByCompanyId(
-    @Param('companyId') companyId: string,
-    @GetUser() user: AuthenticatedUser | null,
-  ) {
-    const services = await this.clientService.findAllByCompanyId(companyId, user);
-    return {
-      message: 'Load data success',
-      data: services,
     };
   }
 }

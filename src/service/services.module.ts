@@ -13,22 +13,19 @@ import {
   FormSubmission,
   FormSubmissionSchema,
 } from 'src/form/schemas/form-submissions.schema';
-import {
-  MembershipCode,
-  MembershipCodeSchema,
-} from 'src/membership/schemas/membership.schema';
+import { MembershipModule } from 'src/membership/membership.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: Service.name, schema: ServiceSchema },
       { name: FormSubmission.name, schema: FormSubmissionSchema },
-      { name: MembershipCode.name, schema: MembershipCodeSchema },
     ]),
     forwardRef(() => AuthModule),
     UsersModule,
     forwardRef(() => FormModule),
     forwardRef(() => ServiceRequestModule),
+    forwardRef(() => MembershipModule),
   ],
   controllers: [ServicesController, ServicesClientController],
   providers: [ServicesInternalService, ServicesClientService],

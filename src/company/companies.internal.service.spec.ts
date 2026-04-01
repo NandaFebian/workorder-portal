@@ -6,7 +6,7 @@ import { Company } from './schemas/company.schemas';
 import { Invitation } from './schemas/invitation.schemas';
 import { UsersService } from '../users/users.service';
 import { PositionsService } from '../positions/positions.service';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { Role } from '../common/enums/role.enum';
 
@@ -121,7 +121,7 @@ describe('CompaniesInternalService', () => {
         '507f1f77bcf86cd799439050',
       );
       expect(invitationModel.create).toHaveBeenCalled();
-      expect(result.data.invited).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
       expect(result.errors).toHaveLength(0);
     });
 
@@ -187,7 +187,7 @@ describe('CompaniesInternalService', () => {
       // Assert
       expect(usersService.findOneByEmail).toHaveBeenCalledTimes(5);
       expect(invitationModel.create).toHaveBeenCalledTimes(5);
-      expect(result.data.invited).toHaveLength(5);
+      expect(result.data).toHaveLength(5);
       expect(result.errors).toHaveLength(0);
     });
 
@@ -255,16 +255,18 @@ describe('CompaniesInternalService', () => {
         ],
       };
 
-      // Act
-      const result = await service.inviteEmployees(
-        '507f1f77bcf86cd799439012',
-        inviteDto,
-      );
+      // Act & Assert
+      await expect(
+        service.inviteEmployees('507f1f77bcf86cd799439012', inviteDto),
+      ).rejects.toThrow(UnprocessableEntityException);
 
-      // Assert
-      expect(result.data.invited).toHaveLength(0);
-      expect(result.errors!).toHaveLength(1);
-      expect(result.errors![0].message).toContain('Position');
+      try {
+        await service.inviteEmployees('507f1f77bcf86cd799439012', inviteDto);
+      } catch (error: any) {
+        const errResponse = error.getResponse();
+        expect(errResponse.errors).toHaveLength(1);
+        expect(errResponse.errors[0].message).toContain('Position');
+      }
     });
 
     it('UT-CMP-005: should handle duplicate email gracefully', async () => {
@@ -293,18 +295,20 @@ describe('CompaniesInternalService', () => {
         ],
       };
 
-      // Act
-      const result = await service.inviteEmployees(
-        '507f1f77bcf86cd799439012',
-        inviteDto,
-      );
+      // Act & Assert
+      await expect(
+        service.inviteEmployees('507f1f77bcf86cd799439012', inviteDto),
+      ).rejects.toThrow(UnprocessableEntityException);
 
-      // Assert
-      expect(result.data.invited).toHaveLength(0);
-      expect(result.errors!).toHaveLength(1);
-      expect(result.errors![0].message).toContain(
-        'already belongs to a company',
-      );
+      try {
+        await service.inviteEmployees('507f1f77bcf86cd799439012', inviteDto);
+      } catch (error: any) {
+        const errResponse = error.getResponse();
+        expect(errResponse.errors).toHaveLength(1);
+        expect(errResponse.errors[0].message).toContain(
+          'already belongs to a company',
+        );
+      }
     });
 
     it('UT-CMP-006: should set same companyId for all invitations', async () => {

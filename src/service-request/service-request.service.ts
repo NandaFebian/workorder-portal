@@ -51,13 +51,14 @@ export class ServiceRequestService {
   async findAllByClientId(userId: string): Promise<any[]> {
     const requests = await this.csrModel
       .find({ requestedBy: new Types.ObjectId(userId), deletedAt: null })
-      .populate('serviceId', 'companyId title description accessType isActive serviceRequestConfig workOrdersConfig')
+      .populate('companyId', 'name address description isActive')
+      .populate('serviceId', 'companyId title description accessType isActive')
       .populate('requestedBy', 'name email role')
       .populate('approvedBy', 'name email role')
       .sort({ createdAt: -1 })
       .exec();
 
-    return Promise.all(requests.map((r) => this._enrichAndFormat(r)));
+    return Promise.all(requests.map((r) => this._enrichAndFormat(r, false)));
   }
 
   async findOneForClient(id: string, userId: string): Promise<any> {
@@ -65,25 +66,26 @@ export class ServiceRequestService {
 
     const sr = await this.csrModel
       .findOne({ _id: id, requestedBy: new Types.ObjectId(userId), deletedAt: null })
-      .populate('serviceId', 'companyId title description accessType isActive serviceRequestConfig workOrdersConfig')
+      .populate('companyId', 'name address description isActive')
+      .populate('serviceId', 'companyId title description accessType isActive')
       .populate('requestedBy', 'name email role')
       .populate('approvedBy', 'name email role')
       .exec();
 
     if (!sr) throw new NotFoundException('Service Request not found');
-    return this._enrichAndFormat(sr);
+    return this._enrichAndFormat(sr, false);
   }
 
   async findAllByCompanyId(companyId: string): Promise<any[]> {
     const requests = await this.csrModel
       .find({ companyId: new Types.ObjectId(companyId), deletedAt: null })
-      .populate('serviceId', 'companyId title description accessType isActive serviceRequestConfig workOrdersConfig')
+      .populate('serviceId', 'companyId title description accessType isActive')
       .populate('requestedBy', 'name email role')
       .populate('approvedBy', 'name email role')
       .sort({ createdAt: -1 })
       .exec();
 
-    return Promise.all(requests.map((r) => this._enrichAndFormat(r)));
+    return Promise.all(requests.map((r) => this._enrichAndFormat(r, true)));
   }
 
   async findOneInternal(id: string, user?: AuthenticatedUser): Promise<any> {
@@ -96,16 +98,16 @@ export class ServiceRequestService {
 
     const sr = await this.csrModel
       .findOne(query)
-      .populate('serviceId', 'companyId title description accessType isActive serviceRequestConfig workOrdersConfig')
+      .populate('serviceId', 'companyId title description accessType isActive')
       .populate('requestedBy', 'name email role')
       .populate('approvedBy', 'name email role')
       .exec();
 
     if (!sr) throw new NotFoundException('Service Request not found');
-    return this._enrichAndFormat(sr);
+    return this._enrichAndFormat(sr, true);
   }
 
-  private async _enrichAndFormat(sr: any): Promise<any> {
+  private async _enrichAndFormat(sr: any, isInternal = true): Promise<any> {
     const doc = sr.toObject ? sr.toObject() : sr;
 
     // Hydrate intake form
@@ -145,7 +147,9 @@ export class ServiceRequestService {
           .exec()
       : null;
 
-    return SrResponseUtil.formatOne(doc, intakeForm, reviewForm, intakeSubmission, reviewSubmission);
+    return isInternal
+      ? SrResponseUtil.formatInternal(doc, intakeForm, reviewForm, intakeSubmission, reviewSubmission)
+      : SrResponseUtil.formatPublic(doc, intakeForm, reviewForm, intakeSubmission, reviewSubmission);
   }
 
   async updateStatus(

@@ -24,7 +24,7 @@ export class MembershipService {
     private membershipCodeModel: Model<MembershipCodeDocument>,
     @InjectModel(Company.name)
     private companyModel: Model<CompanyDocument>,
-  ) {}
+  ) { }
 
   async generateCodes(
     dto: GenerateMemberCodesDto,
@@ -70,11 +70,52 @@ export class MembershipService {
       .exec();
   }
 
+  /**
+   * Helper: cek apakah user sudah berlangganan (claimed membership) pada company tertentu.
+   * Dapat dipanggil dari modul lain (mis. ServicesClientService).
+   */
+  async isUserSubscribed(
+    userId: string,
+    companyId: string,
+  ): Promise<boolean> {
+    if (
+      !userId ||
+      !companyId ||
+      !Types.ObjectId.isValid(userId) ||
+      !Types.ObjectId.isValid(companyId)
+    ) {
+      console.log('[DEBUG isUserSubscribed] Invalid userId or companyId', { userId, companyId });
+      return false;
+    }
+
+    try {
+      // Menggunakan query object polos, Mongoose akan mengurus cast ObjectId otomatis
+      const membership = await this.membershipCodeModel.findOne({
+        companyId: companyId,
+        claimedBy: userId,
+        isClaimed: true,
+        $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
+      });
+
+      console.log('[DEBUG isUserSubscribed] Result:', { 
+        userId, 
+        companyId, 
+        found: !!membership,
+        membershipId: membership?._id 
+      });
+
+      return !!membership;
+    } catch (error) {
+      console.error('[DEBUG isUserSubscribed] Error:', error);
+      return false;
+    }
+  }
+
   async findAllSubscribedClients(user: AuthenticatedUser): Promise<any[]> {
     if (!user.company?._id) {
       throw new ForbiddenException('User is not associated with any company.');
     }
-    
+
     // Find all claimed codes for this company, populate the client data
     const memberships = await this.membershipCodeModel
       .find({
@@ -85,7 +126,7 @@ export class MembershipService {
       .populate('claimedBy', 'name email role')
       .sort({ claimedAt: -1 })
       .exec();
-      
+
     // Extract and format the clients
     return memberships.map((membership) => ({
       membershipCode: membership.code,

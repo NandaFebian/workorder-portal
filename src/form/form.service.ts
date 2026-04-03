@@ -3,6 +3,8 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  UnprocessableEntityException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -16,7 +18,6 @@ import {
 } from './schemas/form-submissions.schema';
 import { CreateFormTemplateDto } from './dto/create-form-template.dto';
 import { UpdateFormTemplateDto } from './dto/update-form-template.dto';
-import { SubmitFormDto } from './dto/submit-form.dto';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { v4 as uuidv4 } from 'uuid';
 import { CompaniesInternalService } from 'src/company/companies.internal.service';
@@ -30,7 +31,7 @@ export class FormsService {
     @InjectModel(FormSubmission.name)
     private formSubmissionModel: Model<FormSubmissionDocument>,
     private companiesInternalService: CompaniesInternalService,
-  ) {}
+  ) { }
 
   async createTemplate(
     dto: CreateFormTemplateDto,
@@ -57,7 +58,7 @@ export class FormsService {
     }
 
     return this.formTemplateModel.aggregate([
-      { $match: { companyId: user.company._id, deletedAt: null } },
+      { $match: { companyId: user.company._id } },
       { $sort: { __v: -1 } },
       {
         $group: {
@@ -66,6 +67,7 @@ export class FormsService {
         },
       },
       { $replaceRoot: { newRoot: '$latest_doc' } },
+      { $match: { deletedAt: null } },
       { $sort: { createdAt: -1 } },
     ]);
   }
@@ -98,6 +100,10 @@ export class FormsService {
     dto: UpdateFormTemplateDto,
     user: AuthenticatedUser,
   ): Promise<FormTemplateDocument> {
+    if (Object.keys(dto).length === 0) {
+      throw new BadRequestException('Payload for update cannot be empty');
+    }
+
     if (!Types.ObjectId.isValid(formId)) {
       throw new NotFoundException('Invalid form template ID');
     }
@@ -116,6 +122,17 @@ export class FormsService {
 
     if (!existingForm) {
       throw new NotFoundException(`Form template with ID ${formId} not found`);
+    }
+
+    const latestVersion = (await this.formTemplateModel
+      .findOne({ formKey: existingForm.formKey, companyId: user.company._id })
+      .sort({ __v: -1 })
+      .exec()) as any;
+
+    if (latestVersion && latestVersion._id.toString() !== formId) {
+      throw new UnprocessableEntityException(
+        `Cannot edit this form template. A newer version exists. Please refresh to edit the latest version.`,
+      );
     }
 
     const newVersionData = {

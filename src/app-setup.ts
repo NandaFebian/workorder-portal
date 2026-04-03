@@ -15,31 +15,39 @@ export function setupApp(app: INestApplication) {
       exceptionFactory: (errors: ValidationError[]) => {
         const fieldMap = new Map<string, string[]>();
 
-        const flattenErrors = (validationErrors: ValidationError[]) => {
+        const buildPath = (parentPath: string, property: string): string => {
+          if (!parentPath) return property;
+          if (!isNaN(Number(property))) {
+            return `${parentPath}[${property}]`;
+          }
+          return `${parentPath}.${property}`;
+        };
+
+        const flattenErrors = (validationErrors: ValidationError[], parentPath = '') => {
           for (const error of validationErrors) {
+            const currentPath = buildPath(parentPath, error.property);
             if (error.constraints) {
               const msgs = Object.values(error.constraints);
-              if (fieldMap.has(error.property)) {
-                fieldMap.get(error.property)!.push(...msgs);
+              if (fieldMap.has(currentPath)) {
+                fieldMap.get(currentPath)!.push(...msgs);
               } else {
-                fieldMap.set(error.property, [...msgs]);
+                fieldMap.set(currentPath, [...msgs]);
               }
             }
             if (error.children && error.children.length > 0) {
-              flattenErrors(error.children);
+              flattenErrors(error.children, currentPath);
             }
           }
         };
 
         flattenErrors(errors);
 
-        const combinedErrors: Record<string, string> = {};
-        for (const [key, value] of fieldMap.entries()) {
-          combinedErrors[key] = value.join('\n');
-        }
+        const fieldArray = Array.from(fieldMap.entries()).map(([key, value]) => ({
+          [key]: value.join('\n'),
+        }));
 
         const formattedErrors = {
-          field: Object.keys(combinedErrors).length > 0 ? [combinedErrors] : [],
+          field: fieldArray,
         };
 
         return new BadRequestException({

@@ -313,10 +313,24 @@ export class FormsService {
       throw new NotFoundException(`Form template with ID ${id} not found`);
     }
 
-    // Soft delete only this specific version
+    // Check if it is the latest version
+    const latestVersion = (await this.formTemplateModel
+      .findOne({ formKey: template.formKey, companyId: user.company._id, deletedAt: null })
+      .sort({ __v: -1 })
+      .exec()) as any;
+
+    if (latestVersion && latestVersion._id.toString() !== id) {
+      throw new UnprocessableEntityException(
+        'Hanya versi form terbaru yang dapat dihapus. Silakan muat ulang untuk mendapatkan versi terakhir.',
+      );
+    }
+
+    // Soft delete all versions
     const deletedAt = new Date();
-    template.deletedAt = deletedAt;
-    await template.save();
+    await this.formTemplateModel.updateMany(
+      { formKey: template.formKey, companyId: user.company._id, deletedAt: null },
+      { $set: { deletedAt } }
+    );
 
     return { deletedAt };
   }

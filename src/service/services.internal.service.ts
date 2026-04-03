@@ -287,9 +287,22 @@ export class ServicesInternalService {
       throw new NotFoundException(`Service with ID ${id} not found`);
     }
 
+    const latestVersion = (await this.serviceModel
+      .findOne({ serviceKey: service.serviceKey, companyId: user.company._id, deletedAt: null })
+      .sort({ __v: -1 })
+      .exec()) as any;
+
+    if (latestVersion && latestVersion._id.toString() !== id) {
+      throw new UnprocessableEntityException(
+        'Hanya versi service terbaru yang dapat dihapus. Silakan muat ulang untuk mendapatkan versi terakhir.',
+      );
+    }
+
     const deletedAt = new Date();
-    service.deletedAt = deletedAt;
-    await service.save();
+    await this.serviceModel.updateMany(
+      { serviceKey: service.serviceKey, companyId: user.company._id, deletedAt: null },
+      { $set: { deletedAt } }
+    );
 
     return {
       ...serviceDetails,

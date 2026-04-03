@@ -152,10 +152,32 @@ export class MembershipService {
       throw new ConflictException('Membership code already claimed');
     }
 
-    codeDoc.isClaimed = true;
-    codeDoc.claimedBy = user._id as any;
-    codeDoc.claimedAt = new Date();
-    await codeDoc.save();
+    const alreadySubscribed = await this.isUserSubscribed(
+      user._id.toString(),
+      codeDoc.companyId.toString(),
+    );
+
+    if (alreadySubscribed) {
+      throw new ConflictException(
+        'You have already claimed a membership code for this company',
+      );
+    }
+
+    const updatedDoc = await this.membershipCodeModel.findOneAndUpdate(
+      { _id: codeDoc._id, isClaimed: false },
+      {
+        $set: {
+          isClaimed: true,
+          claimedBy: user._id,
+          claimedAt: new Date(),
+        },
+      },
+      { new: true }
+    );
+
+    if (!updatedDoc) {
+      throw new ConflictException('Membership code already claimed by another concurrent request');
+    }
 
     // Re-fetch with full company object populated
     const populated = await this.membershipCodeModel

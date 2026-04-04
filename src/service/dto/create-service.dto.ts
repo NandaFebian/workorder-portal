@@ -19,7 +19,7 @@ class ServiceRequestConfigDto {
   @IsOptional()
   intakeFormId?: string;
 
-  @ValidateIf((o) => o.reviewNeed === true || (o.reviewFormId !== null && o.reviewFormId !== undefined && o.reviewFormId !== ''))
+  @ValidateIf((o) => o.reviewNeed === true)
   @IsNotEmpty({ message: 'reviewFormId is required when reviewNeed is true' })
   @IsMongoId({ message: 'reviewFormId must be a valid MongoDB ObjectId' })
   reviewFormId?: string | null;

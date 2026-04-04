@@ -1,8 +1,10 @@
 import {
   Controller,
   Get,
-  Put,
+  Post,
+  Patch,
   Param,
+  Body,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -24,64 +26,63 @@ import { ResponseUtil } from 'src/common/utils/response.util';
 export class ServiceRequestInternalController {
   constructor(private readonly csrService: ServiceRequestService) {}
 
-  @Get()
+  @Get('inbox')
   @HttpCode(HttpStatus.OK)
-  async findAll(@GetUser() user: AuthenticatedUser) {
+  async getInbox(@GetUser() user: AuthenticatedUser) {
     if (!user.company?._id)
       throw new ForbiddenException('No company associated');
+    
     const data = await this.csrService.findAllByCompanyId(
       user.company._id.toString(),
     );
-    return ResponseUtil.success('Load data success', data);
+    return ResponseUtil.success('Load inbox success', data);
+  }
+
+  @Get('services/:serviceId/intake-form')
+  @HttpCode(HttpStatus.OK)
+  async getIntakeFormInternal(
+    @Param('serviceId') serviceId: string,
+    @GetUser() user: AuthenticatedUser,
+  ) {
+    if (!user.company?._id)
+      throw new ForbiddenException('No company associated');
+      
+    // TODO: Implement get internal intake form logic
+    return ResponseUtil.success('Load intake form success', {});
   }
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
-  async findOne(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+  async getDetail(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     if (!user.company?._id)
       throw new ForbiddenException('No company associated');
+    
     const data = await this.csrService.findOneInternal(id, user);
-    return ResponseUtil.success('Load data success', data);
+    return ResponseUtil.success('Load detail success', data);
   }
 
-  @Put(':id/approve')
+  @Post(':id/review')
+  @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @HttpCode(HttpStatus.CREATED) // or OK
+  async submitReview(@Param('id') id: string, @Body() body: any, @GetUser() user: AuthenticatedUser) {
+    // TODO: Implement submit review logic
+    return ResponseUtil.success('Submit review success', {});
+  }
+
+  @Patch(':id/approve')
   @Roles(Role.CompanyOwner, Role.CompanyManager)
   @HttpCode(HttpStatus.OK)
   async approve(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-    const data = await this.csrService.updateStatus(id, 'approved', user);
-    return ResponseUtil.success('Request approved successfully', data);
+    // TODO: Implement approve SR logic
+    return ResponseUtil.success('Request approved successfully', {});
   }
 
-  @Put(':id/reject')
+  @Patch(':id/reject')
   @Roles(Role.CompanyOwner, Role.CompanyManager)
   @HttpCode(HttpStatus.OK)
   async reject(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-    const data = await this.csrService.updateStatus(id, 'rejected', user);
-    return ResponseUtil.success('Request rejected successfully', data);
-  }
-
-  @Put(':id/cancel')
-  @Roles(Role.CompanyOwner, Role.CompanyManager)
-  @HttpCode(HttpStatus.OK)
-  async cancel(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-    const data = await this.csrService.updateStatus(id, 'cancelled', user);
-    return ResponseUtil.success('Request cancelled successfully', data);
-  }
-
-  @Put(':id/complete')
-  @Roles(Role.CompanyOwner, Role.CompanyManager)
-  @HttpCode(HttpStatus.OK)
-  async complete(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-    const data = await this.csrService.updateStatus(id, 'completed', user);
-    return ResponseUtil.success('Request completed successfully', data);
-  }
-
-  @Put(':id/close')
-  @Roles(Role.CompanyOwner, Role.CompanyManager)
-  @HttpCode(HttpStatus.OK)
-  async close(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-    const data = await this.csrService.updateStatus(id, 'closed', user);
-    return ResponseUtil.success('Request closed successfully', data);
+    // TODO: Implement reject SR logic
+    return ResponseUtil.success('Request rejected successfully', {});
   }
 
   @Delete(':id')

@@ -65,7 +65,7 @@ export class ServiceRequestService {
     if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
 
     const sr = await this.csrModel
-      .findOne({ _id: id, requestedBy: new Types.ObjectId(userId), deletedAt: null })
+      .findOne({ _id: id, deletedAt: null })
       .populate('companyId', 'name address description isActive')
       .populate('serviceId', 'companyId title description accessType isActive')
       .populate('requestedBy', 'name email role')
@@ -73,6 +73,12 @@ export class ServiceRequestService {
       .exec();
 
     if (!sr) throw new NotFoundException('Service Request not found');
+    
+    const requestedById = sr.requestedBy?._id ? sr.requestedBy._id.toString() : sr.requestedBy?.toString();
+    if (requestedById !== userId) {
+      throw new ForbiddenException('You are not authorized to access this Service Request.');
+    }
+
     return this._enrichAndFormat(sr, false);
   }
 
@@ -91,19 +97,19 @@ export class ServiceRequestService {
   async findOneInternal(id: string, user?: AuthenticatedUser): Promise<any> {
     if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
 
-    const query: any = { _id: id, deletedAt: null };
-    if (user?.company?._id) {
-      query.companyId = new Types.ObjectId(user.company._id.toString());
-    }
-
     const sr = await this.csrModel
-      .findOne(query)
+      .findOne({ _id: id, deletedAt: null })
       .populate('serviceId', 'companyId title description accessType isActive')
       .populate('requestedBy', 'name email role')
       .populate('approvedBy', 'name email role')
       .exec();
 
     if (!sr) throw new NotFoundException('Service Request not found');
+
+    if (user?.company?._id && sr.companyId.toString() !== user.company._id.toString()) {
+      throw new ForbiddenException('You are not authorized to access this Service Request.');
+    }
+
     return this._enrichAndFormat(sr, true);
   }
 

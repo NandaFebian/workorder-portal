@@ -15,9 +15,9 @@ export class CreateWorkReportDto {
   @IsNotEmpty()
   companyId: string;
 
-  @IsString()
+  @IsMongoId()
   @IsOptional()
-  reportFormKey?: string;
+  reportFormId?: string;
 
   @IsEnum(['drafted', 'in_progress', 'completed', 'cancelled', 'rejected'])
   @IsOptional()

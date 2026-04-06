@@ -36,8 +36,8 @@ import { Service, ServiceSchema } from 'src/service/schemas/service.schema';
     MembershipModule,
   ],
   controllers: [
+    ServiceRequestInternalController, // harus duluan agar /inbox tidak tertangkap /:id
     ServiceRequestPublicController,
-    ServiceRequestInternalController,
   ],
   providers: [ServiceRequestService],
   exports: [ServiceRequestService],

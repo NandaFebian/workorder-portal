@@ -22,24 +22,11 @@ export class ServicesInternalService {
     private readonly formsService: FormsService,
   ) {}
 
-  private async resolveFormIdToKey(formId: string | undefined): Promise<string | null> {
-    if (!formId) return null;
-    try {
-      const template = await this.formsService.findTemplateById(formId);
-      return template.formKey;
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw new UnprocessableEntityException(`Form template with ID ${formId} not found.`);
-      }
-      throw error;
-    }
-  }
-
   private async buildServiceRequestConfig(configDto: any): Promise<any> {
     if (!configDto) return {};
     return {
-      intakeFormKey: await this.resolveFormIdToKey(configDto.intakeFormId),
-      reviewFormKey: await this.resolveFormIdToKey(configDto.reviewFormId),
+      intakeFormId: configDto.intakeFormId ? new Types.ObjectId(configDto.intakeFormId) : null,
+      reviewFormId: configDto.reviewFormId ? new Types.ObjectId(configDto.reviewFormId) : null,
       serviceRequestApprovalAccessType: configDto.serviceRequestApprovalAccessType ?? 'auto',
       reviewNeed: configDto.reviewNeed ?? false,
     };
@@ -50,8 +37,8 @@ export class ServicesInternalService {
     return Promise.all(
       configsDto.map(async (dto) => ({
         positionId: new Types.ObjectId(dto.positionId),
-        workOrderFormKey: await this.resolveFormIdToKey(dto.workOrderFormId),
-        workReportFormKey: await this.resolveFormIdToKey(dto.workReportFormId),
+        workOrderFormId: dto.workOrderFormId ? new Types.ObjectId(dto.workOrderFormId) : null,
+        workReportFormId: dto.workReportFormId ? new Types.ObjectId(dto.workReportFormId) : null,
         workOrderApprovalAccessType: dto.workOrderApprovalAccessType ?? 'auto',
         workReportApprovalAccessType: dto.workReportApprovalAccessType ?? 'auto',
         minStaff: dto.minStaff,

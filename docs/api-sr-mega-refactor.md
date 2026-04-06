@@ -1,10 +1,10 @@
 # Service Request (SR) API Documentation
 
-This document outlines the mega refactor changes for the Service Request module. It details the active endpoints, their access rules, Request structures, and Response structures.
+This document outlines the active endpoints, their access rules, Request structures, and Response structures based on the current implementation.
 
 ## Roles
 - **Requester**: Client or Internal Staff who initializes the service request.
-- **Provider**: Company Owner or Company Manager of the respective company handling the service.
+- **Provider**: Company Owner, Company Manager, or Company Staff of the respective company handling the service.
 
 ---
 
@@ -69,7 +69,12 @@ Shows the `company` handling the request but hides internal configs.
   "intakeSubmission": { /* Form Submission Object */ },
   "reviewSubmission": { /* Form Submission Object */ },
   "receivedAt": "Date",
-  ... (other dates)
+  "approvedAt": "Date",
+  "rejectedAt": "Date",
+  "cancelledAt": "Date",
+  "workOrderCreatedAt": "Date",
+  "completedAt": "Date",
+  "closedAt": "Date"
 }
 ```
 
@@ -77,71 +82,88 @@ Shows the `company` handling the request but hides internal configs.
 
 ## 2. Endpoints: Retrieve Service Requests
 
-### Get All SR Inbox (Provider)
-- **Endpoint**: `GET /service-request/inbox`
-- **Access Rule**: Provider (Owner/Manager). Scoped to `user.companyId`.
-- **Response**: Array of `Provider Side SR Response`.
-
-### Get All SR Sent (Requester)
-- **Endpoint**: `GET /public/service-request/sent`
-- **Access Rule**: All Users (Client & Staff). Scoped to `user._id`.
+### Get All SR — Sent (Requester)
+- **Endpoint**: `GET /service-requests/sent`
+- **Access**: All authenticated users (Client & Staff). Scoped to `user._id`.
 - **Response**: Array of `Requester Side SR Response`.
 
-### Get SR Detail
-- **Provider Endpoint**: `GET /service-request/{SRid}`
-- **Requester Endpoint**: `GET /public/service-request/{SRid}`
-- **Access Rule**: 
-  - Requester can only access their own SR.
-  - Provider can only access SR assigned to their company.
-  - Others receive **403 Forbidden**.
-- **Response**: `Provider Side SR Response` OR `Requester Side SR Response` depending on the route.
+### Get All SR — Inbox (Provider)
+- **Endpoint**: `GET /service-requests/inbox`
+- **Access**: CompanyOwner, CompanyManager, CompanyStaff. Scoped to `user.companyId`.
+- **Response**: Array of `Provider Side SR Response`.
+
+### Get SR Detail (Unified)
+- **Endpoint**: `GET /service-requests/:id`
+- **Access**: Authenticated user.
+  - If the user is the **requester** → returns `Requester Side SR Response`.
+  - If the user is the **provider** (part of the handling company) → returns `Provider Side SR Response`.
+  - Others → **403 Forbidden**.
 
 ---
 
-## 3. Endpoints: Forms & Submissions
+## 3. Endpoints: Intake Form
 
-### Get Intake Form (Public / Member Only)
-- **Endpoint**: `GET /public/service-request/services/{ServiceId}/intake-form`
-- **Access Rule**: 
-  - Public Service → Any Client
-  - Member Only Service → Registered Member Client
-  - Internal Only Service → **403 Access Denied**
-- **Response**: Form Template Object
+### Get Intake Form (Public / Member Only Service)
+- **Endpoint**: `GET /service-request/services/:serviceId/intake-form`
+- **Access**: All authenticated users. Validated based on service `accessType`:
+  - `public` → any authenticated user
+  - `member_only` → registered member of the company only
+  - `internal` → **403 Forbidden** (use internal endpoint instead)
+- **Response**: Form Template Object, or `null` if no intake form is configured.
 
-### Get Intake Form (Internal Only)
-- **Endpoint**: `GET /service-request/services/{ServiceId}/intake-form`
-- **Access Rule**: Internal Service → Staff part of that company. Others → **403 Access Denied**.
-- **Response**: Form Template Object
+### Get Intake Form (Internal Service — Provider Staff)
+- **Endpoint**: `GET /service-request/services/:serviceId/intake-form`
+- **Access**: CompanyOwner, CompanyManager, CompanyStaff belonging to the provider company.
+- **Note**: This uses the same path but is handled differently based on role. Staff of the correct company can access internal service forms; others receive **403 Forbidden**.
+- **Response**: Form Template Object, or `null` if no intake form is configured.
+
+---
+
+## 4. Endpoints: Forms & Submissions
 
 ### Submit Intake (Create SR)
-- **Endpoint**: `POST /public/service-request/service/{ServiceId}`
-- **Access Rule**: Rules follow the Intake Form's strict rules (Public, Member Only, Internal Only validations). External Clients cannot access Internal Only.
+- **Endpoint**: `POST /service-request/service/:serviceId`
+- **Access**: All authenticated users. Validated based on service `accessType`:
+  - `public` → anyone
+  - `member_only` → registered member of the company
+  - `internal` → staff of the provider company only
 - **Request Body**:
 ```json
 {
-  "submissions": [
-    {
-      "formId": "ObjectID",
-      "fieldsData": [
-        { "fieldId": "string", "value": "string/number/boolean" }
-      ]
-    }
-  ]
+  "submission": {
+    "formId": "ObjectID",
+    "fieldsData": [
+      { "order": 1, "value": "string | number | boolean | string[]" }
+    ]
+  }
 }
 ```
-- **Validation**:
-  - `serviceId` must exist and be active.
-  - Required fields must exist (Missing = **422 Unprocessable Entity**).
-- **Business Rule**: Initial state set to `received`.
+- **Notes**:
+  - `submission` is optional if the service has no intake form, or if the form has no required fields.
+  - `formId` must exactly match the `intakeFormId` configured on the service. Otherwise → **400 Bad Request**.
+  - For `single_select` fields, `value` must be the option's `key` (not its label).
+  - For `multi_select` fields, `value` must be an array of option `key`s.
 - **Response**: `Requester Side SR Response`
 
 ### Submit Review
-- **Endpoint**: `POST /public/service-request/{SRId}/review`
-- **Access Rule**: Only the specific Requester who made the SR.
+- **Endpoint**: `POST /service-request/:id/review`
+- **Access**: Only the specific Requester who created the SR.
 - **Validation**:
-  - SR Status MUST be `completed`.
-  - Strict payload validation against Review Form Schema.
-- **Business Rule**: Submitting review changes the status to `closed` (if `reviewNeed` is true).
+  - SR Status MUST be `completed` → otherwise **422 Unprocessable Entity**.
+  - `formId` must exactly match the `reviewFormId` on the SR → otherwise **400 Bad Request**.
+  - Required fields must be present → otherwise **422 Unprocessable Entity**.
+- **Request Body**:
+```json
+{
+  "submission": {
+    "formId": "ObjectID",
+    "fieldsData": [
+      { "order": 1, "value": "string | number | boolean | string[]" }
+    ]
+  }
+}
+```
+- **Business Rule**: Submitting review changes status to `closed` (when `reviewNeed` is `true`).
 - **Response**: `Requester Side SR Response`
 
 ---
@@ -149,20 +171,26 @@ Shows the `company` handling the request but hides internal configs.
 ## 4. Endpoints: Status Transitions
 
 ### Cancel Service Request
-- **Endpoint**: `PATCH /public/service-request/{SRid}/cancel`
-- **Access Rule**: Requestor only.
-- **Rules**: Allows execution only if status is `received`.
+- **Endpoint**: `PATCH /service-requests/:id/cancel`
+- **Access**: Requester only (the user who made the SR).
+- **Rules**: Only allowed when status is `received`.
 - **Result Status**: `cancelled`
 
 ### Approve Service Request
-- **Endpoint**: `PATCH /service-request/{SRid}/approve`
-- **Access Rule**: Provider only.
-- **Rules**: Allows execution only if status is `received`.
-- **Result Status**: `approved` 
-- **Effect**: Triggers automatic Work Order (and possibly Work Report) creation. Status eventually turns into `workOrderCreated`.
+- **Endpoint**: `PATCH /service-requests/:id/approve`
+- **Access**: CompanyOwner, CompanyManager (Provider side).
+- **Rules**: Only allowed when status is `received`.
+- **Result Status**: `approved` → automatically transitions to `workOrderCreated`
+- **Effect**: Triggers automatic Work Order creation (and possibly Work Report).
 
 ### Reject Service Request
-- **Endpoint**: `PATCH /service-request/{SRid}/reject`
-- **Access Rule**: Provider only.
-- **Rules**: Allows execution only if status is `received`.
+- **Endpoint**: `PATCH /service-requests/:id/reject`
+- **Access**: CompanyOwner, CompanyManager (Provider side).
+- **Rules**: Only allowed when status is `received`.
 - **Result Status**: `rejected`
+
+### Delete Service Request
+- **Endpoint**: `DELETE /service-requests/:id`
+- **Access**: CompanyOwner, CompanyManager (Provider side).
+- **Rules**: Soft-delete. Returns the deleted SR detail with `deletedAt` timestamp.
+- **Response**: Deleted `Provider Side SR Response` with `deletedAt` field.

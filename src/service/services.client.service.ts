@@ -145,15 +145,15 @@ export class ServicesClientService {
   ): Promise<any[]> {
     const service = await this.findAndValidatePublicService(serviceId, user);
     const src = (service as any).serviceRequestConfig || {};
-    const intakeFormKey = src.intakeFormKey;
+    const intakeFormId = src.intakeFormId;
 
-    if (!intakeFormKey) return [];
+    if (!intakeFormId) return [];
 
     try {
-      const latestForm =
-        await this.formsService.findLatestTemplateByKey(intakeFormKey);
-      if (!latestForm) return [];
-      return [{ form: latestForm }];
+      const form =
+        await this.formsService.findTemplateById(intakeFormId.toString());
+      if (!form) return [];
+      return [{ form }];
     } catch {
       return [];
     }
@@ -170,28 +170,8 @@ export class ServicesClientService {
     );
     const src = (service as any).serviceRequestConfig || {};
 
-    let intakeFormId: any = null;
-    let reviewFormId: any = null;
-
-    if (src.intakeFormKey) {
-      try {
-        const template =
-          await this.formsService.findLatestTemplateByKey(
-            src.intakeFormKey,
-          );
-        if (template) intakeFormId = template._id;
-      } catch { }
-    }
-
-    if (src.reviewFormKey && src.reviewNeed) {
-      try {
-        const template =
-          await this.formsService.findLatestTemplateByKey(
-            src.reviewFormKey,
-          );
-        if (template) reviewFormId = template._id;
-      } catch { }
-    }
+    const intakeFormId: any = src.intakeFormId || null;
+    const reviewFormId: any = (src.reviewFormId && src.reviewNeed) ? src.reviewFormId : null;
 
     const newCSR = await this.csrService.create({
       serviceId: service._id as any,
@@ -204,56 +184,42 @@ export class ServicesClientService {
       reviewNeed: src.reviewNeed ?? false,
     });
 
-    const submissions = dto.submissions || [];
-    const submissionDocs: any[] = [];
-    let savedIntakeSubmissionId: Types.ObjectId | null = null;
+    // Only accept a single submission object, strictly for the intake form
+    const submission = dto.submission || null;
 
-    for (const submission of submissions) {
-      const formTemplate = await this.formsService.findTemplateById(
-        submission.formId,
-      );
-
-      if (!formTemplate) {
+    if (submission) {
+      if (!intakeFormId) {
+        throw new NotFoundException('This service does not have an intake form.');
+      }
+      if (submission.formId !== intakeFormId.toString()) {
         throw new NotFoundException(
-          `Form template with ID ${submission.formId} not found`,
+          `Submitted form ID ${submission.formId} does not match the required intake form for this service.`,
         );
       }
 
-      validateFormSubmission(
-        formTemplate.fields,
-        submission.fieldsData,
-      );
-
-      const subDocId = new Types.ObjectId();
-
-      if (
-        intakeFormId &&
-        submission.formId === intakeFormId.toString()
-      ) {
-        savedIntakeSubmissionId = subDocId;
+      const formTemplate = await this.formsService.findTemplateById(intakeFormId.toString());
+      if (!formTemplate) {
+        throw new NotFoundException(`Intake form template not found`);
       }
 
-      submissionDocs.push({
+      validateFormSubmission(formTemplate.fields, submission.fieldsData);
+
+      const subDocId = new Types.ObjectId();
+      await this.submissionModel.insertMany([{
         _id: subDocId,
         ownerId: newCSR._id,
-        formId: new Types.ObjectId(submission.formId),
+        formId: new Types.ObjectId(intakeFormId.toString()),
         submissionType: 'intake',
         submittedBy: new Types.ObjectId(user._id.toString()),
         fieldsData: submission.fieldsData,
         status: 'submitted',
         submittedAt: new Date(),
-      });
-    }
+      }]);
 
-    if (submissionDocs.length > 0) {
-      await this.submissionModel.insertMany(submissionDocs);
-
-      if (savedIntakeSubmissionId) {
-        newCSR.intakeSubmissionId = savedIntakeSubmissionId;
-        await newCSR.save();
-      }
+      newCSR.intakeSubmissionId = subDocId;
+      await newCSR.save();
     }
 
     return newCSR;
   }
-}
+}

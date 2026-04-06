@@ -48,10 +48,10 @@ export async function getServicesWithAggregation(
 
   return Promise.all(
     services.map(async (service) => {
-      const resolveForm = async (formKey: string | null | undefined) => {
-        if (!formKey) return null;
+      const resolveForm = async (formId: any) => {
+        if (!formId) return null;
         try {
-          const template = await formsService.findLatestTemplateByKey(formKey);
+          const template = await formsService.findTemplateById(formId.toString());
           if (!template) return null;
           const t = template.toObject ? template.toObject() : template;
           return {
@@ -87,8 +87,8 @@ export async function getServicesWithAggregation(
       // Hydrate serviceRequestConfig
       const src = service.serviceRequestConfig || {};
       const hydratedServiceRequestConfig = {
-        intakeForm: await resolveForm(src.intakeFormKey),
-        reviewForm: await resolveForm(src.reviewFormKey),
+        intakeForm: await resolveForm(src.intakeFormId),
+        reviewForm: await resolveForm(src.reviewFormId),
         serviceRequestApprovalAccessType: src.serviceRequestApprovalAccessType ?? 'auto',
         reviewNeed: src.reviewNeed ?? false,
       };
@@ -97,8 +97,8 @@ export async function getServicesWithAggregation(
       const rawConfigs: any[] = service.workOrdersConfig || [];
       const hydratedWorkOrdersConfig = await Promise.all(
         rawConfigs.map(async (cfg) => ({
-          workOrderForm: await resolveForm(cfg.workOrderFormKey),
-          workReportForm: await resolveForm(cfg.workReportFormKey),
+          workOrderForm: await resolveForm(cfg.workOrderFormId),
+          workReportForm: await resolveForm(cfg.workReportFormId),
           positionsOnDuty: await resolvePosition(cfg.positionId),
           workOrderApprovalAccessType: cfg.workOrderApprovalAccessType ?? 'auto',
           workReportApprovalAccessType: cfg.workReportApprovalAccessType ?? 'auto',

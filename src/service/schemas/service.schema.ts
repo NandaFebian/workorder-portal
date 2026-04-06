@@ -5,11 +5,11 @@ export type ServiceDocument = Service & Document;
 
 @Schema({ _id: false })
 class ServiceRequestConfig {
-  @Prop({ type: String, default: null })
-  intakeFormKey: string | null;
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormTemplate', default: null })
+  intakeFormId: MongooseSchema.Types.ObjectId | null;
 
-  @Prop({ type: String, default: null })
-  reviewFormKey: string | null;
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormTemplate', default: null })
+  reviewFormId: MongooseSchema.Types.ObjectId | null;
 
   @Prop({
     type: String,
@@ -33,11 +33,11 @@ class WorkOrderConfig {
   })
   positionId: MongooseSchema.Types.ObjectId;
 
-  @Prop({ type: String, default: null })
-  workOrderFormKey: string | null;
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormTemplate', default: null })
+  workOrderFormId: MongooseSchema.Types.ObjectId | null;
 
-  @Prop({ type: String, default: null })
-  workReportFormKey: string | null;
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormTemplate', default: null })
+  workReportFormId: MongooseSchema.Types.ObjectId | null;
 
   @Prop({
     type: String,

@@ -147,9 +147,9 @@ export class WorkOrderService {
   private async _hydrateOne(wo: any): Promise<any> {
     // Hydrate the single work order form from its key
     let workOrderForm: any = null;
-    if (wo.workOrderFormKey) {
+    if (wo.workOrderFormId) {
       try {
-        const template = await this.formsService.findLatestTemplateByKey(wo.workOrderFormKey);
+        const template = await this.formsService.findTemplateById(wo.workOrderFormId.toString());
         if (template) {
           const t = template.toObject ? template.toObject() : template;
           workOrderForm = {
@@ -248,8 +248,8 @@ export class WorkOrderService {
     if (!wo) throw new NotFoundException('Work Order not found');
 
     // Verify all submissions are present for the work order form
-    if (wo.workOrderFormKey) {
-      const template = await this.formsService.findLatestTemplateByKey(wo.workOrderFormKey);
+    if (wo.workOrderFormId) {
+      const template = await this.formsService.findTemplateById(wo.workOrderFormId.toString());
       if (template) {
         const submission = await this.submissionModel.findOne({
           ownerId: wo._id,

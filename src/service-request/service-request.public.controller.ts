@@ -20,6 +20,8 @@ import { ResponseUtil } from 'src/common/utils/response.util';
 export class ServiceRequestPublicController {
   constructor(private readonly csrService: ServiceRequestService) {}
 
+  // ─── Retrieve ────────────────────────────────────────────────────────────────
+
   @Get('service-requests/sent')
   @HttpCode(HttpStatus.OK)
   async getSent(@GetUser() user: AuthenticatedUser) {
@@ -36,6 +38,8 @@ export class ServiceRequestPublicController {
     const data = await this.csrService.getUnifiedDetail(id, user);
     return ResponseUtil.success('Load detail success', data);
   }
+
+  // ─── Submissions ─────────────────────────────────────────────────────────────
 
   @Post('service-request/service/:serviceId')
   @HttpCode(HttpStatus.CREATED)
@@ -58,6 +62,8 @@ export class ServiceRequestPublicController {
     const data = await this.csrService.submitReview(id, user, body);
     return ResponseUtil.success('Submit review success', data);
   }
+
+  // ─── Status Transitions ───────────────────────────────────────────────────────
 
   @Patch('service-requests/:id/cancel')
   @HttpCode(HttpStatus.OK)

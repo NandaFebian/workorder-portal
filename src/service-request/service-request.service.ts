@@ -85,10 +85,10 @@ export class ServiceRequestService {
     }
 
     const src = (service as any).serviceRequestConfig || {};
-    if (!src.intakeFormKey) return null;
+    if (!src.intakeFormId) return null;
     
     try {
-      const template = await this.formsService.findLatestTemplateByKey(src.intakeFormKey);
+      const template = await this.formsService.findTemplateById(src.intakeFormId.toString());
       return template;
     } catch {
       return null;
@@ -123,29 +123,35 @@ export class ServiceRequestService {
     let reviewFormId: Types.ObjectId | null = null;
     let templateFields: any[] = [];
     
-    if (src.intakeFormKey) {
+    if (src.intakeFormId) {
+      intakeFormId = src.intakeFormId as Types.ObjectId;
       try {
-        const template = await this.formsService.findLatestTemplateByKey(src.intakeFormKey);
+        const template = await this.formsService.findTemplateById(intakeFormId.toString());
         if (template) {
-          intakeFormId = template._id as Types.ObjectId;
           templateFields = template.fields || [];
         }
       } catch {}
     }
     
-    if (src.reviewFormKey && src.reviewNeed) {
-      try {
-        const template = await this.formsService.findLatestTemplateByKey(src.reviewFormKey);
-        if (template) reviewFormId = template._id as Types.ObjectId;
-      } catch {}
+    if (src.reviewFormId && src.reviewNeed) {
+      reviewFormId = src.reviewFormId as Types.ObjectId;
     }
     
-    const submissions = dto.submissions || [];
-    const intakeSubmissions = submissions.filter(s => intakeFormId && s.formId === intakeFormId.toString());
-    
+    const submission = dto.submission || null;
+
+    // Strict Request Payload Validation: Ensure user doesn't submit random form IDs
+    if (submission) {
+      if (!intakeFormId) {
+        throw new BadRequestException('This service does not require any intake form submission.');
+      }
+      if (submission.formId !== intakeFormId.toString()) {
+        throw new BadRequestException(`Submitted form ID ${submission.formId} does not match the required intake form for this service.`);
+      }
+    }
+
     // Strict schema & required fields validation
-    if (intakeSubmissions.length > 0) {
-      const submissionData = intakeSubmissions[0].fieldsData || [];
+    if (submission && submission.formId === intakeFormId?.toString()) {
+      const submissionData = submission.fieldsData || [];
       const submittedOrders = submissionData.map(f => f.order);
       for (const tField of templateFields) {
         if (tField.required && !submittedOrders.includes(tField.order)) {
@@ -174,14 +180,10 @@ export class ServiceRequestService {
       receivedAt: new Date(),
     });
 
-    const submissionDocs: any[] = [];
-    let savedIntakeSubmissionId: Types.ObjectId | null = null;
-    
-    for (const submission of submissions) {
-      if (!intakeFormId || submission.formId !== intakeFormId.toString()) continue;
+    // Save submission if provided and valid
+    if (submission && intakeFormId && submission.formId === intakeFormId.toString()) {
       const subDocId = new Types.ObjectId();
-      savedIntakeSubmissionId = subDocId;
-      submissionDocs.push({
+      await this.submissionModel.create({
         _id: subDocId,
         ownerId: (newCSR as any)._id,
         formId: new Types.ObjectId(submission.formId),
@@ -191,11 +193,7 @@ export class ServiceRequestService {
         status: 'submitted',
         submittedAt: new Date(),
       });
-    }
-
-    if (submissionDocs.length > 0) {
-      await this.submissionModel.insertMany(submissionDocs);
-      newCSR.intakeSubmissionId = savedIntakeSubmissionId;
+      newCSR.intakeSubmissionId = subDocId;
       await newCSR.save();
     }
     
@@ -229,41 +227,44 @@ export class ServiceRequestService {
     if (!template) throw new UnprocessableEntityException('Review form template not found.');
     const templateFields = template.fields || [];
 
-    const submissions = dto.submissions || [];
-    const reviewSubmissions = submissions.filter(s => s.formId === sr.reviewFormId!.toString());
+    const submission = dto.submission || null;
 
-    if (reviewSubmissions.length > 0) {
-      const submissionData = reviewSubmissions[0].fieldsData || [];
-      const submittedOrders = submissionData.map(f => f.order);
-      for (const tField of templateFields) {
-        if (tField.required && !submittedOrders.includes(tField.order)) {
-          throw new UnprocessableEntityException(`Missing required field: ${tField.label}`);
-        }
-      }
-      validateFormSubmission(templateFields, submissionData);
-      
-      const subDocId = new Types.ObjectId();
-      await this.submissionModel.create({
-        _id: subDocId,
-        ownerId: (sr as any)._id,
-        formId: sr.reviewFormId,
-        submissionType: 'review',
-        submittedBy: new Types.ObjectId(user._id.toString()),
-        fieldsData: submissionData,
-        status: 'submitted',
-        submittedAt: new Date(),
-      });
-      
-      sr.reviewSubmissionId = subDocId;
-      
-      if (sr.reviewNeed) {
-        sr.serviceRequestStatus = 'closed';
-        sr.closedAt = new Date();
-      }
-      await sr.save();
-    } else {
+    if (!submission) {
       throw new UnprocessableEntityException('Review submission payload is empty or invalid.');
     }
+
+    if (submission.formId !== sr.reviewFormId!.toString()) {
+      throw new BadRequestException(`Submitted form ID ${submission.formId} does not match the review form for this service request.`);
+    }
+
+    const submissionData = submission.fieldsData || [];
+    const submittedOrders = submissionData.map(f => f.order);
+    for (const tField of templateFields) {
+      if (tField.required && !submittedOrders.includes(tField.order)) {
+        throw new UnprocessableEntityException(`Missing required field: ${tField.label}`);
+      }
+    }
+    validateFormSubmission(templateFields, submissionData);
+      
+    const subDocId = new Types.ObjectId();
+    await this.submissionModel.create({
+      _id: subDocId,
+      ownerId: (sr as any)._id,
+      formId: sr.reviewFormId,
+      submissionType: 'review',
+      submittedBy: new Types.ObjectId(user._id.toString()),
+      fieldsData: submissionData,
+      status: 'submitted',
+      submittedAt: new Date(),
+    });
+      
+    sr.reviewSubmissionId = subDocId;
+      
+    if (sr.reviewNeed) {
+      sr.serviceRequestStatus = 'closed';
+      sr.closedAt = new Date();
+    }
+    await sr.save();
 
     return this.findOneForClient((sr as any)._id.toString(), user._id.toString());
   }
@@ -379,16 +380,16 @@ export class ServiceRequestService {
       } catch {}
     }
 
-    // Find intake and review submissions
+    // Find intake and review submissions (filter by submissionType to avoid cross-contamination)
     const intakeSubmission = doc.intakeFormId
       ? await this.submissionModel
-          .findOne({ ownerId: doc._id, formId: doc.intakeFormId })
+          .findOne({ ownerId: doc._id, formId: doc.intakeFormId, submissionType: 'intake' })
           .exec()
       : null;
 
     const reviewSubmission = doc.reviewFormId
       ? await this.submissionModel
-          .findOne({ ownerId: doc._id, formId: doc.reviewFormId })
+          .findOne({ ownerId: doc._id, formId: doc.reviewFormId, submissionType: 'review' })
           .exec()
       : null;
 
@@ -471,7 +472,7 @@ export class ServiceRequestService {
         await this.workReportService.create({
           workOrderId: createdWorkOrder._id.toString(),
           companyId: sr.companyId.toString(),
-          reportFormKey: firstConfig?.workReportForm ? firstConfig.workOrderForm?._id?.toString() : null,
+          reportFormId: reportFormId ? reportFormId.toString() : null,
           status: 'drafted',
         } as any);
       }

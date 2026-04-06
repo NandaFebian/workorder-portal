@@ -36,9 +36,9 @@ export class WorkOrder {
   })
   assignedStaff: MongooseSchema.Types.ObjectId[];
 
-  // Store single form key (from the matching workOrdersConfig entry)
-  @Prop({ type: String, default: null })
-  workOrderFormKey: string | null;
+  // Store single form id (from the matching workOrdersConfig entry)
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormTemplate', default: null })
+  workOrderFormId: MongooseSchema.Types.ObjectId | null;
 
   @Prop({
     required: true,

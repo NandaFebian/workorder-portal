@@ -27,7 +27,7 @@ export class WorkReportService {
     const newReport = new this.workReportModel({
       workOrderId: createDto.workOrderId,
       companyId: createDto.companyId,
-      reportFormKey: createDto.reportFormKey ?? null,
+      reportFormId: createDto.reportFormId ?? null,
       status: createDto.status ?? 'drafted',
     });
     return newReport.save();
@@ -56,9 +56,9 @@ export class WorkReportService {
 
     // Hydrate the single report form
     let reportForm: any = null;
-    if (report.reportFormKey) {
+    if (report.reportFormId) {
       try {
-        const template = await this.formsService.findLatestTemplateByKey(report.reportFormKey);
+        const template = await this.formsService.findTemplateById(report.reportFormId.toString());
         if (template) {
           const t = template.toObject ? template.toObject() : template;
           reportForm = {
@@ -112,8 +112,8 @@ export class WorkReportService {
         if (!Types.ObjectId.isValid(formId)) continue;
 
         // Validate that this form matches the report form
-        const reportFormTemplate = workReport.reportFormKey
-          ? await this.formsService.findLatestTemplateByKey(workReport.reportFormKey)
+        const reportFormTemplate = workReport.reportFormId
+          ? await this.formsService.findTemplateById(workReport.reportFormId.toString())
           : null;
 
         if (!reportFormTemplate || (reportFormTemplate._id as any).toString() !== formId) {
@@ -164,8 +164,8 @@ export class WorkReportService {
       for (const item of submissions) {
         const { formId, fieldsData } = item;
         if (!Types.ObjectId.isValid(formId)) continue;
-        const formTemplate = await this.formsService.findLatestTemplateByKey(
-          workReport.reportFormKey ?? '',
+        const formTemplate = await this.formsService.findTemplateById(
+          workReport.reportFormId?.toString() ?? '',
         );
         if (!formTemplate) throw new NotFoundException(`Form template not found`);
         validateFormSubmission(formTemplate.fields, fieldsData);

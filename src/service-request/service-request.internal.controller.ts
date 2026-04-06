@@ -23,6 +23,8 @@ import { ResponseUtil } from 'src/common/utils/response.util';
 export class ServiceRequestInternalController {
   constructor(private readonly csrService: ServiceRequestService) {}
 
+  // ─── Retrieve ────────────────────────────────────────────────────────────────
+
   @Get('service-requests/inbox')
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
   @HttpCode(HttpStatus.OK)
@@ -35,6 +37,8 @@ export class ServiceRequestInternalController {
     );
     return ResponseUtil.success('Load inbox success', data);
   }
+
+  // ─── Status Transitions ───────────────────────────────────────────────────────
 
   @Patch('service-requests/:id/approve')
   @Roles(Role.CompanyOwner, Role.CompanyManager)

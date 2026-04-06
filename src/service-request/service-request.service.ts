@@ -5,10 +5,14 @@ import {
   Inject,
   forwardRef,
   ForbiddenException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { generateCode } from 'src/common/utils/generate-code.util';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { Service, ServiceDocument } from 'src/service/schemas/service.schema';
+import { validateFormSubmission } from 'src/form/helpers/form-validation.helper';
+import { MembershipService } from 'src/membership/membership.service';
 import {
   ServiceRequest,
   ServiceRequestDocument,
@@ -31,11 +35,14 @@ export class ServiceRequestService {
     private csrModel: Model<ServiceRequestDocument>,
     @InjectModel(FormSubmission.name)
     private submissionModel: Model<FormSubmissionDocument>,
+    @InjectModel(Service.name)
+    private serviceModel: Model<ServiceDocument>,
     private readonly formsService: FormsService,
     private readonly workOrderService: WorkOrderService,
     @Inject(forwardRef(() => ServicesInternalService))
     private readonly servicesInternalService: ServicesInternalService,
     private readonly workReportService: WorkReportService,
+    private readonly membershipService: MembershipService,
   ) {}
 
   async create(data: any): Promise<ServiceRequestDocument> {
@@ -46,6 +53,219 @@ export class ServiceRequestService {
       receivedAt: new Date(),
     });
     return newRequest.save();
+  }
+
+  async getIntakeForm(
+    serviceId: string,
+    user: AuthenticatedUser | null,
+    attemptType: 'public' | 'internal',
+  ): Promise<any> {
+    if (!Types.ObjectId.isValid(serviceId)) throw new BadRequestException('Invalid Service ID');
+    
+    const service = await this.serviceModel.findOne({ _id: new Types.ObjectId(serviceId), deletedAt: null, isActive: true }).exec();
+    if (!service) throw new NotFoundException('Service not found or inactive');
+
+    if (attemptType === 'public') {
+      if (service.accessType === 'internal') {
+        throw new ForbiddenException('External clients are not allowed to access internal services.');
+      }
+      if (service.accessType === 'member_only') {
+        if (!user || (!user._id)) {
+           throw new ForbiddenException('You must log in to access this member-only service.');
+        }
+        const isMember = await this.membershipService.isUserSubscribed(user._id.toString(), service.companyId.toString());
+        if (!isMember) {
+          throw new ForbiddenException('You must be a registered member of the Provider company to access this service.');
+        }
+      }
+    } else if (attemptType === 'internal') {
+      if (!user || !user.company?._id || user.company._id.toString() !== service.companyId.toString()) {
+        throw new ForbiddenException('Only internal staff of the provider company can access this form.');
+      }
+    }
+
+    const src = (service as any).serviceRequestConfig || {};
+    if (!src.intakeFormKey) return null;
+    
+    try {
+      const template = await this.formsService.findLatestTemplateByKey(src.intakeFormKey);
+      return template;
+    } catch {
+      return null;
+    }
+  }
+
+  async submitIntake(
+    serviceId: string,
+    user: AuthenticatedUser,
+    dto: any,
+  ): Promise<any> {
+    if (!Types.ObjectId.isValid(serviceId)) throw new BadRequestException('Invalid Service ID');
+    
+    const service = await this.serviceModel.findOne({ _id: new Types.ObjectId(serviceId), deletedAt: null, isActive: true }).exec();
+    if (!service) throw new NotFoundException('Service not found or inactive');
+
+    // Access Control Check
+    if (service.accessType === 'internal') {
+      if (!user.company?._id || user.company._id.toString() !== service.companyId.toString()) {
+        throw new ForbiddenException('External Clients are not allowed to submit internal requests.');
+      }
+    } else if (service.accessType === 'member_only') {
+      const isMember = await this.membershipService.isUserSubscribed(user._id.toString(), service.companyId.toString());
+      if (!isMember) {
+        throw new ForbiddenException('Requester must be a registered member of the Provider company.');
+      }
+    } // public allows everyone
+
+    const src = (service as any).serviceRequestConfig || {};
+    
+    let intakeFormId: Types.ObjectId | null = null;
+    let reviewFormId: Types.ObjectId | null = null;
+    let templateFields: any[] = [];
+    
+    if (src.intakeFormKey) {
+      try {
+        const template = await this.formsService.findLatestTemplateByKey(src.intakeFormKey);
+        if (template) {
+          intakeFormId = template._id as Types.ObjectId;
+          templateFields = template.fields || [];
+        }
+      } catch {}
+    }
+    
+    if (src.reviewFormKey && src.reviewNeed) {
+      try {
+        const template = await this.formsService.findLatestTemplateByKey(src.reviewFormKey);
+        if (template) reviewFormId = template._id as Types.ObjectId;
+      } catch {}
+    }
+    
+    const submissions = dto.submissions || [];
+    const intakeSubmissions = submissions.filter(s => intakeFormId && s.formId === intakeFormId.toString());
+    
+    // Strict schema & required fields validation
+    if (intakeSubmissions.length > 0) {
+      const submissionData = intakeSubmissions[0].fieldsData || [];
+      const submittedOrders = submissionData.map(f => f.order);
+      for (const tField of templateFields) {
+        if (tField.required && !submittedOrders.includes(tField.order)) {
+          throw new UnprocessableEntityException(`Missing required field: ${tField.label}`);
+        }
+      }
+      validateFormSubmission(templateFields, submissionData);
+    } else if (intakeFormId) {
+       // Check if there are any required fields in the template, if yes and no submission, throw error
+       const hasRequired = templateFields.some(f => f.required);
+       if (hasRequired) {
+          throw new UnprocessableEntityException('Intake form submission is required.');
+       }
+    }
+    
+    const newCSR = await this.csrModel.create({
+      code: `SR-${generateCode()}`,
+      serviceId: service._id,
+      requestedBy: user._id,
+      companyId: service.companyId,
+      intakeFormId,
+      reviewFormId,
+      serviceRequestApprovalAccessType: src.serviceRequestApprovalAccessType ?? 'auto',
+      reviewNeed: src.reviewNeed ?? false,
+      serviceRequestStatus: 'received',
+      receivedAt: new Date(),
+    });
+
+    const submissionDocs: any[] = [];
+    let savedIntakeSubmissionId: Types.ObjectId | null = null;
+    
+    for (const submission of submissions) {
+      if (!intakeFormId || submission.formId !== intakeFormId.toString()) continue;
+      const subDocId = new Types.ObjectId();
+      savedIntakeSubmissionId = subDocId;
+      submissionDocs.push({
+        _id: subDocId,
+        ownerId: (newCSR as any)._id,
+        formId: new Types.ObjectId(submission.formId),
+        submissionType: 'intake',
+        submittedBy: new Types.ObjectId(user._id.toString()),
+        fieldsData: submission.fieldsData,
+        status: 'submitted',
+        submittedAt: new Date(),
+      });
+    }
+
+    if (submissionDocs.length > 0) {
+      await this.submissionModel.insertMany(submissionDocs);
+      newCSR.intakeSubmissionId = savedIntakeSubmissionId;
+      await newCSR.save();
+    }
+    
+    return this.findOneForClient((newCSR as any)._id.toString(), user._id.toString());
+  }
+
+  async submitReview(
+    srId: string,
+    user: AuthenticatedUser,
+    dto: any,
+  ): Promise<any> {
+    if (!Types.ObjectId.isValid(srId)) throw new BadRequestException('Invalid ID');
+
+    const sr = await this.csrModel.findOne({ _id: srId, deletedAt: null }).exec();
+    if (!sr) throw new NotFoundException('Service Request not found');
+
+    const requestedById = sr.requestedBy?._id ? sr.requestedBy._id.toString() : sr.requestedBy?.toString();
+    if (requestedById !== user._id.toString()) {
+      throw new ForbiddenException('Only the requester who made this SR can submit a review.');
+    }
+
+    if (sr.serviceRequestStatus !== 'completed') {
+      throw new UnprocessableEntityException('Review can only be submitted when SR status is completed.');
+    }
+
+    if (!sr.reviewFormId) {
+      throw new UnprocessableEntityException('This SR does not have a review form associated.');
+    }
+
+    const template = await this.formsService.findTemplateById(sr.reviewFormId!.toString());
+    if (!template) throw new UnprocessableEntityException('Review form template not found.');
+    const templateFields = template.fields || [];
+
+    const submissions = dto.submissions || [];
+    const reviewSubmissions = submissions.filter(s => s.formId === sr.reviewFormId!.toString());
+
+    if (reviewSubmissions.length > 0) {
+      const submissionData = reviewSubmissions[0].fieldsData || [];
+      const submittedOrders = submissionData.map(f => f.order);
+      for (const tField of templateFields) {
+        if (tField.required && !submittedOrders.includes(tField.order)) {
+          throw new UnprocessableEntityException(`Missing required field: ${tField.label}`);
+        }
+      }
+      validateFormSubmission(templateFields, submissionData);
+      
+      const subDocId = new Types.ObjectId();
+      await this.submissionModel.create({
+        _id: subDocId,
+        ownerId: (sr as any)._id,
+        formId: sr.reviewFormId,
+        submissionType: 'review',
+        submittedBy: new Types.ObjectId(user._id.toString()),
+        fieldsData: submissionData,
+        status: 'submitted',
+        submittedAt: new Date(),
+      });
+      
+      sr.reviewSubmissionId = subDocId;
+      
+      if (sr.reviewNeed) {
+        sr.serviceRequestStatus = 'closed';
+        sr.closedAt = new Date();
+      }
+      await sr.save();
+    } else {
+      throw new UnprocessableEntityException('Review submission payload is empty or invalid.');
+    }
+
+    return this.findOneForClient((sr as any)._id.toString(), user._id.toString());
   }
 
   async findAllByClientId(userId: string): Promise<any[]> {
@@ -113,6 +333,25 @@ export class ServiceRequestService {
     return this._enrichAndFormat(sr, true);
   }
 
+  async getUnifiedDetail(id: string, user: AuthenticatedUser): Promise<any> {
+    if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
+    
+    const sr = await this.csrModel.findOne({ _id: id, deletedAt: null }).exec();
+    if (!sr) throw new NotFoundException('Service Request not found');
+
+    const requestedById = sr.requestedBy?._id ? sr.requestedBy._id.toString() : sr.requestedBy?.toString();
+    const isRequester = requestedById === user._id.toString();
+    const isProvider = user.company?._id && sr.companyId.toString() === user.company._id.toString();
+
+    if (isRequester) {
+      return this.findOneForClient(id, user._id.toString());
+    } else if (isProvider) {
+      return this.findOneInternal(id, user);
+    } else {
+      throw new ForbiddenException('You are not authorized to access this Service Request.');
+    }
+  }
+
   private async _enrichAndFormat(sr: any, isInternal = true): Promise<any> {
     const doc = sr.toObject ? sr.toObject() : sr;
 
@@ -167,6 +406,21 @@ export class ServiceRequestService {
 
     const sr = await this.csrModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!sr) throw new NotFoundException('Service Request not found');
+
+    if (sr.serviceRequestStatus !== 'received' && (status === 'cancelled' || status === 'approved' || status === 'rejected')) {
+       throw new UnprocessableEntityException('This action can only be performed when SR status is received.');
+    }
+
+    if (status === 'cancelled') {
+      const requestedById = sr.requestedBy?._id ? sr.requestedBy._id.toString() : sr.requestedBy?.toString();
+      if (requestedById !== user._id.toString()) {
+        throw new ForbiddenException('Only the requester can cancel this Service Request.');
+      }
+    } else if (status === 'approved' || status === 'rejected') {
+      if (!user.company?._id || user.company._id.toString() !== sr.companyId.toString()) {
+         throw new ForbiddenException('Only the provider company staff can perform this action.');
+      }
+    }
 
     const now = new Date();
     const updateData: any = { serviceRequestStatus: status };
@@ -236,7 +490,7 @@ export class ServiceRequestService {
     return this.findOneInternal(id);
   }
 
-  async remove(id: string, user: AuthenticatedUser): Promise<{ deletedAt: Date }> {
+  async remove(id: string, user: AuthenticatedUser): Promise<any> {
     if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
 
     const sr = await this.csrModel.findOne({ _id: id, deletedAt: null }).exec();
@@ -249,10 +503,13 @@ export class ServiceRequestService {
       throw new ForbiddenException('You do not have permission to delete this request.');
     }
 
+    // Capture full SR detail before deletion
+    const srDetail = await this.findOneInternal(id);
+
     const deletedAt = new Date();
     sr.deletedAt = deletedAt;
     await sr.save();
 
-    return { deletedAt };
+    return { ...srDetail, deletedAt };
   }
 }

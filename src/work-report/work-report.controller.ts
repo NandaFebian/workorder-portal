@@ -85,9 +85,10 @@ export class WorkReportController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(RolesGuard)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
   async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-    const data = await this.workReportService.remove(id);
+    const data = await this.workReportService.remove(id, user);
     return ResponseUtil.success('Work report deleted successfully', data);
   }
 }

@@ -17,12 +17,15 @@ import {
 import { WorkOrderModule } from 'src/work-order/work-order.module';
 import { ServicesModule } from 'src/service/services.module';
 import { WorkReportModule } from 'src/work-report/work-report.module';
+import { MembershipModule } from 'src/membership/membership.module';
+import { Service, ServiceSchema } from 'src/service/schemas/service.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: ServiceRequest.name, schema: ServiceRequestSchema },
       { name: FormSubmission.name, schema: FormSubmissionSchema },
+      { name: Service.name, schema: ServiceSchema },
     ]),
     forwardRef(() => AuthModule),
     UsersModule,
@@ -30,6 +33,7 @@ import { WorkReportModule } from 'src/work-report/work-report.module';
     forwardRef(() => WorkOrderModule),
     forwardRef(() => ServicesModule),
     WorkReportModule,
+    MembershipModule,
   ],
   controllers: [
     ServiceRequestPublicController,

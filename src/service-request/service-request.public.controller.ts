@@ -15,64 +15,54 @@ import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { ResponseUtil } from 'src/common/utils/response.util';
 
-@Controller('public/service-request')
+@Controller()
 @UseGuards(AuthGuard) // Accessible by all Requesters (Clients + Staffs)
 export class ServiceRequestPublicController {
   constructor(private readonly csrService: ServiceRequestService) {}
 
-  @Get('sent')
+  @Get('service-requests/sent')
   @HttpCode(HttpStatus.OK)
   async getSent(@GetUser() user: AuthenticatedUser) {
     const data = await this.csrService.findAllByClientId(user._id.toString());
     return ResponseUtil.success('Load sent service requests success', data);
   }
 
-  @Get('services/:serviceId/intake-form')
+  @Get('service-requests/:id')
   @HttpCode(HttpStatus.OK)
-  async getIntakeFormPublic(
-    @Param('serviceId') serviceId: string,
+  async getDetailSr(
+    @Param('id') id: string,
     @GetUser() user: AuthenticatedUser,
   ) {
-    // TODO: Implement get public intake form logic
-    return ResponseUtil.success('Load intake form success', {});
-  }
-
-  @Get(':id')
-  @HttpCode(HttpStatus.OK)
-  async getDetail(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-    const data = await this.csrService.findOneForClient(
-      id,
-      user._id.toString(),
-    );
+    const data = await this.csrService.getUnifiedDetail(id, user);
     return ResponseUtil.success('Load detail success', data);
   }
 
-  @Post('service/:serviceId')
+  @Post('service-request/service/:serviceId')
   @HttpCode(HttpStatus.CREATED)
   async submitIntake(
     @Param('serviceId') serviceId: string,
     @Body() body: any,
     @GetUser() user: AuthenticatedUser
   ) {
-    // TODO: Implement submit intake logic
-    return ResponseUtil.success('Submit intake success', {});
+    const data = await this.csrService.submitIntake(serviceId, user, body);
+    return ResponseUtil.success('Submit intake success', data);
   }
 
-  @Post(':id/review')
+  @Post('service-request/:id/review')
   @HttpCode(HttpStatus.CREATED)
   async submitReview(
     @Param('id') id: string,
     @Body() body: any,
     @GetUser() user: AuthenticatedUser
   ) {
-    // TODO: Implement submit review logic
-    return ResponseUtil.success('Submit review success', {});
+    const data = await this.csrService.submitReview(id, user, body);
+    return ResponseUtil.success('Submit review success', data);
   }
 
-  @Patch(':id/cancel')
+  @Patch('service-requests/:id/cancel')
   @HttpCode(HttpStatus.OK)
   async cancelSr(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-    // TODO: Implement cancel sr logic
-    return ResponseUtil.success('Cancel SR success', {});
+    const data = await this.csrService.updateStatus(id, 'cancelled', user);
+    return ResponseUtil.success('Cancel SR success', data);
   }
 }

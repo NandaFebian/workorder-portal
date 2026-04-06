@@ -291,7 +291,7 @@ export class FormsService {
   async removeById(
     id: string,
     user: AuthenticatedUser,
-  ): Promise<{ deletedAt: Date }> {
+  ): Promise<any> {
     if (!user.company?._id) {
       throw new ForbiddenException('User is not associated with any company.');
     }
@@ -325,13 +325,16 @@ export class FormsService {
       );
     }
 
-    // Soft delete all versions
+    // Capture data before deleting
+    const deletedData = template.toObject();
+
+    // Soft delete all versions with the same formKey
     const deletedAt = new Date();
     await this.formTemplateModel.updateMany(
       { formKey: template.formKey, companyId: user.company._id, deletedAt: null },
       { $set: { deletedAt } }
     );
 
-    return { deletedAt };
+    return { ...deletedData, deletedAt };
   }
 }

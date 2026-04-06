@@ -24,12 +24,16 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from 'src/common/enums/role.enum';
 import { ResponseUtil } from 'src/common/utils/response.util';
+import { ServiceRequestService } from 'src/service-request/service-request.service';
 
 @Controller('services')
 @UseGuards(AuthGuard, RolesGuard)
 export class ServicesController {
   // Inject service internal
-  constructor(private readonly internalService: ServicesInternalService) {}
+  constructor(
+    private readonly internalService: ServicesInternalService,
+    private readonly csrService: ServiceRequestService,
+  ) { }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -50,7 +54,7 @@ export class ServicesController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
   async findAll(@GetUser() user: AuthenticatedUser) {
     const services = await this.internalService.findAll(user);
     return ResponseUtil.success('Load data success', services);
@@ -62,6 +66,17 @@ export class ServicesController {
   async findOne(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const service = await this.internalService.findByVersionId(id, user);
     return ResponseUtil.success('Load data success', service);
+  }
+
+  @Get(':serviceId/intake-form')
+  @HttpCode(HttpStatus.OK)
+  @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
+  async getIntakeFormInternal(
+    @Param('serviceId') serviceId: string,
+    @GetUser() user: AuthenticatedUser,
+  ) {
+    const data = await this.csrService.getIntakeForm(serviceId, user, 'internal');
+    return ResponseUtil.success('Load intake form success', data ? { form: data } : {});
   }
 
   @Put(':id')
@@ -94,7 +109,7 @@ export class ServicesController {
     if (typeof isActive !== 'boolean') {
       throw new BadRequestException('isActive must be a boolean value');
     }
-    
+
     const populatedUpdatedService = await this.internalService.toggleActive(
       id,
       isActive,

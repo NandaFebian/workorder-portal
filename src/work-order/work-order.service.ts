@@ -325,7 +325,7 @@ export class WorkOrderService {
     return this.findOneInternal(id, user);
   }
 
-  async remove(id: string, user: AuthenticatedUser): Promise<{ deletedAt: Date }> {
+  async remove(id: string, user: AuthenticatedUser): Promise<any> {
     if (!user.company?._id) throw new ForbiddenException('User company information is missing');
 
     const wo = await this.workOrderModel.findOne({
@@ -335,10 +335,13 @@ export class WorkOrderService {
     });
     if (!wo) throw new NotFoundException('Work Order not found');
 
+    // Capture full WO detail before deletion
+    const woDetail = await this._hydrateOne(wo);
+
     const deletedAt = new Date();
     wo.deletedAt = deletedAt;
     await wo.save();
-    return { deletedAt };
+    return { ...woDetail, deletedAt };
   }
 
   async getReport(id: string, user: AuthenticatedUser): Promise<any> {

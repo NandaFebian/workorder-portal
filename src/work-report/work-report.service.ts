@@ -185,13 +185,21 @@ export class WorkReportService {
     return this.findOne((workReport._id as any).toString());
   }
 
-  async remove(id: string): Promise<{ deletedAt: Date }> {
+  async remove(id: string, user: AuthenticatedUser): Promise<any> {
     if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Invalid ID');
     const report = await this.workReportModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!report) throw new NotFoundException('Work Report not found');
+
+    if (!user?.company?._id || user.company._id.toString() !== report.companyId.toString()) {
+      throw new NotFoundException('Work Report not found');
+    }
+
+    // Capture full detail before deletion
+    const reportDetail = await this._hydrateReport(report, user);
+
     const deletedAt = new Date();
     report.deletedAt = deletedAt;
     await report.save();
-    return { deletedAt };
+    return { ...reportDetail, deletedAt };
   }
 }

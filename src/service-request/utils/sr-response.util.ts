@@ -15,7 +15,6 @@ const buildService = (serviceId: any) =>
   serviceId
     ? {
         _id: serviceId._id,
-        companyId: serviceId.companyId,
         title: serviceId.title,
         description: serviceId.description,
         accessType: serviceId.accessType,
@@ -58,6 +57,8 @@ export class SrResponseUtil {
   ) {
     return {
       _id: doc._id,
+      code: doc.code,
+      companyId: doc.companyId,
       serviceRequestStatus: doc.serviceRequestStatus,
       company: buildCompany(doc.companyId),
       service: buildService(doc.serviceId),
@@ -84,6 +85,8 @@ export class SrResponseUtil {
   ) {
     return {
       _id: doc._id,
+      code: doc.code,
+      companyId: doc.companyId,
       serviceRequestStatus: doc.serviceRequestStatus,
       serviceRequestApprovalAccessType: doc.serviceRequestApprovalAccessType ?? 'auto',
       reviewNeed: doc.reviewNeed ?? false,

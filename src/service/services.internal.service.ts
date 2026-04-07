@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-
 import { Service, type ServiceDocument } from './schemas/service.schema';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
@@ -14,13 +13,14 @@ import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interf
 import { v4 as uuidv4 } from 'uuid';
 import { FormsService } from 'src/form/form.service';
 import { getServicesWithAggregation } from './helpers/service-aggregation.helper';
+import { Role } from 'src/common/enums/role.enum';
 
 @Injectable()
 export class ServicesInternalService {
   constructor(
     @InjectModel(Service.name) private serviceModel: Model<ServiceDocument>,
     private readonly formsService: FormsService,
-  ) {}
+  ) { }
 
   private async buildServiceRequestConfig(configDto: any): Promise<any> {
     if (!configDto) return {};
@@ -47,7 +47,7 @@ export class ServicesInternalService {
         const pos = await this.serviceModel.db
           .collection('positions')
           .findOne({ _id: new Types.ObjectId(dto.positionId), deletedAt: null });
-        
+
         if (!pos) {
           throw new NotFoundException(`Position with ID ${dto.positionId} not found`);
         }
@@ -238,10 +238,18 @@ export class ServicesInternalService {
     if (!user.company?._id) {
       throw new ForbiddenException('User is not associated with any company.');
     }
+
+    const query: any = { companyId: user.company._id };
+
+    if (user.role === Role.CompanyStaff) {
+      query.accessType = 'internal';
+      query.isActive = true;
+    }
+
     return getServicesWithAggregation(
       this.serviceModel,
       this.formsService,
-      { companyId: user.company._id },
+      query,
       true,
     );
   }

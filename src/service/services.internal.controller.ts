@@ -76,7 +76,7 @@ export class ServicesController {
     @GetUser() user: AuthenticatedUser,
   ) {
     const data = await this.csrService.getIntakeForm(serviceId, user, 'internal');
-    return ResponseUtil.success('Load intake form success', data ? { form: data } : {});
+    return ResponseUtil.success('Load intake form success', data ?? null);
   }
 
   @Put(':id')

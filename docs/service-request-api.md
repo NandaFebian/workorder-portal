@@ -115,7 +115,7 @@ Membuat Service Request baru dengan mengisi form intake.
 
 **Endpoint**
 ```
-POST /service-request/service/:serviceId
+POST /service-requests/service/:serviceId
 ```
 
 **Auth**: Wajib
@@ -244,7 +244,7 @@ Mengirimkan review setelah Service Request berstatus `completed`.
 
 **Endpoint**
 ```
-POST /service-request/:srId/review
+POST /service-requests/:srId/review
 ```
 
 **Auth**: Wajib — Hanya requester yang membuat SR tersebut

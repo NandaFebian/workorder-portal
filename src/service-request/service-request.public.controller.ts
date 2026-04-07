@@ -16,7 +16,7 @@ import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interf
 import { ResponseUtil } from 'src/common/utils/response.util';
 
 @Controller()
-@UseGuards(AuthGuard) // Accessible by all Requesters (Clients + Staffs)
+@UseGuards(AuthGuard)
 export class ServiceRequestPublicController {
   constructor(private readonly csrService: ServiceRequestService) {}
 
@@ -41,7 +41,7 @@ export class ServiceRequestPublicController {
 
   // ─── Submissions ─────────────────────────────────────────────────────────────
 
-  @Post('service-request/service/:serviceId')
+  @Post('service-requests/service/:serviceId')
   @HttpCode(HttpStatus.CREATED)
   async submitIntake(
     @Param('serviceId') serviceId: string,
@@ -52,7 +52,7 @@ export class ServiceRequestPublicController {
     return ResponseUtil.success('Submit intake success', data);
   }
 
-  @Post('service-request/:id/review')
+  @Post('service-requests/:id/review')
   @HttpCode(HttpStatus.CREATED)
   async submitReview(
     @Param('id') id: string,

@@ -58,7 +58,6 @@ export class SrResponseUtil {
     return {
       _id: doc._id,
       code: doc.code,
-      companyId: doc.companyId,
       serviceRequestStatus: doc.serviceRequestStatus,
       company: buildCompany(doc.companyId),
       service: buildService(doc.serviceId),

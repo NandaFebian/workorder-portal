@@ -85,10 +85,10 @@ export class SrResponseUtil {
     return {
       _id: doc._id,
       code: doc.code,
-      companyId: doc.companyId,
       serviceRequestStatus: doc.serviceRequestStatus,
       serviceRequestApprovalAccessType: doc.serviceRequestApprovalAccessType ?? 'auto',
       reviewNeed: doc.reviewNeed ?? false,
+      company: buildCompany(doc.companyId),
       service: buildService(doc.serviceId),
       requestedBy: buildUser(doc.requestedBy),
       approvedBy: buildUser(doc.approvedBy),

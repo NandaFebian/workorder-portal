@@ -328,6 +328,7 @@ export class ServiceRequestService {
   async findAllByCompanyId(companyId: string): Promise<any[]> {
     const requests = await this.csrModel
       .find({ companyId: new Types.ObjectId(companyId), deletedAt: null })
+      .populate('companyId', 'name address description isActive')
       .populate('serviceId', 'companyId title description accessType isActive')
       .populate('requestedBy', 'name email role')
       .populate('approvedBy', 'name email role')
@@ -342,6 +343,7 @@ export class ServiceRequestService {
 
     const sr = await this.csrModel
       .findOne({ _id: id, deletedAt: null })
+      .populate('companyId', 'name address description isActive')
       .populate('serviceId', 'companyId title description accessType isActive')
       .populate('requestedBy', 'name email role')
       .populate('approvedBy', 'name email role')

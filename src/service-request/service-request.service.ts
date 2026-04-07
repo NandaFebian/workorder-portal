@@ -483,12 +483,18 @@ export class ServiceRequestService {
       const firstConfig = serviceData.workOrdersConfig?.[0];
       const workOrderFormId = firstConfig?.workOrderForm?._id ?? null;
       const reportFormId = firstConfig?.workReportForm?._id ?? null;
+      const workOrderApprovalAccessType = firstConfig?.workOrderApprovalAccessType ?? 'auto';
+      const minStaff = firstConfig?.minStaff ?? 0;
+      const maxStaff = firstConfig?.maxStaff ?? 1;
 
       const createdWorkOrder = await this.workOrderService.createInternal({
         companyId: sr.companyId,
         serviceId: sr.serviceId,
         serviceRequestId: sr._id,
         workOrderFormId,
+        workOrderApprovalAccessType,
+        minStaff,
+        maxStaff,
         createdBy: user._id,
         status: 'drafted',
       });
@@ -507,13 +513,16 @@ export class ServiceRequestService {
       sr.workOrderCreatedAt = now;
       await sr.save();
 
-      return this.workOrderService.findOneInternal(
+      const workOrder = await this.workOrderService.findOneInternal(
         (createdWorkOrder as any)._id.toString(),
         user,
       );
+      const serviceRequest = await this.findOneInternal(id, user);
+
+      return { serviceRequest, workOrder };
     }
 
-    return this.findOneInternal(id);
+    return this.findOneInternal(id, user);
   }
 
   async remove(id: string, user: AuthenticatedUser): Promise<any> {

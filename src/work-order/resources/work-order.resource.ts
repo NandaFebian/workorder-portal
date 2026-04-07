@@ -22,6 +22,9 @@ export class WorkOrderResource {
       approvedBy: wo.approvedBy
         ? this.transformUser(wo.approvedBy)
         : null,
+      workOrderApprovalAccessType: wo.workOrderApprovalAccessType,
+      minStaff: wo.minStaff,
+      maxStaff: wo.maxStaff,
       assignedStaff: (wo.assignedStaff || []).map((s: any) => this.transformUser(s)),
       staffPIC: wo.staffPIC
         ? this.transformUser(wo.staffPIC)

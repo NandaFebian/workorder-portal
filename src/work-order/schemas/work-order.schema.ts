@@ -41,6 +41,19 @@ export class WorkOrder {
   workOrderFormId: MongooseSchema.Types.ObjectId | null;
 
   @Prop({
+    type: String,
+    enum: ['auto', 'staff_pic'],
+    default: 'auto',
+  })
+  workOrderApprovalAccessType: string;
+
+  @Prop({ default: 0 })
+  minStaff: number;
+
+  @Prop({ default: 1 })
+  maxStaff: number;
+
+  @Prop({
     required: true,
     enum: ['drafted', 'ready', 'inProgress', 'completed', 'cancelled'],
     default: 'drafted',

@@ -68,22 +68,38 @@ export function validateFormSubmission(
   templateFields: FormField[],
   submittedFields: Array<{ order: number; value: any }>,
 ): void {
+  const errorsAcc: Record<string, string>[] = [];
+
   for (const submittedField of submittedFields) {
     const templateField = templateFields.find(
       (f) => f.order === submittedField.order,
     );
 
     if (!templateField) {
-      throw new UnprocessableEntityException(
-        `Field with order ${submittedField.order} not found in form template`,
-      );
+      errorsAcc.push({ [`order_${submittedField.order}`]: `Field with order ${submittedField.order} not found in form template` });
+      continue;
     }
 
-    // Validate the field value
-    validateFieldValue(
-      templateField,
-      submittedField.value,
-      submittedField.order,
-    );
+    try {
+      // Validate the field value
+      validateFieldValue(
+        templateField,
+        submittedField.value,
+        submittedField.order,
+      );
+    } catch (e: any) {
+      if (e instanceof UnprocessableEntityException) {
+        errorsAcc.push({ [templateField.label || 'unknown']: e.message });
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  if (errorsAcc.length > 0) {
+    throw new UnprocessableEntityException({
+      message: 'Validation failed',
+      errors: { field: errorsAcc },
+    });
   }
 }

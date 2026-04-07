@@ -153,17 +153,28 @@ export class ServiceRequestService {
     if (submission && submission.formId === intakeFormId?.toString()) {
       const submissionData = submission.fieldsData || [];
       const submittedOrders = submissionData.map(f => f.order);
+      const missingFields: Record<string, string>[] = [];
       for (const tField of templateFields) {
         if (tField.required && !submittedOrders.includes(tField.order)) {
-          throw new UnprocessableEntityException(`Missing required field: ${tField.label}`);
+          missingFields.push({ [tField.label || 'unknown']: 'Missing required field' });
         }
+      }
+      
+      if (missingFields.length > 0) {
+        throw new UnprocessableEntityException({
+          message: 'Validation failed',
+          errors: { field: missingFields },
+        });
       }
       validateFormSubmission(templateFields, submissionData);
     } else if (intakeFormId) {
        // Check if there are any required fields in the template, if yes and no submission, throw error
        const hasRequired = templateFields.some(f => f.required);
        if (hasRequired) {
-          throw new UnprocessableEntityException('Intake form submission is required.');
+          throw new UnprocessableEntityException({
+            message: 'Validation failed',
+            errors: { field: [{ '*' : 'Intake form submission is required.' }] },
+          });
        }
     }
     
@@ -230,7 +241,10 @@ export class ServiceRequestService {
     const submission = dto.submission || null;
 
     if (!submission) {
-      throw new UnprocessableEntityException('Review submission payload is empty or invalid.');
+      throw new UnprocessableEntityException({
+        message: 'Validation failed',
+        errors: { field: [{ '*' : 'Review submission payload is empty or invalid.' }] },
+      });
     }
 
     if (submission.formId !== sr.reviewFormId!.toString()) {
@@ -239,10 +253,18 @@ export class ServiceRequestService {
 
     const submissionData = submission.fieldsData || [];
     const submittedOrders = submissionData.map(f => f.order);
+    const missingFields: Record<string, string>[] = [];
     for (const tField of templateFields) {
       if (tField.required && !submittedOrders.includes(tField.order)) {
-        throw new UnprocessableEntityException(`Missing required field: ${tField.label}`);
+        missingFields.push({ [tField.label || 'unknown']: 'Missing required field' });
       }
+    }
+
+    if (missingFields.length > 0) {
+      throw new UnprocessableEntityException({
+        message: 'Validation failed',
+        errors: { field: missingFields },
+      });
     }
     validateFormSubmission(templateFields, submissionData);
       

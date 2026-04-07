@@ -88,7 +88,7 @@ export class CompaniesInternalService {
     inviteEmployeesDto: InviteEmployeesDto,
   ): Promise<InviteEmployeesResponse> {
     await this.findInternalById(companyId);
-    const errors: InviteError[] = [];
+    const errors: Record<string, string>[] = [];
 
     // First Pass: Validate ALL entries first — collect every error before doing anything
     const usersToInvite: {
@@ -97,17 +97,13 @@ export class CompaniesInternalService {
       position: any;
     }[] = [];
 
-    for (const invite of inviteEmployeesDto.invites) {
+    for (let i = 0; i < inviteEmployeesDto.invites.length; i++) {
+      const invite = inviteEmployeesDto.invites[i];
       // Validate role
       if (
         ![Role.CompanyStaff, Role.CompanyManager].includes(invite.role as Role)
       ) {
-        errors.push({
-          user: { email: invite.email },
-          role_offered: invite.role,
-          position_offered: null,
-          message: 'Invalid role specified',
-        });
+        errors.push({ [`invites[${i}].role`]: 'Invalid role specified' });
         continue;
       }
 
@@ -115,91 +111,45 @@ export class CompaniesInternalService {
       if (invite.role === Role.CompanyManager) {
         if (invite.positionId) {
           if (!Types.ObjectId.isValid(invite.positionId)) {
-            errors.push({
-              user: { email: invite.email },
-              role_offered: invite.role,
-              position_offered: { _id: invite.positionId, name: 'Invalid ID' },
-              message: 'Invalid Position ID format',
-            });
+            errors.push({ [`invites[${i}].positionId`]: 'Invalid Position ID format' });
             continue;
           }
           try {
             position = await this.positionsService.findById(invite.positionId);
           } catch {
-            errors.push({
-              user: { email: invite.email },
-              role_offered: invite.role,
-              position_offered: { _id: invite.positionId, name: 'Not Found' },
-              message: `Position with ID ${invite.positionId} not found`,
-            });
+            errors.push({ [`invites[${i}].positionId`]: `Position with ID ${invite.positionId} not found` });
             continue;
           }
         }
       } else {
         // company_staff — positionId wajib
         if (!invite.positionId) {
-          errors.push({
-            user: { email: invite.email },
-            role_offered: invite.role,
-            position_offered: null,
-            message: 'Position ID is required for staff role',
-          });
+          errors.push({ [`invites[${i}].positionId`]: 'Position ID is required for staff role' });
           continue;
         }
         if (!Types.ObjectId.isValid(invite.positionId)) {
-          errors.push({
-            user: { email: invite.email },
-            role_offered: invite.role,
-            position_offered: { _id: invite.positionId, name: 'Invalid ID' },
-            message: 'Invalid Position ID format',
-          });
+          errors.push({ [`invites[${i}].positionId`]: 'Invalid Position ID format' });
           continue;
         }
         try {
           position = await this.positionsService.findById(invite.positionId);
         } catch {
-          errors.push({
-            user: { email: invite.email },
-            role_offered: invite.role,
-            position_offered: { _id: invite.positionId, name: 'Not Found' },
-            message: `Position with ID ${invite.positionId} not found`,
-          });
+          errors.push({ [`invites[${i}].positionId`]: `Position with ID ${invite.positionId} not found` });
           continue;
         }
       }
 
       const user = await this.usersService.findOneByEmail(invite.email);
       if (!user) {
-        errors.push({
-          user: { email: invite.email },
-          role_offered: invite.role,
-          position_offered: position
-            ? { _id: position._id, name: position.name }
-            : null,
-          message: 'User not found',
-        });
+        errors.push({ [`invites[${i}].email`]: 'User not found' });
         continue;
       }
       if (user.companyId) {
-        errors.push({
-          user: { email: invite.email, name: user.name },
-          role_offered: invite.role,
-          position_offered: position
-            ? { _id: position._id, name: position.name }
-            : null,
-          message: 'User already belongs to a company',
-        });
+        errors.push({ [`invites[${i}].email`]: 'User already belongs to a company' });
         continue;
       }
       if (user.role !== Role.UnassignedStaff) {
-        errors.push({
-          user: { email: invite.email, name: user.name },
-          role_offered: invite.role,
-          position_offered: position
-            ? { _id: position._id, name: position.name }
-            : null,
-          message: 'User is not available for invitation',
-        });
+        errors.push({ [`invites[${i}].email`]: 'User is not available for invitation' });
         continue;
       }
 
@@ -209,8 +159,8 @@ export class CompaniesInternalService {
     // If ANY entry failed validation — abort the entire batch (all-or-nothing)
     if (errors.length > 0) {
       throw new UnprocessableEntityException({
-        message: 'Invitation process aborted. Fix all errors and try again.',
-        errors,
+        message: 'Validation failed',
+        errors: { field: errors },
       });
     }
 

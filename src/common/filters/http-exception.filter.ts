@@ -16,7 +16,7 @@ export interface StandardErrorResponse {
   timestamp: string;
   path: string;
   message: string;
-  errors?: any;
+  errors: any;
 }
 
 @Catch()
@@ -69,11 +69,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
       path: request.url,
       message: responseMessage,
+      errors: detailErrors || {},
     };
-
-    if (detailErrors) {
-      errorResponse.errors = detailErrors;
-    }
 
     response.status(status).json(errorResponse);
   }

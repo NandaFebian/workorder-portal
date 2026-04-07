@@ -24,6 +24,14 @@ export class ServicesInternalService {
 
   private async buildServiceRequestConfig(configDto: any): Promise<any> {
     if (!configDto) return {};
+
+    if (configDto.intakeFormId) {
+      await this.formsService.findTemplateById(configDto.intakeFormId);
+    }
+    if (configDto.reviewFormId) {
+      await this.formsService.findTemplateById(configDto.reviewFormId);
+    }
+
     return {
       intakeFormId: configDto.intakeFormId ? new Types.ObjectId(configDto.intakeFormId) : null,
       reviewFormId: configDto.reviewFormId ? new Types.ObjectId(configDto.reviewFormId) : null,
@@ -35,15 +43,32 @@ export class ServicesInternalService {
   private async buildWorkOrdersConfig(configsDto: any[]): Promise<any[]> {
     if (!configsDto || configsDto.length === 0) return [];
     return Promise.all(
-      configsDto.map(async (dto) => ({
-        positionId: new Types.ObjectId(dto.positionId),
-        workOrderFormId: dto.workOrderFormId ? new Types.ObjectId(dto.workOrderFormId) : null,
-        workReportFormId: dto.workReportFormId ? new Types.ObjectId(dto.workReportFormId) : null,
-        workOrderApprovalAccessType: dto.workOrderApprovalAccessType ?? 'auto',
-        workReportApprovalAccessType: dto.workReportApprovalAccessType ?? 'auto',
-        minStaff: dto.minStaff,
-        maxStaff: dto.maxStaff,
-      })),
+      configsDto.map(async (dto) => {
+        const pos = await this.serviceModel.db
+          .collection('positions')
+          .findOne({ _id: new Types.ObjectId(dto.positionId), deletedAt: null });
+        
+        if (!pos) {
+          throw new NotFoundException(`Position with ID ${dto.positionId} not found`);
+        }
+
+        if (dto.workOrderFormId) {
+          await this.formsService.findTemplateById(dto.workOrderFormId);
+        }
+        if (dto.workReportFormId) {
+          await this.formsService.findTemplateById(dto.workReportFormId);
+        }
+
+        return {
+          positionId: new Types.ObjectId(dto.positionId),
+          workOrderFormId: dto.workOrderFormId ? new Types.ObjectId(dto.workOrderFormId) : null,
+          workReportFormId: dto.workReportFormId ? new Types.ObjectId(dto.workReportFormId) : null,
+          workOrderApprovalAccessType: dto.workOrderApprovalAccessType ?? 'auto',
+          workReportApprovalAccessType: dto.workReportApprovalAccessType ?? 'auto',
+          minStaff: dto.minStaff,
+          maxStaff: dto.maxStaff,
+        };
+      }),
     );
   }
 

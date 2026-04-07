@@ -16,7 +16,7 @@ import { Type } from 'class-transformer';
 
 class ServiceRequestConfigDto {
   @IsMongoId({ message: 'intakeFormId must be a valid MongoDB ObjectId' })
-  @IsOptional()
+  @IsNotEmpty({ message: 'intakeFormId is required' })
   intakeFormId?: string;
 
   @ValidateIf((o) => o.reviewNeed === true)
@@ -25,11 +25,11 @@ class ServiceRequestConfigDto {
   reviewFormId?: string | null;
 
   @IsEnum(['auto', 'manager'])
-  @IsOptional()
+  @IsNotEmpty({ message: 'serviceRequestApprovalAccessType is required' })
   serviceRequestApprovalAccessType?: string;
 
   @IsBoolean()
-  @IsOptional()
+  @IsNotEmpty({ message: 'reviewNeed is required' })
   reviewNeed?: boolean;
 }
 
@@ -39,19 +39,19 @@ class WorkOrderConfigDto {
   positionId: string;
 
   @IsMongoId({ message: 'workOrderFormId must be a valid MongoDB ObjectId' })
-  @IsOptional()
+  @IsNotEmpty({ message: 'workOrderFormId is required' })
   workOrderFormId?: string;
 
   @IsMongoId({ message: 'workReportFormId must be a valid MongoDB ObjectId' })
-  @IsOptional()
+  @IsNotEmpty({ message: 'workReportFormId is required' })
   workReportFormId?: string;
 
   @IsEnum(['auto', 'staff_pic'])
-  @IsOptional()
+  @IsNotEmpty({ message: 'workOrderApprovalAccessType is required' })
   workOrderApprovalAccessType?: string;
 
   @IsEnum(['auto', 'manager'])
-  @IsOptional()
+  @IsNotEmpty({ message: 'workReportApprovalAccessType is required' })
   workReportApprovalAccessType?: string;
 
   @IsNumber()
@@ -88,7 +88,7 @@ export class CreateServiceDto {
 
   @ValidateNested()
   @Type(() => ServiceRequestConfigDto)
-  @IsOptional()
+  @IsNotEmpty({ message: 'serviceRequestConfig is required' })
   serviceRequestConfig?: ServiceRequestConfigDto;
 
   @IsArray()

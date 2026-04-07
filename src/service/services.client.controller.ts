@@ -31,10 +31,10 @@ export class ServicesClientController {
     @Param('companyId') companyId: string,
     @GetUser() user: AuthenticatedUser | null,
   ) {
-    const data = await this.clientService.findAllByCompanyId(companyId, user);
+    const { services: data } = await this.clientService.findAllByCompanyId(companyId, user);
     return {
       message: 'Load data success',
-      data: data,
+      data,
     };
   }
 
@@ -62,7 +62,7 @@ export class ServicesClientController {
     const data = await this.csrService.getIntakeForm(id, user, 'public');
     return {
       message: 'Load data success',
-      data: data ? { form: data } : {},
+      data: data ?? {},
     };
   }
 }

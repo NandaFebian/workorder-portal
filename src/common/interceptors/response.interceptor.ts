@@ -10,6 +10,7 @@ import { map } from 'rxjs/operators';
 
 export interface Response<T> {
   success: boolean;
+  code: number;
   message: string;
   data: T;
 }
@@ -21,11 +22,15 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
     next: CallHandler,
   ): Observable<Response<T>> {
     return next.handle().pipe(
-      map((data) => ({
-        success: true,
-        message: data.message || 'Operation successful',
-        data: data.data || data,
-      })),
+      map((data) => {
+        const res = context.switchToHttp().getResponse();
+        return {
+          success: true,
+          code: res.statusCode,
+          message: data?.message || 'Operation successful',
+          data: data?.data !== undefined ? data.data : data,
+        };
+      }),
     );
   }
 }

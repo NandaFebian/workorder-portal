@@ -19,7 +19,7 @@ export class FormTemplate {
   @Prop({ required: false })
   description: string;
 
-  @Prop({ required: true, enum: ['work_order', 'report', 'intake'] })
+  @Prop({ required: true, enum: ['work_order', 'report', 'intake', 'review'] })
   formType: string;
 
   // Definisikan __v secara manual sebagai field biasa

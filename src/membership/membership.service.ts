@@ -84,7 +84,6 @@ export class MembershipService {
       !Types.ObjectId.isValid(userId) ||
       !Types.ObjectId.isValid(companyId)
     ) {
-      console.log('[DEBUG isUserSubscribed] Invalid userId or companyId', { userId, companyId });
       return false;
     }
 
@@ -97,16 +96,8 @@ export class MembershipService {
         $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
       });
 
-      console.log('[DEBUG isUserSubscribed] Result:', { 
-        userId, 
-        companyId, 
-        found: !!membership,
-        membershipId: membership?._id 
-      });
-
       return !!membership;
     } catch (error) {
-      console.error('[DEBUG isUserSubscribed] Error:', error);
       return false;
     }
   }

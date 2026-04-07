@@ -351,7 +351,8 @@ export class ServiceRequestService {
 
     if (!sr) throw new NotFoundException('Service Request not found');
 
-    if (user?.company?._id && sr.companyId.toString() !== user.company._id.toString()) {
+    const companyIdStr = sr.companyId?._id ? sr.companyId._id.toString() : sr.companyId?.toString();
+    if (user?.company?._id && companyIdStr !== user.company._id.toString()) {
       throw new ForbiddenException('You are not authorized to access this Service Request.');
     }
 

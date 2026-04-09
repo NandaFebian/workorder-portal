@@ -8,6 +8,7 @@ import { CoreModule } from './core/core.module';
 import { OperationsModule } from './operations/operations.module';
 import { OrganizationModule } from './organization/organization.module';
 import { MembershipModule } from './membership/membership.module';
+import { FcmModule } from './fcm/fcm.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { MembershipModule } from './membership/membership.module';
     FormModule,
     OperationsModule,
     MembershipModule,
+    FcmModule,
   ],
   controllers: [AppController],
   providers: [AppService],

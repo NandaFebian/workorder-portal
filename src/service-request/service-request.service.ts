@@ -27,12 +27,13 @@ import { ServicesInternalService } from 'src/service/services.internal.service';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { WorkReportService } from 'src/work-report/work-report.service';
 import { SrResponseUtil } from './utils/sr-response.util';
+import { FcmService } from 'src/fcm/fcm.service';
 
 @Injectable()
 export class ServiceRequestService {
   constructor(
     @InjectModel(ServiceRequest.name)
-    private csrModel: Model<ServiceRequestDocument>,
+    private srModel: Model<ServiceRequestDocument>,
     @InjectModel(FormSubmission.name)
     private submissionModel: Model<FormSubmissionDocument>,
     @InjectModel(Service.name)
@@ -43,10 +44,11 @@ export class ServiceRequestService {
     private readonly servicesInternalService: ServicesInternalService,
     private readonly workReportService: WorkReportService,
     private readonly membershipService: MembershipService,
+    private readonly fcmService: FcmService,
   ) {}
 
   async create(data: any): Promise<ServiceRequestDocument> {
-    const newRequest = new this.csrModel({
+    const newRequest = new this.srModel({
       ...data,
       code: `SR-${generateCode()}`,
       serviceRequestStatus: 'received',
@@ -178,7 +180,7 @@ export class ServiceRequestService {
        }
     }
     
-    const newCSR = await this.csrModel.create({
+    const newSR = await this.srModel.create({
       code: `SR-${generateCode()}`,
       serviceId: service._id,
       requestedBy: user._id,
@@ -196,7 +198,7 @@ export class ServiceRequestService {
       const subDocId = new Types.ObjectId();
       await this.submissionModel.create({
         _id: subDocId,
-        ownerId: (newCSR as any)._id,
+        ownerId: (newSR as any)._id,
         formId: new Types.ObjectId(submission.formId),
         submissionType: 'intake',
         submittedBy: new Types.ObjectId(user._id.toString()),
@@ -204,11 +206,34 @@ export class ServiceRequestService {
         status: 'submitted',
         submittedAt: new Date(),
       });
-      newCSR.intakeSubmissionId = subDocId;
-      await newCSR.save();
+      newSR.intakeSubmissionId = subDocId;
+      await newSR.save();
     }
     
-    return this.findOneForClient((newCSR as any)._id.toString(), user._id.toString());
+    // --- Example FCM Usage: Send Notification ---
+    // In a real scenario, you retrieve tokens for the staff of the company receiving this SR
+    // const providerTokens = ['token1', 'token2']; // e.g., await userModel.findTokensByCompany(service.companyId);
+    // if (providerTokens.length) {
+    //   await this.fcmService.sendToMultipleDevices(
+    //     providerTokens,
+    //     'New Service Request Received',
+    //     `SR ${newSR.code} has been submitted for service ${service.title}.`,
+    //     { serviceRequestId: (newSR as any)._id.toString() },
+    //   );
+    // }
+    
+    // Fallback/Mock sending to a supposed requested user or device
+    if (user && user['fcmToken']) {
+      await this.fcmService.sendToDevice(
+        user['fcmToken'] as string,
+        'Service Request Created',
+        `Your request ${newSR.code} is created and pending review.`,
+        { serviceRequestId: (newSR as any)._id.toString() }
+      );
+    }
+    // ---------------------------------------------
+    
+    return this.findOneForClient((newSR as any)._id.toString(), user._id.toString());
   }
 
   async submitReview(
@@ -218,7 +243,7 @@ export class ServiceRequestService {
   ): Promise<any> {
     if (!Types.ObjectId.isValid(srId)) throw new BadRequestException('Invalid ID');
 
-    const sr = await this.csrModel.findOne({ _id: srId, deletedAt: null }).exec();
+    const sr = await this.srModel.findOne({ _id: srId, deletedAt: null }).exec();
     if (!sr) throw new NotFoundException('Service Request not found');
 
     const requestedById = sr.requestedBy?._id ? sr.requestedBy._id.toString() : sr.requestedBy?.toString();
@@ -292,7 +317,7 @@ export class ServiceRequestService {
   }
 
   async findAllByClientId(userId: string): Promise<any[]> {
-    const requests = await this.csrModel
+    const requests = await this.srModel
       .find({ requestedBy: new Types.ObjectId(userId), deletedAt: null })
       .populate('companyId', 'name address description isActive')
       .populate('serviceId', 'companyId title description accessType isActive')
@@ -307,7 +332,7 @@ export class ServiceRequestService {
   async findOneForClient(id: string, userId: string): Promise<any> {
     if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
 
-    const sr = await this.csrModel
+    const sr = await this.srModel
       .findOne({ _id: id, deletedAt: null })
       .populate('companyId', 'name address description isActive')
       .populate('serviceId', 'companyId title description accessType isActive')
@@ -326,7 +351,7 @@ export class ServiceRequestService {
   }
 
   async findAllByCompanyId(companyId: string): Promise<any[]> {
-    const requests = await this.csrModel
+    const requests = await this.srModel
       .find({ companyId: new Types.ObjectId(companyId), deletedAt: null })
       .populate('companyId', 'name address description isActive')
       .populate('serviceId', 'companyId title description accessType isActive')
@@ -341,7 +366,7 @@ export class ServiceRequestService {
   async findOneInternal(id: string, user?: AuthenticatedUser): Promise<any> {
     if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
 
-    const sr = await this.csrModel
+    const sr = await this.srModel
       .findOne({ _id: id, deletedAt: null })
       .populate('companyId', 'name address description isActive')
       .populate('serviceId', 'companyId title description accessType isActive')
@@ -362,7 +387,7 @@ export class ServiceRequestService {
   async getUnifiedDetail(id: string, user: AuthenticatedUser): Promise<any> {
     if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
     
-    const sr = await this.csrModel.findOne({ _id: id, deletedAt: null }).exec();
+    const sr = await this.srModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!sr) throw new NotFoundException('Service Request not found');
 
     const requestedById = sr.requestedBy?._id ? sr.requestedBy._id.toString() : sr.requestedBy?.toString();
@@ -430,7 +455,7 @@ export class ServiceRequestService {
   ): Promise<any> {
     if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
 
-    const sr = await this.csrModel.findOne({ _id: id, deletedAt: null }).exec();
+    const sr = await this.srModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!sr) throw new NotFoundException('Service Request not found');
 
     if (sr.serviceRequestStatus !== 'received' && (status === 'cancelled' || status === 'approved' || status === 'rejected')) {
@@ -528,7 +553,7 @@ export class ServiceRequestService {
   async remove(id: string, user: AuthenticatedUser): Promise<any> {
     if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
 
-    const sr = await this.csrModel.findOne({ _id: id, deletedAt: null }).exec();
+    const sr = await this.srModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!sr) throw new NotFoundException('Client service request not found');
 
     if (!user.company?._id) {

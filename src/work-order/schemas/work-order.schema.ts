@@ -15,6 +15,9 @@ export class WorkOrder {
   })
   serviceRequestId: MongooseSchema.Types.ObjectId | null;
 
+  @Prop({ type: String, default: null })
+  batchId: string | null;
+
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
   createdBy: MongooseSchema.Types.ObjectId;
 
@@ -40,12 +43,25 @@ export class WorkOrder {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormTemplate', default: null })
   workOrderFormId: MongooseSchema.Types.ObjectId | null;
 
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormTemplate', default: null })
+  reportFormId: MongooseSchema.Types.ObjectId | null;
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Position', default: null })
+  positionId: MongooseSchema.Types.ObjectId | null;
+
   @Prop({
     type: String,
     enum: ['auto', 'staff_pic'],
     default: 'auto',
   })
   workOrderApprovalAccessType: string;
+
+  @Prop({
+    type: String,
+    enum: ['auto', 'manager'],
+    default: 'auto',
+  })
+  workReportApprovalAccessType: string;
 
   @Prop({ default: 0 })
   minStaff: number;
@@ -55,20 +71,38 @@ export class WorkOrder {
 
   @Prop({
     required: true,
-    enum: ['drafted', 'ready', 'inProgress', 'completed', 'cancelled'],
+    enum: ['drafted', 'sent', 'approved', 'rejected', 'cancelled', 'onprogress', 'completed', 'failed'],
     default: 'drafted',
   })
   status: string;
 
+  @Prop({ type: Boolean, default: false })
+  has_issue: boolean;
+
+  @Prop({ type: String, default: null })
+  issue_note: string | null;
+
   // Per-status date tracking
   @Prop({ type: Date, default: null })
-  readyAt: Date | null;
+  draftedAt: Date | null;
+
+  @Prop({ type: Date, default: null })
+  sentAt: Date | null;
+
+  @Prop({ type: Date, default: null })
+  approvedAt: Date | null;
+
+  @Prop({ type: Date, default: null })
+  rejectedAt: Date | null;
 
   @Prop({ type: Date, default: null })
   startedAt: Date | null;
 
   @Prop({ type: Date, default: null })
   completedAt: Date | null;
+
+  @Prop({ type: Date, default: null })
+  failedAt: Date | null;
 
   @Prop({ type: Date, default: null })
   cancelledAt: Date | null;

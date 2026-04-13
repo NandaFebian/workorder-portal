@@ -23,8 +23,15 @@ export class WorkReport {
   approvedBy: MongooseSchema.Types.ObjectId | null;
 
   @Prop({
+    type: String,
+    enum: ['auto', 'manager'],
+    default: 'auto',
+  })
+  workReportApprovalAccessType: string;
+
+  @Prop({
     required: true,
-    enum: ['drafted', 'in_progress', 'completed', 'cancelled', 'rejected'],
+    enum: ['drafted', 'onProgress', 'submitted', 'rejected', 'approved'],
     default: 'drafted',
   })
   status: string;
@@ -33,7 +40,13 @@ export class WorkReport {
   startedAt: Date | null;
 
   @Prop({ type: Date, default: null })
-  completedAt: Date | null;
+  submittedAt: Date | null;
+
+  @Prop({ type: Date, default: null })
+  approvedAt: Date | null;
+
+  @Prop({ type: Date, default: null })
+  rejectedAt: Date | null;
 
   @Prop({ type: Date, default: null })
   deletedAt: Date | null;

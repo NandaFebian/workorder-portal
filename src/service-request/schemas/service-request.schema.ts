@@ -29,7 +29,19 @@ export class ServiceRequest {
 
   @Prop({
     required: true,
-    enum: ['received', 'cancelled', 'rejected', 'approved', 'workOrderCreated', 'completed', 'closed'],
+    enum: [
+      'received',
+      'cancelled',
+      'rejected',
+      'approved',
+      'workOrderCreated',
+      'unprocessable',
+      'onprogress',
+      'partial_completed',
+      'failed',
+      'completed',
+      'closed'
+    ],
     default: 'received',
   })
   serviceRequestStatus: string;

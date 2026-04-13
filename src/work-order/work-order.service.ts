@@ -4,6 +4,8 @@ import {
   BadRequestException,
   ForbiddenException,
   UnprocessableEntityException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -23,6 +25,7 @@ import { WorkReportService } from 'src/work-report/work-report.service';
 import { WorkOrderResource } from './resources/work-order.resource';
 import { SubmissionType } from '../common/enums/submission-type.enum';
 import { validateFormSubmission } from 'src/form/helpers/form-validation.helper';
+import { ServiceRequestService } from 'src/service-request/service-request.service';
 
 @Injectable()
 export class WorkOrderService {
@@ -34,6 +37,8 @@ export class WorkOrderService {
     private readonly formsService: FormsService,
     private readonly usersService: UsersService,
     private readonly workReportService: WorkReportService,
+    @Inject(forwardRef(() => ServiceRequestService))
+    private readonly serviceRequestService: ServiceRequestService,
   ) {}
 
   async createInternal(data: any): Promise<WorkOrderDocument> {
@@ -41,7 +46,16 @@ export class WorkOrderService {
       ...data,
       code: `WO-${generateCode()}`,
     });
-    return newWorkOrder.save();
+    const saved = await newWorkOrder.save();
+
+    await this.workReportService.create({
+      workOrderId: (saved as any)._id.toString(),
+      companyId: (saved as any).companyId.toString(),
+      reportFormId: (saved as any).reportFormId ? (saved as any).reportFormId.toString() : null,
+      status: 'drafted',
+    } as any);
+
+    return saved;
   }
 
   async create(createWorkOrderDto: any, user: AuthenticatedUser): Promise<any> {
@@ -103,7 +117,7 @@ export class WorkOrderService {
       .sort({ createdAt: -1 })
       .exec();
 
-    return Promise.all(workOrders.map((doc) => this._hydrateOne(doc)));
+    return Promise.all(workOrders.map((doc) => this._hydrateOne(doc, false)));
   }
 
   async findAllAssigned(user: AuthenticatedUser): Promise<any[]> {
@@ -144,7 +158,7 @@ export class WorkOrderService {
     return this._hydrateOne(wo);
   }
 
-  private async _hydrateOne(wo: any): Promise<any> {
+  private async _hydrateOne(wo: any, includeMeta: boolean = true): Promise<any> {
     // Hydrate the single work order form from its key
     let workOrderForm: any = null;
     if (wo.workOrderFormId) {
@@ -169,7 +183,54 @@ export class WorkOrderService {
       .find({ ownerId: wo._id, submissionType: SubmissionType.WorkOrder })
       .exec();
 
-    return WorkOrderResource.transformWorkOrderDetail(wo, workOrderForm, submissions);
+    let meta: any = {
+      workOrderCapabilities: {
+        can_start: false,
+        can_complete: false,
+        can_fail: false,
+      },
+      workOrderSiblings: [],
+    };
+
+    let siblingsQuery: any = null;
+    if (wo.batchId) {
+      siblingsQuery = { batchId: wo.batchId };
+    } else if (wo.serviceRequestId) {
+      siblingsQuery = { serviceRequestId: wo.serviceRequestId };
+    }
+
+    if (siblingsQuery) {
+      const siblings = await this.workOrderModel.find(
+        { ...siblingsQuery, deletedAt: null },
+        { _id: 1, code: 1, status: 1, positionId: 1 }
+      ).populate('positionId', 'name').exec();
+
+      meta.workOrderSiblings = siblings.map((s: any) => ({
+        _id: s._id,
+        code: s.code,
+        status: s.status,
+        position: s.positionId ? { _id: s.positionId._id, name: s.positionId.name } : null
+      }));
+
+      // can_start ONLY if ALL siblings are approved
+      const allApproved = siblings.length > 0 && siblings.every(s => s.status === 'approved');
+      meta.workOrderCapabilities.can_start = allApproved;
+    }
+
+    try {
+      const report = await this.workReportService.findOneQuietlyByWorkOrderId((wo._id as any).toString());
+      if (report && report.status === 'approved') {
+        meta.workOrderCapabilities.can_complete = true;
+        meta.workOrderCapabilities.can_fail = true;
+      }
+    } catch {
+      // ignore
+    }
+
+    const transformed = WorkOrderResource.transformWorkOrderDetail(wo, workOrderForm, submissions);
+    if (!includeMeta) return transformed;
+
+    return { data: transformed, meta };
   }
 
   async updateStatus(id: string, updateStatusDto: any, user: AuthenticatedUser): Promise<any> {
@@ -186,14 +247,26 @@ export class WorkOrderService {
     wo.status = updateStatusDto.status;
 
     switch (updateStatusDto.status) {
-      case 'ready':
-        if (!wo.readyAt) wo.readyAt = now;
+      case 'drafted':
+        if (!wo.draftedAt) wo.draftedAt = now;
         break;
-      case 'inProgress':
+      case 'sent':
+        if (!wo.sentAt) wo.sentAt = now;
+        break;
+      case 'approved':
+        if (!wo.approvedAt) wo.approvedAt = now;
+        break;
+      case 'rejected':
+        if (!wo.rejectedAt) wo.rejectedAt = now;
+        break;
+      case 'onprogress':
         if (!wo.startedAt) wo.startedAt = now;
         break;
       case 'completed':
         if (!wo.completedAt) wo.completedAt = now;
+        break;
+      case 'failed':
+        if (!wo.failedAt) wo.failedAt = now;
         break;
       case 'cancelled':
         if (!wo.cancelledAt) wo.cancelledAt = now;
@@ -241,11 +314,15 @@ export class WorkOrderService {
     return this.findOneInternal(id, user);
   }
 
-  async markAsReady(id: string, user: AuthenticatedUser): Promise<any> {
+  async markAsSent(id: string, user: AuthenticatedUser): Promise<any> {
     if (!user.company?._id) throw new ForbiddenException('User company information is missing');
 
-    const wo = await this.workOrderModel.findOne({ _id: id, companyId: user.company._id });
+    const wo = await this.workOrderModel.findOne({ _id: id, companyId: user.company._id, deletedAt: null });
     if (!wo) throw new NotFoundException('Work Order not found');
+
+    if (wo.status !== 'drafted') {
+      throw new UnprocessableEntityException('Only drafted WO can be sent');
+    }
 
     // Verify all submissions are present for the work order form
     if (wo.workOrderFormId) {
@@ -257,31 +334,233 @@ export class WorkOrderService {
           submissionType: SubmissionType.WorkOrder,
         });
         if (!submission) {
-          throw new UnprocessableEntityException('Work order form must be submitted before marking as ready');
+          throw new UnprocessableEntityException('Work order form must be submitted before marking as sent');
         }
       }
     }
 
-    wo.status = 'ready';
-    if (!wo.readyAt) wo.readyAt = new Date();
+    wo.status = 'sent';
+    if (!wo.sentAt) wo.sentAt = new Date();
     await wo.save();
     return this.findOneInternal(id, user);
   }
 
-  async markAsInProgress(id: string, user: AuthenticatedUser): Promise<any> {
-    if (!user.company?._id) throw new ForbiddenException('User company information is missing');
-
-    const wo = await this.workOrderModel.findOne({ _id: id, companyId: user.company._id });
+  async approve(id: string, user: AuthenticatedUser): Promise<any> {
+    const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null });
     if (!wo) throw new NotFoundException('Work Order not found');
 
-    if (wo.status !== 'ready') {
-      throw new UnprocessableEntityException('Work Order must be in ready status before starting');
+    if (wo.status !== 'sent') {
+      throw new UnprocessableEntityException('Only sent WO can be approved');
     }
 
-    wo.status = 'inProgress';
-    if (!wo.startedAt) wo.startedAt = new Date();
+    if (wo.workOrderApprovalAccessType === 'staff_pic') {
+      const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
+      if (!isPIC && user.role !== 'company_owner' && user.role !== 'company_manager') {
+         throw new ForbiddenException('Only the designated PIC or manager can approve this WO');
+      }
+    }
+
+    wo.status = 'approved';
+    wo.approvedBy = user._id as any;
+    if (!wo.approvedAt) wo.approvedAt = new Date();
     await wo.save();
     return this.findOneInternal(id, user);
+  }
+
+  async reject(id: string, user: AuthenticatedUser): Promise<any> {
+    const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null });
+    if (!wo) throw new NotFoundException('Work Order not found');
+
+    if (wo.status !== 'sent') {
+      throw new UnprocessableEntityException('Only sent WO can be rejected');
+    }
+
+    if (wo.workOrderApprovalAccessType === 'staff_pic') {
+      const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
+      if (!isPIC && user.role !== 'company_owner' && user.role !== 'company_manager') {
+         throw new ForbiddenException('Only the designated PIC or manager can reject this WO');
+      }
+    }
+
+    wo.status = 'rejected';
+    if (!wo.rejectedAt) wo.rejectedAt = new Date();
+    await wo.save();
+    return this.findOneInternal(id, user);
+  }
+
+  async recreate(id: string, user: AuthenticatedUser): Promise<any> {
+    const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null });
+    if (!wo) throw new NotFoundException('Work Order not found');
+    if (wo.status !== 'rejected') throw new UnprocessableEntityException('Only rejected WO can be recreated');
+
+    const newWo = new this.workOrderModel({
+      code: `WO-${generateCode()}`,
+      serviceRequestId: wo.serviceRequestId,
+      createdBy: user._id,
+      serviceId: wo.serviceId,
+      companyId: wo.companyId,
+      workOrderFormId: wo.workOrderFormId,
+      reportFormId: wo.reportFormId,
+      workOrderApprovalAccessType: wo.workOrderApprovalAccessType,
+      workReportApprovalAccessType: wo.workReportApprovalAccessType,
+      minStaff: wo.minStaff,
+      maxStaff: wo.maxStaff,
+      status: 'drafted',
+      draftedAt: new Date(),
+    });
+    const saved = await newWo.save();
+
+    await this.workReportService.create({
+      workOrderId: (saved as any)._id.toString(),
+      companyId: (saved as any).companyId.toString(),
+      reportFormId: (saved as any).reportFormId ? (saved as any).reportFormId.toString() : null,
+      status: 'drafted',
+    } as any);
+    return this.findOneInternal((saved._id as any).toString(), user);
+  }
+
+  async cancel(id: string, user: AuthenticatedUser): Promise<any> {
+    const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null });
+    if (!wo) throw new NotFoundException('Work Order not found');
+
+    wo.status = 'cancelled';
+    wo.cancelledAt = new Date();
+    await wo.save();
+
+    // Cancel all siblings
+    if (wo.serviceRequestId) {
+      await this.workOrderModel.updateMany(
+        { serviceRequestId: wo.serviceRequestId, _id: { $ne: wo._id }, deletedAt: null },
+        { $set: { status: 'cancelled', cancelledAt: new Date() } }
+      );
+      
+      const srId = wo.serviceRequestId.toString();
+      await this.serviceRequestService.updateSRStatusSystemically(srId, 'unprocessable');
+    }
+
+    return this.findOneInternal(id, user);
+  }
+
+  async start(id: string, user: AuthenticatedUser): Promise<any> {
+    const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null });
+    if (!wo) throw new NotFoundException('Work Order not found');
+
+    if (wo.status !== 'approved') throw new UnprocessableEntityException('WO must be approved to start');
+
+    const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
+    const isAssigned = wo.assignedStaff && wo.assignedStaff.some(s => s.toString() === user._id.toString());
+    const isManager = user.role === 'company_owner' || user.role === 'company_manager';
+
+    if (!isPIC && !isAssigned && !isManager) {
+      throw new ForbiddenException('Only assigned staff, PIC, or manager can start this WO');
+    }
+
+    if (wo.serviceRequestId) {
+      const siblings = await this.workOrderModel.find({ serviceRequestId: wo.serviceRequestId, deletedAt: null });
+      const allApproved = siblings.length > 0 && siblings.every(s => s.status === 'approved' || s.status === 'onprogress' || s.status === 'completed');
+      if (!allApproved) {
+        throw new UnprocessableEntityException('All sibling WOs must be approved before any can start');
+      }
+    }
+
+    wo.status = 'onprogress';
+    wo.startedAt = new Date();
+    await wo.save();
+
+    const report = await this.workReportService.findOneQuietlyByWorkOrderId((wo as any)._id.toString());
+    if (report && report.status === 'drafted') {
+       await this.workReportService.update((report as any)._id.toString(), { status: 'onProgress', startedAt: new Date() } as any);
+    }
+
+    if (wo.serviceRequestId) {
+      await this.serviceRequestService.updateSRStatusSystemically(wo.serviceRequestId.toString(), 'onprogress');
+    }
+
+    return this.findOneInternal(id, user);
+  }
+
+  async complete(id: string, issue: string | null, user: AuthenticatedUser): Promise<any> {
+    const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null });
+    if (!wo) throw new NotFoundException('Work Order not found');
+    
+    if (wo.status !== 'onprogress') throw new UnprocessableEntityException('WO must be onprogress to complete');
+
+    const report = await this.workReportService.findOneQuietlyByWorkOrderId(id);
+    if (!report || report.status !== 'approved') {
+      throw new UnprocessableEntityException('Work report must be approved before completing WO');
+    }
+
+    wo.status = 'completed';
+    wo.completedAt = new Date();
+    if (issue) {
+      wo.has_issue = true;
+      wo.issue_note = issue;
+    }
+    await wo.save();
+
+    if (wo.serviceRequestId) {
+      await this._checkAndUpdateSRStatus(wo.serviceRequestId.toString());
+    }
+
+    return this.findOneInternal(id, user);
+  }
+
+  async fail(id: string, issue: string, user: AuthenticatedUser): Promise<any> {
+    const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null });
+    if (!wo) throw new NotFoundException('Work Order not found');
+
+    if (wo.status !== 'onprogress') throw new UnprocessableEntityException('WO must be onprogress to fail');
+
+    const report = await this.workReportService.findOneQuietlyByWorkOrderId(id);
+    if (!report || report.status !== 'approved') {
+      throw new UnprocessableEntityException('Work report must be approved before failing WO');
+    }
+
+    if (!issue) {
+      throw new UnprocessableEntityException('Issue note is required when failing WO');
+    }
+
+    wo.status = 'failed';
+    wo.failedAt = new Date();
+    wo.has_issue = true;
+    wo.issue_note = issue;
+    await wo.save();
+
+    if (wo.serviceRequestId) {
+      await this._checkAndUpdateSRStatus(wo.serviceRequestId.toString());
+    }
+
+    return this.findOneInternal(id, user);
+  }
+
+  private async _checkAndUpdateSRStatus(srId: string) {
+    const siblings = await this.workOrderModel.find({ serviceRequestId: new Types.ObjectId(srId), deletedAt: null });
+    if (!siblings.length) return;
+
+    let allCompleted = true;
+    let anyFailed = false;
+    let anyCompleted = false;
+
+    for (const sib of siblings) {
+      if (sib.status === 'failed') anyFailed = true;
+      if (sib.status === 'completed') anyCompleted = true;
+      if (sib.status !== 'completed' && sib.status !== 'failed') {
+        allCompleted = false;
+      }
+    }
+
+    let srStatus = 'onprogress';
+    if (allCompleted) {
+      srStatus = 'completed';
+    } else if (anyFailed && !anyCompleted && siblings.every(s => s.status === 'failed')) {
+      srStatus = 'failed';
+    } else if ((anyCompleted || anyFailed) && siblings.every(s => s.status === 'completed' || s.status === 'failed')) {
+      srStatus = 'partial_completed';
+    } 
+
+    if (srStatus !== 'onprogress') {
+       await this.serviceRequestService.updateSRStatusSystemically(srId, srStatus);
+    }
   }
 
   async createSubmissions(id: string, createSubmissionsDto: CreateSubmissionsDto, user: AuthenticatedUser): Promise<any> {
@@ -341,7 +620,7 @@ export class WorkOrderService {
     const deletedAt = new Date();
     wo.deletedAt = deletedAt;
     await wo.save();
-    return { ...woDetail, deletedAt };
+    return { data: { ...woDetail.data, deletedAt }, meta: woDetail.meta };
   }
 
   async getReport(id: string, user: AuthenticatedUser): Promise<any> {

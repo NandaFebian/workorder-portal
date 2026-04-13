@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { WorkReport, WorkReportDocument } from './schemas/work-report.schema';
@@ -40,14 +40,31 @@ export class WorkReportService {
     return this._hydrateReport(report, null);
   }
 
+  async findOneQuietlyByWorkOrderId(workOrderId: string): Promise<WorkReportDocument | null> {
+    if (!Types.ObjectId.isValid(workOrderId)) return null;
+    return this.workReportModel.findOne({ workOrderId: new Types.ObjectId(workOrderId), deletedAt: null }).exec();
+  }
+
   async findByWorkOrderId(workOrderId: string, user: AuthenticatedUser): Promise<any> {
     if (!Types.ObjectId.isValid(workOrderId)) throw new NotFoundException('Invalid Work Order ID');
 
     const report = await this.workReportModel
       .findOne({ workOrderId: new Types.ObjectId(workOrderId), deletedAt: null })
+      .populate('workOrderId')
       .exec();
 
     if (!report) throw new NotFoundException('Work Report not found');
+
+    const wo = report.workOrderId as any;
+    if (wo && typeof wo === 'object' && wo._id) {
+      const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
+      const isAssigned = wo.assignedStaff && wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
+      if (!isPIC && !isAssigned && user.role !== 'company_owner' && user.role !== 'company_manager') {
+         throw new ForbiddenException('Only assigned staff, PIC, or manager can access this report.');
+      }
+      report.workOrderId = wo._id;
+    }
+
     return this._hydrateReport(report, user);
   }
 
@@ -96,12 +113,23 @@ export class WorkReportService {
 
     const workReport = await this.workReportModel
       .findOne({ workOrderId: new Types.ObjectId(workOrderId), deletedAt: null })
+      .populate('workOrderId')
       .exec();
 
     if (!workReport) throw new NotFoundException('Work report not found for this work order');
 
     if (user.company?._id?.toString() !== workReport.companyId.toString()) {
-      throw new NotFoundException('Unauthorized to submit this work report form');
+      throw new ForbiddenException('Unauthorized to submit this work report form');
+    }
+
+    const wo = workReport.workOrderId as any;
+    if (wo && typeof wo === 'object' && wo._id) {
+      const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
+      const isAssigned = wo.assignedStaff && wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
+      if (!isPIC && !isAssigned && user.role !== 'company_owner' && user.role !== 'company_manager') {
+         throw new ForbiddenException('Only assigned staff, PIC, or manager can submit this report.');
+      }
+      workReport.workOrderId = wo._id;
     }
 
     const { submissions } = dto;
@@ -154,10 +182,21 @@ export class WorkReportService {
     }
     const workReport = await this.workReportModel
       .findOne({ _id: workReportId, deletedAt: null })
+      .populate('workOrderId')
       .exec();
     if (!workReport) throw new NotFoundException('Work report not found');
     if (user.company?._id?.toString() !== workReport.companyId.toString()) {
-      throw new NotFoundException('Unauthorized to submit this work report form');
+      throw new ForbiddenException('Unauthorized to submit this work report form');
+    }
+
+    const wo = workReport.workOrderId as any;
+    if (wo && typeof wo === 'object' && wo._id) {
+      const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
+      const isAssigned = wo.assignedStaff && wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
+      if (!isPIC && !isAssigned && user.role !== 'company_owner' && user.role !== 'company_manager') {
+         throw new ForbiddenException('Only assigned staff, PIC, or manager can submit this report.');
+      }
+      workReport.workOrderId = wo._id;
     }
 
     if (submissions && Array.isArray(submissions)) {
@@ -183,6 +222,83 @@ export class WorkReportService {
     }
 
     return this.findOne((workReport._id as any).toString());
+  }
+
+  async markAsSent(id: string, user: AuthenticatedUser): Promise<any> {
+    if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Invalid ID');
+    const report = await this.workReportModel.findOne({ _id: id, deletedAt: null }).populate('workOrderId').exec();
+    if (!report) throw new NotFoundException('Work Report not found');
+
+    if (report.status !== 'onProgress' && report.status !== 'rejected') {
+      throw new BadRequestException('Only onProgress or rejected report can be sent');
+    }
+
+    const wo = report.workOrderId as any;
+    if (wo && typeof wo === 'object' && wo._id) {
+      const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
+      const isAssigned = wo.assignedStaff && wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
+      if (!isPIC && !isAssigned && user.role !== 'company_owner' && user.role !== 'company_manager') {
+         throw new ForbiddenException('Only assigned staff, PIC, or manager can send this report.');
+      }
+      report.workOrderId = wo._id;
+    }
+
+    report.submittedAt = new Date();
+    if (report.workReportApprovalAccessType === 'auto') {
+      report.status = 'approved';
+      report.approvedAt = new Date();
+      report.approvedBy = user._id as any;
+    } else {
+      report.status = 'submitted';
+    }
+    
+    await report.save();
+    return this.findOne(id);
+  }
+
+  async approve(id: string, user: AuthenticatedUser): Promise<any> {
+    if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Invalid ID');
+    const report = await this.workReportModel.findOne({ _id: id, deletedAt: null }).exec();
+    if (!report) throw new NotFoundException('Work Report not found');
+
+    if (report.status !== 'submitted') {
+      throw new BadRequestException('Only submitted report can be approved');
+    }
+
+    if (report.workReportApprovalAccessType === 'auto') {
+      throw new BadRequestException('Report is set to auto approve, manual action not allowed');
+    }
+    if (user.role !== 'company_owner' && user.role !== 'company_manager') {
+      throw new ForbiddenException('Only managers can approve this work report');
+    }
+
+    report.status = 'approved';
+    report.approvedAt = new Date();
+    report.approvedBy = user._id as any;
+    await report.save();
+    return this.findOne(id);
+  }
+
+  async reject(id: string, user: AuthenticatedUser): Promise<any> {
+    if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Invalid ID');
+    const report = await this.workReportModel.findOne({ _id: id, deletedAt: null }).exec();
+    if (!report) throw new NotFoundException('Work Report not found');
+
+    if (report.status !== 'submitted') {
+      throw new BadRequestException('Only submitted report can be rejected');
+    }
+
+    if (report.workReportApprovalAccessType === 'auto') {
+      throw new BadRequestException('Report is set to auto approve, manual action not allowed');
+    }
+    if (user.role !== 'company_owner' && user.role !== 'company_manager') {
+      throw new ForbiddenException('Only managers can reject this work report');
+    }
+
+    report.status = 'rejected';
+    report.rejectedAt = new Date();
+    await report.save();
+    return this.findOne(id);
   }
 
   async remove(id: string, user: AuthenticatedUser): Promise<any> {

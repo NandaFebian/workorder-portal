@@ -29,10 +29,19 @@ export class WorkOrderResource {
       staffPIC: wo.staffPIC
         ? this.transformUser(wo.staffPIC)
         : null,
+      position: wo.positionId
+        ? (wo.positionId.name ? { _id: wo.positionId._id, name: wo.positionId.name } : wo.positionId)
+        : null,
       status: wo.status,
-      readyAt: wo.readyAt,
+      has_issue: wo.has_issue ?? false,
+      issue_note: wo.issue_note ?? null,
+      draftedAt: wo.draftedAt,
+      sentAt: wo.sentAt,
+      approvedAt: wo.approvedAt,
+      rejectedAt: wo.rejectedAt,
       startedAt: wo.startedAt,
       completedAt: wo.completedAt,
+      failedAt: wo.failedAt,
       cancelledAt: wo.cancelledAt,
       createdAt: wo.createdAt,
       updatedAt: wo.updatedAt,

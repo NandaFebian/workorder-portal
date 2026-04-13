@@ -4,6 +4,7 @@ import {
   Post,
   Put,
   Delete,
+  Patch,
   Body,
   Param,
   HttpCode,
@@ -81,6 +82,33 @@ export class WorkReportController {
       'Work report form submitted successfully',
       result,
     );
+  }
+
+  @Patch(':id/sent')
+  @UseGuards(RolesGuard)
+  @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
+  @HttpCode(HttpStatus.OK)
+  async markAsSent(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+    const data = await this.workReportService.markAsSent(id, user);
+    return ResponseUtil.success('Work report marked as sent', data);
+  }
+
+  @Patch(':id/approve')
+  @UseGuards(RolesGuard)
+  @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @HttpCode(HttpStatus.OK)
+  async approve(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+    const data = await this.workReportService.approve(id, user);
+    return ResponseUtil.success('Work report approved', data);
+  }
+
+  @Patch(':id/reject')
+  @UseGuards(RolesGuard)
+  @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @HttpCode(HttpStatus.OK)
+  async reject(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+    const data = await this.workReportService.reject(id, user);
+    return ResponseUtil.success('Work report rejected', data);
   }
 
   @Delete(':id')

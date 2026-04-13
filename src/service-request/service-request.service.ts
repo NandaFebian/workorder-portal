@@ -448,6 +448,31 @@ export class ServiceRequestService {
       : SrResponseUtil.formatPublic(doc, intakeForm, reviewForm, intakeSubmission, reviewSubmission);
   }
 
+  async updateSRStatusSystemically(id: string, status: string): Promise<void> {
+    const sr = await this.srModel.findOne({ _id: id, deletedAt: null }).exec();
+    if (!sr) return;
+    sr.serviceRequestStatus = status;
+    const now = new Date();
+    switch (status) {
+      case 'unprocessable':
+        (sr as any).unprocessableAt = now;
+        break;
+      case 'onprogress':
+        (sr as any).onprogressAt = now;
+        break;
+      case 'partial_completed':
+        (sr as any).partialCompletedAt = now;
+        break;
+      case 'failed':
+        (sr as any).failedAt = now;
+        break;
+      case 'completed':
+        sr.completedAt = now;
+        break;
+    }
+    await sr.save();
+  }
+
   async updateStatus(
     id: string,
     status: string,
@@ -504,47 +529,47 @@ export class ServiceRequestService {
         user,
       );
 
-      // Pick the first workOrdersConfig entry to determine the work order form
-      const firstConfig = serviceData.workOrdersConfig?.[0];
-      const workOrderFormId = firstConfig?.workOrderForm?._id ?? null;
-      const reportFormId = firstConfig?.workReportForm?._id ?? null;
-      const workOrderApprovalAccessType = firstConfig?.workOrderApprovalAccessType ?? 'auto';
-      const minStaff = firstConfig?.minStaff ?? 0;
-      const maxStaff = firstConfig?.maxStaff ?? 1;
-
-      const createdWorkOrder = await this.workOrderService.createInternal({
-        companyId: sr.companyId,
-        serviceId: sr.serviceId,
-        serviceRequestId: sr._id,
-        workOrderFormId,
-        workOrderApprovalAccessType,
-        minStaff,
-        maxStaff,
-        createdBy: user._id,
-        status: 'drafted',
-      });
-
-      if (createdWorkOrder?._id && reportFormId) {
-        await this.workReportService.create({
-          workOrderId: createdWorkOrder._id.toString(),
-          companyId: sr.companyId.toString(),
-          reportFormId: reportFormId ? reportFormId.toString() : null,
-          status: 'drafted',
-        } as any);
-      }
+      const batchId = new Types.ObjectId().toString();
+      const configs = serviceData.workOrdersConfig || [];
+      const createdWorkOrdersRaw = await Promise.all(
+        configs.map(async (config: any) => {
+          const workOrderFormId = config.workOrderForm?._id ?? config.workOrderFormId ?? null;
+          const reportFormId = config.workReportForm?._id ?? config.workReportFormId ?? null;
+          const positionId = config.position?._id ?? config.positionId ?? null;
+          
+          return this.workOrderService.createInternal({
+            companyId: sr.companyId,
+            serviceId: sr.serviceId,
+            serviceRequestId: sr._id,
+            batchId,
+            positionId,
+            workOrderFormId,
+            reportFormId,
+            workOrderApprovalAccessType: config.workOrderApprovalAccessType ?? 'auto',
+            workReportApprovalAccessType: config.workReportApprovalAccessType ?? 'auto',
+            minStaff: config.minStaff ?? 0,
+            maxStaff: config.maxStaff ?? 1,
+            createdBy: user._id,
+            status: 'drafted',
+          });
+        })
+      );
 
       // Update sr status to workOrderCreated
       sr.serviceRequestStatus = 'workOrderCreated';
       sr.workOrderCreatedAt = now;
       await sr.save();
 
-      const workOrder = await this.workOrderService.findOneInternal(
-        (createdWorkOrder as any)._id.toString(),
-        user,
+      const workOrders = await Promise.all(
+        createdWorkOrdersRaw.map(async (wo: any) => {
+          const woRes = await this.workOrderService.findOneInternal(wo._id.toString(), user);
+          return woRes.data;
+        })
       );
+
       const serviceRequest = await this.findOneInternal(id, user);
 
-      return { serviceRequest, workOrder };
+      return { serviceRequest, workOrders };
     }
 
     return this.findOneInternal(id, user);

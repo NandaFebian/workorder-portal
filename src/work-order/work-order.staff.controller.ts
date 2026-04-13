@@ -31,7 +31,7 @@ export class WorkOrderStaffController {
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   async findOne(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-    const data = await this.workOrderService.findOneAssigned(id, user);
-    return ResponseUtil.success('Load data success', data);
+    const result = await this.workOrderService.findOneAssigned(id, user);
+    return ResponseUtil.success('Load data success', result.data, result.meta);
   }
 }

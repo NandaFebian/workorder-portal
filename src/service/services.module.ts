@@ -14,6 +14,7 @@ import {
   FormSubmissionSchema,
 } from 'src/form/schemas/form-submissions.schema';
 import { MembershipModule } from 'src/membership/membership.module';
+import { WorkOrderModule } from 'src/work-order/work-order.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { MembershipModule } from 'src/membership/membership.module';
     forwardRef(() => FormModule),
     forwardRef(() => ServiceRequestModule),
     forwardRef(() => MembershipModule),
+    forwardRef(() => WorkOrderModule),
   ],
   controllers: [ServicesController, ServicesClientController],
   providers: [ServicesInternalService, ServicesClientService],

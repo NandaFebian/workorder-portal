@@ -24,12 +24,16 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
     return next.handle().pipe(
       map((data) => {
         const res = context.switchToHttp().getResponse();
-        return {
+        const result: any = {
           success: true,
           code: res.statusCode,
           message: data?.message || 'Operation successful',
           data: data?.data !== undefined ? data.data : data,
         };
+        if (data?.meta !== undefined) {
+          result.meta = data.meta;
+        }
+        return result;
       }),
     );
   }

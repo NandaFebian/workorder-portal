@@ -13,6 +13,8 @@ import {
 } from 'src/form/schemas/form-submissions.schema';
 import { WorkReportModule } from 'src/work-report/work-report.module';
 
+import { ServiceRequestModule } from 'src/service-request/service-request.module';
+
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -23,6 +25,7 @@ import { WorkReportModule } from 'src/work-report/work-report.module';
     forwardRef(() => AuthModule),
     UsersModule,
     WorkReportModule,
+    forwardRef(() => ServiceRequestModule),
   ],
   controllers: [WorkOrderInternalController, WorkOrderStaffController],
   providers: [WorkOrderService],

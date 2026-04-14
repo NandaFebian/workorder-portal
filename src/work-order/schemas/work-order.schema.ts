@@ -21,6 +21,9 @@ export class WorkOrder {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
   createdBy: MongooseSchema.Types.ObjectId;
 
+  @Prop({ type: MongooseSchema.Types.ObjectId, default: null })
+  configId: MongooseSchema.Types.ObjectId | null;
+
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Service', required: true })
   serviceId: MongooseSchema.Types.ObjectId;
 

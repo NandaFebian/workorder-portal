@@ -6,6 +6,7 @@ export class WorkOrderResource {
       _id: wo._id,
       code: wo.code,
       serviceRequestId: wo.serviceRequestId,
+      configId: wo.configId || null,
       companyId: wo.companyId,
       service: wo.serviceId
         ? {
@@ -29,8 +30,8 @@ export class WorkOrderResource {
       staffPIC: wo.staffPIC
         ? this.transformUser(wo.staffPIC)
         : null,
-      position: wo.positionId
-        ? (wo.positionId.name ? { _id: wo.positionId._id, name: wo.positionId.name } : wo.positionId)
+      positionsOnDuty: wo.positionId
+        ? (wo.positionId.name ? this.transformPosition(wo.positionId) : wo.positionId)
         : null,
       status: wo.status,
       has_issue: wo.has_issue ?? false,
@@ -56,6 +57,20 @@ export class WorkOrderResource {
       name: user.name,
       email: user.email,
       role: user.role,
+    };
+  }
+
+  static transformPosition(position: any): any {
+    if (!position || typeof position !== 'object') return position;
+    return {
+      _id: position._id,
+      name: position.name,
+      description: position.description,
+      isActive: position.isActive,
+      companyId: position.companyId,
+      createdAt: position.createdAt,
+      updatedAt: position.updatedAt,
+      deletedAt: position.deletedAt,
     };
   }
 

@@ -535,7 +535,7 @@ export class ServiceRequestService {
         configs.map(async (config: any) => {
           const workOrderFormId = config.workOrderForm?._id ?? config.workOrderFormId ?? null;
           const reportFormId = config.workReportForm?._id ?? config.workReportFormId ?? null;
-          const positionId = config.position?._id ?? config.positionId ?? null;
+          const positionId = config.positionsOnDuty?._id ?? config.positionId ?? null;
           
           return this.workOrderService.createInternal({
             companyId: sr.companyId,
@@ -543,6 +543,7 @@ export class ServiceRequestService {
             serviceRequestId: sr._id,
             batchId,
             positionId,
+            configId: config._id || null,
             workOrderFormId,
             reportFormId,
             workOrderApprovalAccessType: config.workOrderApprovalAccessType ?? 'auto',

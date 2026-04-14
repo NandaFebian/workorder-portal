@@ -97,6 +97,7 @@ export async function getServicesWithAggregation(
       const rawConfigs: any[] = service.workOrdersConfig || [];
       const hydratedWorkOrdersConfig = await Promise.all(
         rawConfigs.map(async (cfg) => ({
+          _id: cfg._id,
           workOrderForm: await resolveForm(cfg.workOrderFormId),
           workReportForm: await resolveForm(cfg.workReportFormId),
           positionsOnDuty: await resolvePosition(cfg.positionId),

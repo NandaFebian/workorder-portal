@@ -24,8 +24,9 @@ class ServiceRequestConfig {
 const ServiceRequestConfigSchema =
   SchemaFactory.createForClass(ServiceRequestConfig);
 
-@Schema({ _id: false })
+@Schema()
 class WorkOrderConfig {
+  _id?: MongooseSchema.Types.ObjectId;
   @Prop({
     type: MongooseSchema.Types.ObjectId,
     ref: 'Position',

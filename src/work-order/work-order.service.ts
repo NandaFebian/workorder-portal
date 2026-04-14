@@ -114,6 +114,7 @@ export class WorkOrderService {
       .populate('staffPIC', 'name email role')
       .populate('assignedStaff', 'name email role')
       .populate('serviceId', 'companyId title description accessType isActive')
+      .populate('positionId', '-__v')
       .sort({ createdAt: -1 })
       .exec();
 
@@ -124,6 +125,7 @@ export class WorkOrderService {
     const workOrders = await this.workOrderModel
       .find({ assignedStaff: user._id, deletedAt: null })
       .populate('serviceId', 'title description')
+      .populate('positionId', '-__v')
       .sort({ createdAt: -1 })
       .exec();
 
@@ -140,6 +142,7 @@ export class WorkOrderService {
       .populate('staffPIC', 'name email role')
       .populate('assignedStaff', 'name email role')
       .populate('serviceId', 'companyId title description accessType isActive')
+      .populate('positionId', '-__v')
       .exec();
 
     if (!wo) throw new NotFoundException('Work Order not found');
@@ -152,6 +155,7 @@ export class WorkOrderService {
     const wo = await this.workOrderModel
       .findOne({ _id: id, assignedStaff: user._id, deletedAt: null })
       .populate('serviceId', 'title description')
+      .populate('positionId', '-__v')
       .exec();
 
     if (!wo) throw new NotFoundException('Work Order not found');
@@ -399,6 +403,8 @@ export class WorkOrderService {
       createdBy: user._id,
       serviceId: wo.serviceId,
       companyId: wo.companyId,
+      positionId: wo.positionId,
+      configId: wo.configId,
       workOrderFormId: wo.workOrderFormId,
       reportFormId: wo.reportFormId,
       workOrderApprovalAccessType: wo.workOrderApprovalAccessType,

@@ -34,6 +34,9 @@ class ServiceRequestConfigDto {
 }
 
 class WorkOrderConfigDto {
+  @IsMongoId()
+  @IsOptional()
+  _id?: string;
   @IsMongoId({ message: 'positionId must be a valid MongoDB ObjectId' })
   @IsNotEmpty()
   positionId: string;

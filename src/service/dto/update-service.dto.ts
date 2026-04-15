@@ -35,6 +35,10 @@ class UpdateServiceRequestConfigDto {
 class UpdateWorkOrderConfigDto {
   @IsMongoId()
   @IsOptional()
+  _id?: string;
+
+  @IsMongoId()
+  @IsOptional()
   positionId?: string;
 
   @IsMongoId()

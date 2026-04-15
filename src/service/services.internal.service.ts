@@ -60,6 +60,7 @@ export class ServicesInternalService {
         }
 
         return {
+          _id: dto._id ? new Types.ObjectId(dto._id) : new Types.ObjectId(),
           positionId: new Types.ObjectId(dto.positionId),
           workOrderFormId: dto.workOrderFormId ? new Types.ObjectId(dto.workOrderFormId) : null,
           workReportFormId: dto.workReportFormId ? new Types.ObjectId(dto.workReportFormId) : null,

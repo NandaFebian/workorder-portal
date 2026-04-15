@@ -233,7 +233,53 @@ export class ServiceRequestService {
     }
     // ---------------------------------------------
     
+    if ((src.serviceRequestApprovalAccessType ?? 'auto') === 'auto') {
+      await this._autoApproveServiceRequest(newSR, user, service);
+    }
+    
     return this.findOneForClient((newSR as any)._id.toString(), user._id.toString());
+  }
+
+  private async _autoApproveServiceRequest(sr: ServiceRequestDocument, user: AuthenticatedUser, service: any): Promise<void> {
+    const now = new Date();
+    sr.serviceRequestStatus = 'approved';
+    (sr as any).approvedAt = now;
+    await sr.save();
+
+    const batchId = new Types.ObjectId().toString();
+    const configs = service.workOrdersConfig || [];
+    
+    if (configs.length > 0) {
+      await Promise.all(
+        configs.map(async (config: any) => {
+          const workOrderFormId = config.workOrderForm?._id ?? config.workOrderFormId ?? null;
+          const reportFormId = config.workReportForm?._id ?? config.workReportFormId ?? null;
+          const positionId = config.positionsOnDuty?._id ?? config.positionId ?? null;
+          
+          return this.workOrderService.createInternal({
+            companyId: sr.companyId,
+            serviceId: sr.serviceId,
+            serviceRequestId: sr._id,
+            batchId,
+            positionId,
+            configId: config._id || null,
+            workOrderFormId,
+            reportFormId,
+            workOrderApprovalAccessType: config.workOrderApprovalAccessType ?? 'auto',
+            workReportApprovalAccessType: config.workReportApprovalAccessType ?? 'auto',
+            minStaff: config.minStaff ?? 0,
+            maxStaff: config.maxStaff ?? 1,
+            createdBy: user._id,
+            status: 'drafted',
+          });
+        })
+      );
+
+      // Update sr status to workOrderCreated
+      sr.serviceRequestStatus = 'workOrderCreated';
+      (sr as any).workOrderCreatedAt = new Date();
+      await sr.save();
+    }
   }
 
   async submitReview(

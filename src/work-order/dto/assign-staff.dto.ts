@@ -1,8 +1,13 @@
-import { IsArray, IsEmail, IsNotEmpty } from 'class-validator';
+import { IsArray, IsEmail, IsOptional, IsString } from 'class-validator';
 
 export class AssignStaffDto {
+  @IsOptional()
+  @IsEmail()
+  @IsString()
+  staff_pic?: string;
+
   @IsArray()
-  @IsNotEmpty()
+  @IsOptional()
   @IsEmail({}, { each: true })
-  staffEmail: string[];
+  assign_staffs?: string[];
 }

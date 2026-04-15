@@ -96,6 +96,13 @@ export class WorkOrderService {
 
     const query: any = { companyId: user.company._id, deletedAt: null };
 
+    if (user.role !== 'company_owner' && user.role !== 'company_manager') {
+      query['$or'] = [
+        { staffPIC: new Types.ObjectId(user._id.toString()) },
+        { assignedStaff: new Types.ObjectId(user._id.toString()) }
+      ];
+    }
+
     if (filterDto.status) query.status = filterDto.status;
     if (filterDto.assignedStaffId) {
       query.assignedStaff = new Types.ObjectId(filterDto.assignedStaffId);
@@ -291,29 +298,38 @@ export class WorkOrderService {
     });
     if (!wo) throw new NotFoundException('Work Order not found');
 
-    const staffIds: Types.ObjectId[] = [];
     const errors: string[] = [];
 
-    const emails = Array.isArray(assignStaffDto.staffEmail)
-      ? assignStaffDto.staffEmail
-      : [assignStaffDto.staffEmail];
+    if (assignStaffDto.staff_pic) {
+      const picUser = await (this as any).usersService.findOneByEmail(assignStaffDto.staff_pic);
+      if (!picUser) {
+        errors.push(`PIC Staff with email ${assignStaffDto.staff_pic} not found`);
+      } else if (picUser.companyId && picUser.companyId.toString() !== user.company._id.toString()) {
+        errors.push(`PIC Staff with email ${assignStaffDto.staff_pic} does not belong to your company`);
+      } else {
+        wo.staffPIC = picUser._id as any;
+      }
+    }
 
-    for (const email of emails) {
-      const staff = await this.usersService.findOneByEmail(email);
-      if (!staff) {
-        errors.push(`Staff with email ${email} not found`);
-        continue;
+    if (assignStaffDto.assign_staffs && Array.isArray(assignStaffDto.assign_staffs)) {
+      const staffIds: Types.ObjectId[] = [];
+      for (const email of assignStaffDto.assign_staffs) {
+        const staff = await (this as any).usersService.findOneByEmail(email);
+        if (!staff) {
+          errors.push(`Staff with email ${email} not found`);
+          continue;
+        }
+        if (staff.companyId && staff.companyId.toString() !== user.company._id.toString()) {
+          errors.push(`Staff with email ${email} does not belong to your company`);
+          continue;
+        }
+        staffIds.push(staff._id as Types.ObjectId);
       }
-      if (staff.companyId && staff.companyId.toString() !== user.company._id.toString()) {
-        errors.push(`Staff with email ${email} does not belong to your company`);
-        continue;
-      }
-      staffIds.push(staff._id as Types.ObjectId);
+      wo.assignedStaff = staffIds as any;
     }
 
     if (errors.length > 0) throw new UnprocessableEntityException(errors.join(', '));
 
-    wo.assignedStaff = staffIds as any;
     await wo.save();
     return this.findOneInternal(id, user);
   }

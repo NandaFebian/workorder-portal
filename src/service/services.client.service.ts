@@ -185,7 +185,7 @@ export class ServicesClientService {
     });
 
     // Only accept a single submission object, strictly for the intake form
-    const submission = dto.submission || null;
+    const submission = dto || null;
 
     if (submission) {
       if (!intakeFormId) {

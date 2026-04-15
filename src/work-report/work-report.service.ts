@@ -132,35 +132,29 @@ export class WorkReportService {
       workReport.workOrderId = wo._id;
     }
 
-    const { submissions } = dto;
+    const { formId, fieldsData } = dto;
+    if (formId && Types.ObjectId.isValid(formId)) {
+      // Validate that this form matches the report form
+      const reportFormTemplate = workReport.reportFormId
+        ? await this.formsService.findTemplateById(workReport.reportFormId.toString())
+        : null;
 
-    if (submissions && Array.isArray(submissions)) {
-      for (const item of submissions) {
-        const { formId, fieldsData } = item;
-        if (!Types.ObjectId.isValid(formId)) continue;
-
-        // Validate that this form matches the report form
-        const reportFormTemplate = workReport.reportFormId
-          ? await this.formsService.findTemplateById(workReport.reportFormId.toString())
-          : null;
-
-        if (!reportFormTemplate || (reportFormTemplate._id as any).toString() !== formId) {
-          throw new NotFoundException(`Form ${formId} is not the report form for this work report`);
-        }
-
-        validateFormSubmission(reportFormTemplate.fields, fieldsData);
-
-        const submission = new this.formSubmissionModel({
-          submissionType: SubmissionType.Report,
-          ownerId: workReport._id,
-          formId: new Types.ObjectId(formId),
-          submittedBy: user._id,
-          fieldsData,
-          status: 'submitted',
-          submittedAt: new Date(),
-        });
-        await submission.save();
+      if (!reportFormTemplate || (reportFormTemplate._id as any).toString() !== formId) {
+        throw new NotFoundException(`Form ${formId} is not the report form for this work report`);
       }
+
+      validateFormSubmission(reportFormTemplate.fields, fieldsData);
+
+      const submission = new this.formSubmissionModel({
+        submissionType: SubmissionType.Report,
+        ownerId: workReport._id,
+        formId: new Types.ObjectId(formId),
+        submittedBy: user._id,
+        fieldsData,
+        status: 'submitted',
+        submittedAt: new Date(),
+      });
+      await submission.save();
     }
 
     return this.findByWorkOrderId(workOrderId, user);
@@ -199,26 +193,24 @@ export class WorkReportService {
       workReport.workOrderId = wo._id;
     }
 
-    if (submissions && Array.isArray(submissions)) {
-      for (const item of submissions) {
-        const { formId, fieldsData } = item;
-        if (!Types.ObjectId.isValid(formId)) continue;
-        const formTemplate = await this.formsService.findTemplateById(
-          workReport.reportFormId?.toString() ?? '',
-        );
-        if (!formTemplate) throw new NotFoundException(`Form template not found`);
-        validateFormSubmission(formTemplate.fields, fieldsData);
-        const submission = new this.formSubmissionModel({
-          submissionType: SubmissionType.Report,
-          ownerId: workReport._id,
-          formId: new Types.ObjectId(formId),
-          submittedBy: user._id,
-          fieldsData,
-          status: 'submitted',
-          submittedAt: new Date(),
-        });
-        await submission.save();
-      }
+    const { formId, fieldsData } = dto;
+
+    if (formId && Types.ObjectId.isValid(formId)) {
+      const formTemplate = await this.formsService.findTemplateById(
+        workReport.reportFormId?.toString() ?? '',
+      );
+      if (!formTemplate) throw new NotFoundException(`Form template not found`);
+      validateFormSubmission(formTemplate.fields, fieldsData);
+      const submission = new this.formSubmissionModel({
+        submissionType: SubmissionType.Report,
+        ownerId: workReport._id,
+        formId: new Types.ObjectId(formId),
+        submittedBy: user._id,
+        fieldsData,
+        status: 'submitted',
+        submittedAt: new Date(),
+      });
+      await submission.save();
     }
 
     return this.findOne((workReport._id as any).toString());

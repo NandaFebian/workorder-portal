@@ -570,7 +570,7 @@ export class ServiceRequestService {
 
       const serviceRequest = await this.findOneInternal(id, user);
 
-      return { serviceRequest, workOrders };
+      return serviceRequest;
     }
 
     return this.findOneInternal(id, user);

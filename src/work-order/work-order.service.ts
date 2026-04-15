@@ -324,8 +324,9 @@ export class WorkOrderService {
     const wo = await this.workOrderModel.findOne({ _id: id, companyId: user.company._id, deletedAt: null });
     if (!wo) throw new NotFoundException('Work Order not found');
 
+    this._checkOwnership(wo, user);
     if (wo.status !== 'drafted') {
-      throw new UnprocessableEntityException('Only drafted WO can be sent');
+      throw new UnprocessableEntityException('Status tidak memenuhi syarat');
     }
 
     // Verify all submissions are present for the work order form
@@ -354,15 +355,11 @@ export class WorkOrderService {
     if (!wo) throw new NotFoundException('Work Order not found');
 
     if (wo.status !== 'sent') {
-      throw new UnprocessableEntityException('Only sent WO can be approved');
+      throw new UnprocessableEntityException('Status tidak memenuhi syarat');
     }
 
-    if (wo.workOrderApprovalAccessType === 'staff_pic') {
-      const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
-      if (!isPIC && user.role !== 'company_owner' && user.role !== 'company_manager') {
-         throw new ForbiddenException('Only the designated PIC or manager can approve this WO');
-      }
-    }
+    this._checkApprovalRequiresManual(wo);
+    this._checkOnlyStaffPic(wo, user);
 
     wo.status = 'approved';
     wo.approvedBy = user._id as any;
@@ -376,15 +373,11 @@ export class WorkOrderService {
     if (!wo) throw new NotFoundException('Work Order not found');
 
     if (wo.status !== 'sent') {
-      throw new UnprocessableEntityException('Only sent WO can be rejected');
+      throw new UnprocessableEntityException('Status tidak memenuhi syarat');
     }
 
-    if (wo.workOrderApprovalAccessType === 'staff_pic') {
-      const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
-      if (!isPIC && user.role !== 'company_owner' && user.role !== 'company_manager') {
-         throw new ForbiddenException('Only the designated PIC or manager can reject this WO');
-      }
-    }
+    this._checkApprovalRequiresManual(wo);
+    this._checkOnlyStaffPic(wo, user);
 
     wo.status = 'rejected';
     if (!wo.rejectedAt) wo.rejectedAt = new Date();
@@ -395,7 +388,9 @@ export class WorkOrderService {
   async recreate(id: string, user: AuthenticatedUser): Promise<any> {
     const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null });
     if (!wo) throw new NotFoundException('Work Order not found');
-    if (wo.status !== 'rejected') throw new UnprocessableEntityException('Only rejected WO can be recreated');
+    
+    this._checkOwnership(wo, user);
+    if (wo.status !== 'rejected') throw new UnprocessableEntityException('Status tidak memenuhi syarat');
 
     const newWo = new this.workOrderModel({
       code: `WO-${generateCode()}`,
@@ -429,6 +424,12 @@ export class WorkOrderService {
     const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null });
     if (!wo) throw new NotFoundException('Work Order not found');
 
+    this._checkOwnership(wo, user);
+    const allowedCancelStatuses = ['drafted', 'approved', 'sent', 'rejected'];
+    if (!allowedCancelStatuses.includes(wo.status)) {
+      throw new UnprocessableEntityException('Status tidak memenuhi syarat');
+    }
+
     wo.status = 'cancelled';
     wo.cancelledAt = new Date();
     await wo.save();
@@ -451,15 +452,9 @@ export class WorkOrderService {
     const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null });
     if (!wo) throw new NotFoundException('Work Order not found');
 
-    if (wo.status !== 'approved') throw new UnprocessableEntityException('WO must be approved to start');
+    if (wo.status !== 'approved') throw new UnprocessableEntityException('Status tidak memenuhi syarat');
 
-    const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
-    const isAssigned = wo.assignedStaff && wo.assignedStaff.some(s => s.toString() === user._id.toString());
-    const isManager = user.role === 'company_owner' || user.role === 'company_manager';
-
-    if (!isPIC && !isAssigned && !isManager) {
-      throw new ForbiddenException('Only assigned staff, PIC, or manager can start this WO');
-    }
+    this._checkOnlyStaffPic(wo, user);
 
     if (wo.serviceRequestId) {
       const siblings = await this.workOrderModel.find({ serviceRequestId: wo.serviceRequestId, deletedAt: null });
@@ -489,7 +484,8 @@ export class WorkOrderService {
     const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null });
     if (!wo) throw new NotFoundException('Work Order not found');
     
-    if (wo.status !== 'onprogress') throw new UnprocessableEntityException('WO must be onprogress to complete');
+    this._checkOwnership(wo, user);
+    if (wo.status !== 'onprogress') throw new UnprocessableEntityException('Status tidak memenuhi syarat');
 
     const report = await this.workReportService.findOneQuietlyByWorkOrderId(id);
     if (!report || report.status !== 'approved') {
@@ -515,7 +511,8 @@ export class WorkOrderService {
     const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null });
     if (!wo) throw new NotFoundException('Work Order not found');
 
-    if (wo.status !== 'onprogress') throw new UnprocessableEntityException('WO must be onprogress to fail');
+    this._checkOwnership(wo, user);
+    if (wo.status !== 'onprogress') throw new UnprocessableEntityException('Status tidak memenuhi syarat');
 
     const report = await this.workReportService.findOneQuietlyByWorkOrderId(id);
     if (!report || report.status !== 'approved') {
@@ -543,26 +540,32 @@ export class WorkOrderService {
     const siblings = await this.workOrderModel.find({ serviceRequestId: new Types.ObjectId(srId), deletedAt: null });
     if (!siblings.length) return;
 
+    let allTerminated = true; // All are either completed or failed
     let allCompleted = true;
-    let anyFailed = false;
-    let anyCompleted = false;
+    let allFailed = true;
 
     for (const sib of siblings) {
-      if (sib.status === 'failed') anyFailed = true;
-      if (sib.status === 'completed') anyCompleted = true;
       if (sib.status !== 'completed' && sib.status !== 'failed') {
+        allTerminated = false;
+      }
+      if (sib.status !== 'completed') {
         allCompleted = false;
+      }
+      if (sib.status !== 'failed') {
+        allFailed = false;
       }
     }
 
     let srStatus = 'onprogress';
-    if (allCompleted) {
-      srStatus = 'completed';
-    } else if (anyFailed && !anyCompleted && siblings.every(s => s.status === 'failed')) {
-      srStatus = 'failed';
-    } else if ((anyCompleted || anyFailed) && siblings.every(s => s.status === 'completed' || s.status === 'failed')) {
-      srStatus = 'partial_completed';
-    } 
+    if (allTerminated) {
+      if (allCompleted) {
+        srStatus = 'completed';
+      } else if (allFailed) {
+        srStatus = 'unprocessable'; // As requested: unprocessable if all WOs failed
+      } else {
+        srStatus = 'partial_completed';
+      }
+    }
 
     if (srStatus !== 'onprogress') {
        await this.serviceRequestService.updateSRStatusSystemically(srId, srStatus);
@@ -579,33 +582,38 @@ export class WorkOrderService {
     });
     if (!wo) throw new NotFoundException('Work Order not found');
 
-    for (const submission of createSubmissionsDto.submissions) {
-      const formTemplate = await this.formsService.findTemplateById(submission.formId);
-      if (!formTemplate) {
-        throw new NotFoundException(`Form template with ID ${submission.formId} not found`);
-      }
-
-      validateFormSubmission(formTemplate.fields, submission.fieldsData);
-
-      const fieldsData = submission.fieldsData.map((field) => {
-        const templateField = formTemplate.fields.find((f) => f.order === field.order);
-        if (!templateField) {
-          throw new UnprocessableEntityException(`Field with order ${field.order} not found in form template`);
-        }
-        return { order: templateField.order, value: field.value };
-      });
-
-      const newSubmission = new this.submissionModel({
-        submissionType: SubmissionType.WorkOrder,
-        ownerId: new Types.ObjectId(id),
-        formId: new Types.ObjectId(submission.formId),
-        submittedBy: new Types.ObjectId(user._id.toString()),
-        fieldsData,
-        status: 'submitted',
-        submittedAt: new Date(),
-      });
-      await newSubmission.save();
+    this._checkOwnership(wo, user);
+    if (wo.status !== 'drafted') {
+      throw new UnprocessableEntityException('Status tidak memenuhi syarat');
     }
+
+    const submission = createSubmissionsDto;
+    
+    const formTemplate = await this.formsService.findTemplateById(submission.formId);
+    if (!formTemplate) {
+      throw new NotFoundException(`Form template with ID ${submission.formId} not found`);
+    }
+
+    validateFormSubmission(formTemplate.fields, submission.fieldsData);
+
+    const fieldsData = submission.fieldsData.map((field) => {
+      const templateField = formTemplate.fields.find((f) => f.order === field.order);
+      if (!templateField) {
+        throw new UnprocessableEntityException(`Field with order ${field.order} not found in form template`);
+      }
+      return { order: templateField.order, value: field.value };
+    });
+
+    const newSubmission = new this.submissionModel({
+      submissionType: SubmissionType.WorkOrder,
+      ownerId: new Types.ObjectId(id),
+      formId: new Types.ObjectId(submission.formId),
+      submittedBy: new Types.ObjectId(user._id.toString()),
+      fieldsData,
+      status: 'submitted',
+      submittedAt: new Date(),
+    });
+    await newSubmission.save();
 
     return this.findOneInternal(id, user);
   }
@@ -635,5 +643,32 @@ export class WorkOrderService {
 
   async submitReportForm(id: string, dto: any, user: AuthenticatedUser): Promise<any> {
     return this.workReportService.submitReportFormByWorkOrderId(id, dto, user);
+  }
+
+  private _checkOwnership(wo: any, user: AuthenticatedUser) {
+    const isOwner = user.role === 'company_owner' || user.role === 'company_manager';
+    const isCreator = wo.createdBy && wo.createdBy.toString() === user._id.toString();
+    if (!isOwner && !isCreator) {
+      throw new ForbiddenException('Hanya Pembuat Perintah Kerja yang dapat melakukan aksi ini');
+    }
+  }
+
+  private _checkOnlyStaffPic(wo: any, user: AuthenticatedUser) {
+    if (wo.workOrderApprovalAccessType !== 'staff_pic') {
+      return;
+    }
+    const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
+    if (!wo.staffPIC) {
+      throw new ForbiddenException('Staff PIC belum ditentukan');
+    }
+    if (!isPIC) {
+      throw new ForbiddenException('Hanya Staff PIC yang dapat melakukan aksi ini');
+    }
+  }
+
+  private _checkApprovalRequiresManual(wo: any) {
+    if (wo.workOrderApprovalAccessType === 'auto') {
+      throw new ForbiddenException('Status auto tidak memenuhi syarat');
+    }
   }
 }

@@ -18,7 +18,7 @@ export class FieldDataDto {
   value: any;
 }
 
-export class SubmissionItemDto {
+export class SubmitIntakeFormDto {
   @IsMongoId()
   @IsNotEmpty()
   formId: string;
@@ -27,11 +27,4 @@ export class SubmissionItemDto {
   @ValidateNested({ each: true })
   @Type(() => FieldDataDto)
   fieldsData: FieldDataDto[];
-}
-
-export class SubmitIntakeFormDto {
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => SubmissionItemDto)
-  submissions: SubmissionItemDto[];
 }

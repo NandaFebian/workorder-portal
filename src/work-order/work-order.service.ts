@@ -39,7 +39,7 @@ export class WorkOrderService {
     private readonly workReportService: WorkReportService,
     @Inject(forwardRef(() => ServiceRequestService))
     private readonly serviceRequestService: ServiceRequestService,
-  ) {}
+  ) { }
 
   async createInternal(data: any): Promise<WorkOrderDocument> {
     const newWorkOrder = new this.workOrderModel({
@@ -95,13 +95,6 @@ export class WorkOrderService {
     }
 
     const query: any = { companyId: user.company._id, deletedAt: null };
-
-    if (user.role !== 'company_owner' && user.role !== 'company_manager') {
-      query['$or'] = [
-        { staffPIC: new Types.ObjectId(user._id.toString()) },
-        { assignedStaff: new Types.ObjectId(user._id.toString()) }
-      ];
-    }
 
     if (filterDto.status) query.status = filterDto.status;
     if (filterDto.assignedStaffId) {
@@ -404,7 +397,7 @@ export class WorkOrderService {
   async recreate(id: string, user: AuthenticatedUser): Promise<any> {
     const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null });
     if (!wo) throw new NotFoundException('Work Order not found');
-    
+
     this._checkOwnership(wo, user);
     if (wo.status !== 'rejected') throw new UnprocessableEntityException('Status tidak memenuhi syarat');
 
@@ -456,7 +449,7 @@ export class WorkOrderService {
         { serviceRequestId: wo.serviceRequestId, _id: { $ne: wo._id }, deletedAt: null },
         { $set: { status: 'cancelled', cancelledAt: new Date() } }
       );
-      
+
       const srId = wo.serviceRequestId.toString();
       await this.serviceRequestService.updateSRStatusSystemically(srId, 'unprocessable');
     }
@@ -486,7 +479,7 @@ export class WorkOrderService {
 
     const report = await this.workReportService.findOneQuietlyByWorkOrderId((wo as any)._id.toString());
     if (report && report.status === 'drafted') {
-       await this.workReportService.update((report as any)._id.toString(), { status: 'onProgress', startedAt: new Date() } as any);
+      await this.workReportService.update((report as any)._id.toString(), { status: 'onProgress', startedAt: new Date() } as any);
     }
 
     if (wo.serviceRequestId) {
@@ -499,7 +492,7 @@ export class WorkOrderService {
   async complete(id: string, issue: string | null, user: AuthenticatedUser): Promise<any> {
     const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null });
     if (!wo) throw new NotFoundException('Work Order not found');
-    
+
     this._checkOwnership(wo, user);
     if (wo.status !== 'onprogress') throw new UnprocessableEntityException('Status tidak memenuhi syarat');
 
@@ -584,7 +577,7 @@ export class WorkOrderService {
     }
 
     if (srStatus !== 'onprogress') {
-       await this.serviceRequestService.updateSRStatusSystemically(srId, srStatus);
+      await this.serviceRequestService.updateSRStatusSystemically(srId, srStatus);
     }
   }
 
@@ -604,7 +597,7 @@ export class WorkOrderService {
     }
 
     const submission = createSubmissionsDto;
-    
+
     const formTemplate = await this.formsService.findTemplateById(submission.formId);
     if (!formTemplate) {
       throw new NotFoundException(`Form template with ID ${submission.formId} not found`);

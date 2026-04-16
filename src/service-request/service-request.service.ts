@@ -596,7 +596,7 @@ export class ServiceRequestService {
             workReportApprovalAccessType: config.workReportApprovalAccessType ?? 'auto',
             minStaff: config.minStaff ?? 0,
             maxStaff: config.maxStaff ?? 1,
-            createdBy: null,
+            createdBy: user._id,
             status: 'drafted',
           });
         })

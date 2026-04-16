@@ -53,6 +53,7 @@ export class WorkOrderService {
       companyId: (saved as any).companyId.toString(),
       reportFormId: (saved as any).reportFormId ? (saved as any).reportFormId.toString() : null,
       status: 'drafted',
+      workReportApprovalAccessType: (saved as any).workReportApprovalAccessType,
     } as any);
 
     return saved;
@@ -70,6 +71,15 @@ export class WorkOrderService {
       status: 'drafted',
     });
     const saved = await newWorkOrder.save();
+
+    await this.workReportService.create({
+      workOrderId: (saved._id as any).toString(),
+      companyId: (saved.companyId as any).toString(),
+      reportFormId: saved.reportFormId ? (saved.reportFormId as any).toString() : null,
+      status: 'drafted',
+      workReportApprovalAccessType: saved.workReportApprovalAccessType,
+    } as any);
+
     return this.findOneInternal((saved._id as any).toString(), user);
   }
 
@@ -101,7 +111,7 @@ export class WorkOrderService {
         return [];
       }
       query.assignedStaff = user._id;
-      query.status = 'sent';
+      query.status = { $in: ['sent', 'onprogress', 'completed', 'failed'] };
     } else {
       if (filterDto.status) query.status = filterDto.status;
       if (filterDto.assignedStaffId) {
@@ -387,14 +397,7 @@ export class WorkOrderService {
       wo.approvedAt = now;
       // Note: No sentAt if auto
       await wo.save();
-
-      // Check if can start immediately (respecting siblings)
-      try {
-        return await this.start(id, user);
-      } catch (e) {
-        // If cannot start due to siblings, return the approved WO
-        return this.findOneInternal(id, user);
-      }
+      return this.findOneInternal(id, user);
     } else {
       wo.status = 'sent';
       if (!wo.sentAt) wo.sentAt = now;
@@ -465,10 +468,11 @@ export class WorkOrderService {
     const saved = await newWo.save();
 
     await this.workReportService.create({
-      workOrderId: (saved as any)._id.toString(),
-      companyId: (saved as any).companyId.toString(),
-      reportFormId: (saved as any).reportFormId ? (saved as any).reportFormId.toString() : null,
+      workOrderId: (saved._id as any).toString(),
+      companyId: (saved.companyId as any).toString(),
+      reportFormId: saved.reportFormId ? (saved.reportFormId as any).toString() : null,
       status: 'drafted',
+      workReportApprovalAccessType: saved.workReportApprovalAccessType,
     } as any);
     return this.findOneInternal((saved._id as any).toString(), user);
   }

@@ -19,7 +19,11 @@ export class CreateWorkReportDto {
   @IsOptional()
   reportFormId?: string;
 
-  @IsEnum(['drafted', 'in_progress', 'completed', 'cancelled', 'rejected'])
+  @IsEnum(['drafted', 'onProgress', 'submitted', 'approved', 'rejected'])
   @IsOptional()
   status?: string;
+
+  @IsEnum(['auto', 'manager'])
+  @IsOptional()
+  workReportApprovalAccessType?: string;
 }

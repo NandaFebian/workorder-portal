@@ -111,7 +111,7 @@ export class WorkOrderService {
         return [];
       }
       query.assignedStaff = user._id;
-      query.status = { $in: ['sent', 'onprogress', 'completed', 'failed'] };
+      query.status = { $in: ['sent', 'onprogress', 'completed', 'failed', 'approved', 'rejected', 'cancelled', 'failed'] };
     } else {
       if (filterDto.status) query.status = filterDto.status;
       if (filterDto.assignedStaffId) {

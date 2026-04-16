@@ -98,11 +98,12 @@ export async function getServicesWithAggregation(
       const hydratedWorkOrdersConfig = await Promise.all(
         rawConfigs.map(async (cfg) => ({
           _id: cfg._id,
+          configId: cfg.configId,
           workOrderForm: await resolveForm(cfg.workOrderFormId),
           workReportForm: await resolveForm(cfg.workReportFormId),
           positionsOnDuty: await resolvePosition(cfg.positionId),
-          workOrderApprovalAccessType: cfg.workOrderApprovalAccessType ?? 'auto',
-          workReportApprovalAccessType: cfg.workReportApprovalAccessType ?? 'auto',
+          workOrderApprovalAccessType: cfg.workOrderApprovalAccessType,
+          workReportApprovalAccessType: cfg.workReportApprovalAccessType,
           minStaff: cfg.minStaff,
           maxStaff: cfg.maxStaff,
         })),

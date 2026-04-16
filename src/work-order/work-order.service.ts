@@ -201,6 +201,7 @@ export class WorkOrderService {
         can_start: false,
         can_complete: false,
         can_fail: false,
+        can_recreate: false,
       },
       workOrderSiblings: [],
     };
@@ -230,12 +231,10 @@ export class WorkOrderService {
       meta.workOrderCapabilities.can_start = allApproved;
     }
 
-    // canRecreate logic
-    meta.canRecreate = false;
     if (wo.configId) {
       const history = await this.workOrderModel.find({ configId: wo.configId, deletedAt: null }).exec();
       if (history.length > 0) {
-        meta.canRecreate = history.every(h => h.status === 'rejected');
+        meta.workOrderCapabilities.can_recreate = history.every(h => h.status === 'rejected');
       }
     }
 
@@ -692,11 +691,15 @@ export class WorkOrderService {
   }
 
   async getReport(id: string, user: AuthenticatedUser): Promise<any> {
-    return this.workReportService.findByWorkOrderId(id, user);
+    const reportData = await this.workReportService.findByWorkOrderId(id, user);
+    const woResult = await this.findOneInternal(id, user);
+    return { report: reportData, meta: woResult.meta };
   }
 
   async submitReportForm(id: string, dto: any, user: AuthenticatedUser): Promise<any> {
-    return this.workReportService.submitReportFormByWorkOrderId(id, dto, user);
+    const reportData = await this.workReportService.submitReportFormByWorkOrderId(id, dto, user);
+    const woResult = await this.findOneInternal(id, user);
+    return { report: reportData, meta: woResult.meta };
   }
 
   private _checkOwnership(wo: any, user: AuthenticatedUser) {

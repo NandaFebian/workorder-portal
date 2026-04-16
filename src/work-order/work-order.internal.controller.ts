@@ -198,11 +198,12 @@ export class WorkOrderInternalController {
     const result = await this.workOrderService.remove(id, user);
     return ResponseUtil.success('Work order deleted successfully', result.data, result.meta);
   }
+
   @Get(':id/report')
   @HttpCode(HttpStatus.OK)
   async getReport(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-    const data = await this.workOrderService.getReport(id, user);
-    return ResponseUtil.success('Report retrieved successfully', data);
+    const result = await this.workOrderService.getReport(id, user);
+    return ResponseUtil.success('Report retrieved successfully', result.report, result.meta);
   }
 
   @Put(':id/report')
@@ -212,14 +213,15 @@ export class WorkOrderInternalController {
     @Body() submitDto: SubmitWorkReportFormDto,
     @GetUser() user: AuthenticatedUser,
   ) {
-    const data = await this.workOrderService.submitReportForm(
+    const result = await this.workOrderService.submitReportForm(
       id,
       submitDto,
       user,
     );
     return ResponseUtil.success(
       'Work report form submitted successfully',
-      data,
+      result.report,
+      result.meta,
     );
   }
 }

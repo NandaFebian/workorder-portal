@@ -269,7 +269,7 @@ export class ServiceRequestService {
             workReportApprovalAccessType: config.workReportApprovalAccessType ?? 'auto',
             minStaff: config.minStaff ?? 0,
             maxStaff: config.maxStaff ?? 1,
-            createdBy: user._id,
+            createdBy: null,
             status: 'drafted',
           });
         })
@@ -596,7 +596,7 @@ export class ServiceRequestService {
             workReportApprovalAccessType: config.workReportApprovalAccessType ?? 'auto',
             minStaff: config.minStaff ?? 0,
             maxStaff: config.maxStaff ?? 1,
-            createdBy: user._id,
+            createdBy: null,
             status: 'drafted',
           });
         })

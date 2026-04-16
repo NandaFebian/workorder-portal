@@ -24,7 +24,16 @@ export class RolesGuard implements CanActivate {
 
     const { user } = context.switchToHttp().getRequest();
 
-    if (!user || !requiredRoles.some((role) => user.role === role)) {
+    if (!user) {
+      throw new ForbiddenException('User not found');
+    }
+
+    // Role Owner is always allowed (OP)
+    if (user.role === 'owner_company') {
+      return true;
+    }
+
+    if (!requiredRoles || !requiredRoles.some((role) => user.role === role)) {
       throw new ForbiddenException(
         'You do not have permission to access this resource',
       );

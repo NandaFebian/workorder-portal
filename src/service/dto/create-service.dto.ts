@@ -41,6 +41,10 @@ class WorkOrderConfigDto {
   @IsNotEmpty()
   positionId: string;
 
+  @IsString()
+  @IsOptional()
+  configId?: string;
+
   @IsMongoId({ message: 'workOrderFormId must be a valid MongoDB ObjectId' })
   @IsNotEmpty({ message: 'workOrderFormId is required' })
   workOrderFormId?: string;

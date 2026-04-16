@@ -27,6 +27,9 @@ const ServiceRequestConfigSchema =
 @Schema()
 class WorkOrderConfig {
   _id?: MongooseSchema.Types.ObjectId;
+  @Prop({ type: String, default: null })
+  configId: string | null;
+
   @Prop({
     type: MongooseSchema.Types.ObjectId,
     ref: 'Position',

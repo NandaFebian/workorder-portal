@@ -18,11 +18,11 @@ export class WorkOrder {
   @Prop({ type: String, default: null })
   batchId: string | null;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
-  createdBy: MongooseSchema.Types.ObjectId;
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', default: null })
+  createdBy: MongooseSchema.Types.ObjectId | null;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, default: null })
-  configId: MongooseSchema.Types.ObjectId | null;
+  @Prop({ type: String, default: null })
+  configId: string | null;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Service', required: true })
   serviceId: MongooseSchema.Types.ObjectId;

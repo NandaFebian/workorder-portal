@@ -41,6 +41,10 @@ class UpdateWorkOrderConfigDto {
   @IsOptional()
   positionId?: string;
 
+  @IsString()
+  @IsOptional()
+  configId?: string;
+
   @IsMongoId()
   @IsOptional()
   workOrderFormId?: string;

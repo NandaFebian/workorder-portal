@@ -96,10 +96,19 @@ export class WorkOrderService {
 
     const query: any = { companyId: user.company._id, deletedAt: null };
 
-    if (filterDto.status) query.status = filterDto.status;
-    if (filterDto.assignedStaffId) {
-      query.assignedStaff = new Types.ObjectId(filterDto.assignedStaffId);
+    if (user.role === 'staff_company') {
+      if (filterDto.status && filterDto.status !== 'sent') {
+        return [];
+      }
+      query.assignedStaff = user._id;
+      query.status = 'sent';
+    } else {
+      if (filterDto.status) query.status = filterDto.status;
+      if (filterDto.assignedStaffId) {
+        query.assignedStaff = new Types.ObjectId(filterDto.assignedStaffId);
+      }
     }
+
     if (filterDto.startDate && filterDto.endDate) {
       query.createdAt = {
         $gte: new Date(filterDto.startDate),
@@ -123,7 +132,7 @@ export class WorkOrderService {
 
   async findAllAssigned(user: AuthenticatedUser): Promise<any[]> {
     const workOrders = await this.workOrderModel
-      .find({ assignedStaff: user._id, deletedAt: null })
+      .find({ assignedStaff: user._id, status: 'sent', deletedAt: null })
       .populate('serviceId', 'title description')
       .populate('positionId', '-__v')
       .sort({ createdAt: -1 })
@@ -217,8 +226,17 @@ export class WorkOrderService {
       }));
 
       // can_start ONLY if ALL siblings are approved
-      const allApproved = siblings.length > 0 && siblings.every(s => s.status === 'approved');
+      const allApproved = siblings.length > 0 && siblings.every(s => s.status === 'approved' || s.status === 'onprogress' || s.status === 'completed');
       meta.workOrderCapabilities.can_start = allApproved;
+    }
+
+    // canRecreate logic
+    meta.canRecreate = false;
+    if (wo.configId) {
+      const history = await this.workOrderModel.find({ configId: wo.configId, deletedAt: null }).exec();
+      if (history.length > 0) {
+        meta.canRecreate = history.every(h => h.status === 'rejected');
+      }
     }
 
     try {
@@ -333,9 +351,20 @@ export class WorkOrderService {
     const wo = await this.workOrderModel.findOne({ _id: id, companyId: user.company._id, deletedAt: null });
     if (!wo) throw new NotFoundException('Work Order not found');
 
-    this._checkOwnership(wo, user);
+    // Requirement: User must be creator OR Owner
+    const isOwner = user.role === 'owner_company';
+    const isCreator = wo.createdBy && wo.createdBy.toString() === user._id.toString();
+    if (!isOwner && !isCreator) {
+      throw new ForbiddenException('Hanya Pembuat Perintah Kerja atau Owner yang dapat mengirim Perintah Kerja');
+    }
+
     if (wo.status !== 'drafted') {
       throw new UnprocessableEntityException('Status tidak memenuhi syarat');
+    }
+
+    // Validation: Minimum Staff
+    if (wo.assignedStaff.length < wo.minStaff) {
+      throw new BadRequestException(`Jumlah staf minimal belum terpenuhi (${wo.assignedStaff.length}/${wo.minStaff})`);
     }
 
     // Verify all submissions are present for the work order form
@@ -353,10 +382,26 @@ export class WorkOrderService {
       }
     }
 
-    wo.status = 'sent';
-    if (!wo.sentAt) wo.sentAt = new Date();
-    await wo.save();
-    return this.findOneInternal(id, user);
+    const now = new Date();
+    if (wo.workOrderApprovalAccessType === 'auto') {
+      wo.status = 'approved';
+      wo.approvedAt = now;
+      // Note: No sentAt if auto
+      await wo.save();
+
+      // Check if can start immediately (respecting siblings)
+      try {
+        return await this.start(id, user);
+      } catch (e) {
+        // If cannot start due to siblings, return the approved WO
+        return this.findOneInternal(id, user);
+      }
+    } else {
+      wo.status = 'sent';
+      if (!wo.sentAt) wo.sentAt = now;
+      await wo.save();
+      return this.findOneInternal(id, user);
+    }
   }
 
   async approve(id: string, user: AuthenticatedUser): Promise<any> {
@@ -655,9 +700,17 @@ export class WorkOrderService {
   }
 
   private _checkOwnership(wo: any, user: AuthenticatedUser) {
-    const isOwner = user.role === 'company_owner' || user.role === 'company_manager';
+    if (user.role === 'owner_company') return;
+
     const isCreator = wo.createdBy && wo.createdBy.toString() === user._id.toString();
-    if (!isOwner && !isCreator) {
+
+    if (user.role === 'manager_company') {
+      const isSystemGenerated = !wo.createdBy;
+      if (isSystemGenerated || isCreator) return;
+      throw new ForbiddenException('Manager hanya diizinkan untuk mengonfigurasi atau memodifikasi sebuah WO JIKA dibuat oleh sistem (null) ATAU manager tersebut adalah pembuatnya langsung.');
+    }
+
+    if (!isCreator) {
       throw new ForbiddenException('Hanya Pembuat Perintah Kerja yang dapat melakukan aksi ini');
     }
   }

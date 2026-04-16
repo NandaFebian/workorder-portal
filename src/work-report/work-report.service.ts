@@ -59,7 +59,7 @@ export class WorkReportService {
     if (wo && typeof wo === 'object' && wo._id) {
       const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
       const isAssigned = wo.assignedStaff && wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
-      if (!isPIC && !isAssigned && user.role !== 'company_owner' && user.role !== 'company_manager') {
+      if (!isPIC && !isAssigned && user.role !== 'owner_company' && user.role !== 'manager_company') {
          throw new ForbiddenException('Only assigned staff, PIC, or manager can access this report.');
       }
       report.workOrderId = wo._id;
@@ -126,7 +126,7 @@ export class WorkReportService {
     if (wo && typeof wo === 'object' && wo._id) {
       const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
       const isAssigned = wo.assignedStaff && wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
-      if (!isPIC && !isAssigned && user.role !== 'company_owner' && user.role !== 'company_manager') {
+      if (!isPIC && !isAssigned && user.role !== 'owner_company' && user.role !== 'manager_company') {
          throw new ForbiddenException('Only assigned staff, PIC, or manager can submit this report.');
       }
       workReport.workOrderId = wo._id;
@@ -187,7 +187,7 @@ export class WorkReportService {
     if (wo && typeof wo === 'object' && wo._id) {
       const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
       const isAssigned = wo.assignedStaff && wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
-      if (!isPIC && !isAssigned && user.role !== 'company_owner' && user.role !== 'company_manager') {
+      if (!isPIC && !isAssigned && user.role !== 'owner_company' && user.role !== 'manager_company') {
          throw new ForbiddenException('Only assigned staff, PIC, or manager can submit this report.');
       }
       workReport.workOrderId = wo._id;
@@ -221,15 +221,15 @@ export class WorkReportService {
     const report = await this.workReportModel.findOne({ _id: id, deletedAt: null }).populate('workOrderId').exec();
     if (!report) throw new NotFoundException('Work Report not found');
 
-    if (report.status !== 'onProgress' && report.status !== 'rejected') {
-      throw new BadRequestException('Only onProgress or rejected report can be sent');
+    if (report.status !== 'onProgress' && report.status !== 'drafted' && report.status !== 'rejected') {
+      throw new BadRequestException('Only onProgress, drafted, or rejected report can be sent');
     }
 
     const wo = report.workOrderId as any;
     if (wo && typeof wo === 'object' && wo._id) {
       const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
       const isAssigned = wo.assignedStaff && wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
-      if (!isPIC && !isAssigned && user.role !== 'company_owner' && user.role !== 'company_manager') {
+      if (!isPIC && !isAssigned && user.role !== 'owner_company' && user.role !== 'manager_company') {
          throw new ForbiddenException('Only assigned staff, PIC, or manager can send this report.');
       }
       report.workOrderId = wo._id;
@@ -254,13 +254,13 @@ export class WorkReportService {
     if (!report) throw new NotFoundException('Work Report not found');
 
     if (report.status !== 'submitted') {
-      throw new BadRequestException('Only submitted report can be approved');
+      throw new BadRequestException('Work Report status harus SUBMITTED sebelum dapat di-approve');
     }
 
     if (report.workReportApprovalAccessType === 'auto') {
       throw new BadRequestException('Report is set to auto approve, manual action not allowed');
     }
-    if (user.role !== 'company_owner' && user.role !== 'company_manager') {
+    if (user.role !== 'owner_company' && user.role !== 'manager_company') {
       throw new ForbiddenException('Only managers can approve this work report');
     }
 
@@ -283,7 +283,7 @@ export class WorkReportService {
     if (report.workReportApprovalAccessType === 'auto') {
       throw new BadRequestException('Report is set to auto approve, manual action not allowed');
     }
-    if (user.role !== 'company_owner' && user.role !== 'company_manager') {
+    if (user.role !== 'owner_company' && user.role !== 'manager_company') {
       throw new ForbiddenException('Only managers can reject this work report');
     }
 

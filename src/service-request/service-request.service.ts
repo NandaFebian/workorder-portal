@@ -297,8 +297,8 @@ export class ServiceRequestService {
       throw new ForbiddenException('Only the requester who made this SR can submit a review.');
     }
 
-    if (sr.serviceRequestStatus !== 'completed') {
-      throw new UnprocessableEntityException('Review can only be submitted when SR status is completed.');
+    if (sr.serviceRequestStatus !== 'completed' && sr.serviceRequestStatus !== 'closed') {
+      throw new UnprocessableEntityException('Review can only be submitted when SR status is completed or closed.');
     }
 
     if (!sr.reviewFormId) {
@@ -354,6 +354,9 @@ export class ServiceRequestService {
     sr.reviewSubmissionId = subDocId;
       
     if (sr.reviewNeed) {
+      sr.serviceRequestStatus = 'completed';
+      sr.completedAt = new Date();
+    } else {
       sr.serviceRequestStatus = 'closed';
       sr.closedAt = new Date();
     }
@@ -497,9 +500,14 @@ export class ServiceRequestService {
   async updateSRStatusSystemically(id: string, status: string): Promise<void> {
     const sr = await this.srModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!sr) return;
-    sr.serviceRequestStatus = status;
+    let targetStatus = status;
+    if (targetStatus === 'completed' && !sr.reviewNeed) {
+      targetStatus = 'closed';
+    }
+
+    sr.serviceRequestStatus = targetStatus;
     const now = new Date();
-    switch (status) {
+    switch (targetStatus) {
       case 'unprocessable':
         (sr as any).unprocessableAt = now;
         break;
@@ -514,6 +522,9 @@ export class ServiceRequestService {
         break;
       case 'completed':
         sr.completedAt = now;
+        break;
+      case 'closed':
+        sr.closedAt = now;
         break;
     }
     await sr.save();

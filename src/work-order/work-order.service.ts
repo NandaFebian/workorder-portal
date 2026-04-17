@@ -373,11 +373,13 @@ export class WorkOrderService {
     const wo = await this.workOrderModel.findOne({ _id: id, companyId: user.company._id, deletedAt: null });
     if (!wo) throw new NotFoundException('Work Order not found');
 
-    // Requirement: User must be creator OR Owner
+    // Requirement: User must be creator OR Owner OR Manager (for system-generated or self-created)
     const isOwner = user.role === 'owner_company';
     const isCreator = wo.createdBy && wo.createdBy.toString() === user._id.toString();
-    if (!isOwner && !isCreator) {
-      throw new ForbiddenException('Hanya Pembuat Perintah Kerja atau Owner yang dapat mengirim Perintah Kerja');
+    const isManager = user.role === 'manager_company' && (!wo.createdBy || isCreator);
+
+    if (!isOwner && !isCreator && !isManager) {
+      throw new ForbiddenException('Hanya Pembuat Perintah Kerja, Manager, atau Owner yang dapat mengirim Perintah Kerja');
     }
 
     if (wo.status !== 'drafted') {

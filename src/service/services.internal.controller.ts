@@ -130,7 +130,7 @@ export class ServicesController {
         return woRes.data;
       })
     );
-    return ResponseUtil.success('Work Orders created manually successfully', workOrders);
+    return ResponseUtil.success('Work Order created manually successfully', workOrders[0] || null);
   }
 
   @Put(':id')

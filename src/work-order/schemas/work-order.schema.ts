@@ -74,7 +74,7 @@ export class WorkOrder {
 
   @Prop({
     required: true,
-    enum: ['drafted', 'sent', 'approved', 'rejected', 'cancelled', 'onprogress', 'completed', 'failed'],
+    enum: ['drafted', 'sent', 'approved', 'rejected', 'cancelled', 'on_progress', 'completed', 'failed'],
     default: 'drafted',
   })
   status: string;

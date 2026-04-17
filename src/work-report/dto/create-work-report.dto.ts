@@ -19,7 +19,7 @@ export class CreateWorkReportDto {
   @IsOptional()
   reportFormId?: string;
 
-  @IsEnum(['drafted', 'onProgress', 'submitted', 'approved', 'rejected'])
+  @IsEnum(['drafted', 'on_progress', 'submitted', 'approved', 'rejected'])
   @IsOptional()
   status?: string;
 

@@ -111,11 +111,12 @@ export class WorkOrderService {
         return [];
       }
       query.assignedStaff = user._id;
-      query.status = { $in: ['sent', 'onprogress', 'completed', 'failed', 'approved', 'rejected', 'cancelled'] };
+      query.status = { $in: ['sent', 'on_progress', 'completed', 'failed', 'approved', 'rejected', 'cancelled'] };
     } else if (user.role === 'manager_company') {
+      const managerId = new Types.ObjectId(user._id.toString());
       query.$or = [
-        { createdBy: user._id },
-        { workOrderApprovalAccessType: 'auto' },
+        { createdBy: managerId },
+        { createdBy: null }, // System generated (Service Request flow)
       ];
       if (filterDto.status) query.status = filterDto.status;
       if (filterDto.assignedStaffId) {
@@ -246,7 +247,7 @@ export class WorkOrderService {
       }));
 
       // can_start ONLY if ALL siblings are approved
-      const allApproved = siblings.length > 0 && siblings.every(s => s.status === 'approved' || s.status === 'onprogress' || s.status === 'completed');
+      const allApproved = siblings.length > 0 && siblings.every(s => s.status === 'approved' || s.status === 'on_progress' || s.status === 'completed');
       meta.workOrderCapabilities.can_start = allApproved;
     }
 
@@ -299,7 +300,7 @@ export class WorkOrderService {
       case 'rejected':
         if (!wo.rejectedAt) wo.rejectedAt = now;
         break;
-      case 'onprogress':
+      case 'on_progress':
         if (!wo.startedAt) wo.startedAt = now;
         break;
       case 'completed':
@@ -537,19 +538,19 @@ export class WorkOrderService {
 
     if (wo.serviceRequestId) {
       const siblings = await this.workOrderModel.find({ serviceRequestId: wo.serviceRequestId, deletedAt: null });
-      const allApproved = siblings.length > 0 && siblings.every(s => s.status === 'approved' || s.status === 'onprogress' || s.status === 'completed');
+      const allApproved = siblings.length > 0 && siblings.every(s => s.status === 'approved' || s.status === 'on_progress' || s.status === 'completed');
       if (!allApproved) {
         throw new UnprocessableEntityException('All sibling WOs must be approved before any can start');
       }
     }
 
-    wo.status = 'onprogress';
+    wo.status = 'on_progress';
     wo.startedAt = new Date();
     await wo.save();
 
     const report = await this.workReportService.findOneQuietlyByWorkOrderId((wo as any)._id.toString());
     if (report && report.status === 'drafted') {
-      await this.workReportService.update((report as any)._id.toString(), { status: 'onProgress', startedAt: new Date() } as any);
+      await this.workReportService.update((report as any)._id.toString(), { status: 'on_progress', startedAt: new Date() } as any);
     }
 
     if (wo.serviceRequestId) {
@@ -635,7 +636,7 @@ export class WorkOrderService {
       }
     }
 
-    let srStatus = 'onprogress';
+    let srStatus = 'on_progress';
     if (allTerminated) {
       if (allCompleted) {
         srStatus = 'completed';
@@ -646,7 +647,7 @@ export class WorkOrderService {
       }
     }
 
-    if (srStatus !== 'onprogress') {
+    if (srStatus !== 'on_progress') {
       await this.serviceRequestService.updateSRStatusSystemically(srId, srStatus);
     }
   }
@@ -755,11 +756,19 @@ export class WorkOrderService {
       return;
     }
     const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
-    if (!wo.staffPIC) {
-      throw new ForbiddenException('Staff PIC belum ditentukan');
-    }
-    if (!isPIC) {
-      throw new ForbiddenException('Hanya Staff PIC yang dapat melakukan aksi ini');
+    const isAssigned = wo.assignedStaff && wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
+    
+    // If PIC is set, only PIC can approve. If NO PIC is set, any assigned staff can approve.
+    const staffCanVerify = wo.staffPIC ? isPIC : isAssigned;
+
+    if (!staffCanVerify) {
+      if (wo.staffPIC) {
+        throw new ForbiddenException('Hanya Staff PIC yang dapat melakukan aksi ini');
+      } else if (wo.assignedStaff.length > 0) {
+        throw new ForbiddenException('Hanya Staff yang ditugaskan yang dapat melakukan aksi ini');
+      } else {
+        throw new ForbiddenException('Staff PIC atau Staff belum ditentukan');
+      }
     }
   }
 

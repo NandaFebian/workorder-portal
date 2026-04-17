@@ -226,8 +226,8 @@ export class WorkReportService {
     const report = await this.workReportModel.findOne({ _id: id, deletedAt: null }).populate('workOrderId').exec();
     if (!report) throw new NotFoundException('Work Report not found');
 
-    if (report.status !== 'onProgress' && report.status !== 'drafted' && report.status !== 'rejected') {
-      throw new BadRequestException('Only onProgress, drafted, or rejected report can be sent');
+    if (report.status !== 'on_progress' && report.status !== 'drafted' && report.status !== 'rejected') {
+      throw new BadRequestException('Only on_progress, drafted, or rejected report can be sent');
     }
 
     const wo = report.workOrderId as any;

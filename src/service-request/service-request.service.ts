@@ -276,7 +276,7 @@ export class ServiceRequestService {
       );
 
       // Update sr status to workOrderCreated
-      sr.serviceRequestStatus = 'workOrderCreated';
+      sr.serviceRequestStatus = 'work_order_created';
       (sr as any).workOrderCreatedAt = new Date();
       await sr.save();
     }
@@ -511,8 +511,8 @@ export class ServiceRequestService {
       case 'unprocessable':
         (sr as any).unprocessableAt = now;
         break;
-      case 'onprogress':
-        (sr as any).onprogressAt = now;
+      case 'on_progress':
+        (sr as any).onProgressAt = now;
         break;
       case 'partial_completed':
         (sr as any).partialCompletedAt = now;
@@ -614,7 +614,7 @@ export class ServiceRequestService {
       );
 
       // Update sr status to workOrderCreated
-      sr.serviceRequestStatus = 'workOrderCreated';
+      sr.serviceRequestStatus = 'work_order_created';
       sr.workOrderCreatedAt = now;
       await sr.save();
 

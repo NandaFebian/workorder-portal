@@ -226,6 +226,10 @@ export class WorkOrderService {
       workOrderSiblings: [],
     };
 
+    const isApproved = wo.status === 'approved';
+    const isOnProgress = wo.status === 'on_progress';
+    const isRejected = wo.status === 'rejected';
+
     let siblingsQuery: any = null;
     if (wo.batchId) {
       siblingsQuery = { batchId: wo.batchId };
@@ -246,23 +250,30 @@ export class WorkOrderService {
         position: s.positionId ? { _id: s.positionId._id, name: s.positionId.name } : null
       }));
 
-      // can_start ONLY if ALL siblings are approved
-      const allApproved = siblings.length > 0 && siblings.every(s => s.status === 'approved' || s.status === 'on_progress' || s.status === 'completed');
-      meta.workOrderCapabilities.can_start = allApproved;
+      // can_start ONLY if ALL siblings are ready AND current WO is approved
+      const allSiblingsReady = siblings.length > 0 && siblings.every(s => 
+        ['approved', 'on_progress', 'completed', 'failed'].includes(s.status)
+      );
+      meta.workOrderCapabilities.can_start = isApproved && allSiblingsReady;
+    } else {
+      // If no siblings, just check if current WO is approved
+      meta.workOrderCapabilities.can_start = isApproved;
     }
 
     if (wo.configId) {
       const history = await this.workOrderModel.find({ configId: wo.configId, deletedAt: null }).exec();
       if (history.length > 0) {
-        meta.workOrderCapabilities.can_recreate = history.every(h => h.status === 'rejected');
+        // can_recreate ONLY if current WO is rejected AND all historical versions are also rejected
+        meta.workOrderCapabilities.can_recreate = isRejected && history.every(h => h.status === 'rejected');
       }
     }
 
     try {
       const report = await this.workReportService.findOneQuietlyByWorkOrderId((wo._id as any).toString());
       if (report && report.status === 'approved') {
-        meta.workOrderCapabilities.can_complete = true;
-        meta.workOrderCapabilities.can_fail = true;
+        // can_complete/fail ONLY if current WO is on_progress AND report is approved
+        meta.workOrderCapabilities.can_complete = isOnProgress;
+        meta.workOrderCapabilities.can_fail = isOnProgress;
       }
     } catch {
       // ignore

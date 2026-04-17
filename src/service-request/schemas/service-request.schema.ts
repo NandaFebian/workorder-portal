@@ -76,6 +76,18 @@ export class ServiceRequest {
   workOrderCreatedAt: Date | null;
 
   @Prop({ type: Date, default: null })
+  onProgressAt: Date | null;
+
+  @Prop({ type: Date, default: null })
+  unprocessableAt: Date | null;
+
+  @Prop({ type: Date, default: null })
+  partialCompletedAt: Date | null;
+
+  @Prop({ type: Date, default: null })
+  failedAt: Date | null;
+
+  @Prop({ type: Date, default: null })
   completedAt: Date | null;
 
   @Prop({ type: Date, default: null })

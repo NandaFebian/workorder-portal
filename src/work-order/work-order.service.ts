@@ -554,7 +554,7 @@ export class WorkOrderService {
     }
 
     if (wo.serviceRequestId) {
-      await this.serviceRequestService.updateSRStatusSystemically(wo.serviceRequestId.toString(), 'onprogress');
+      await this.serviceRequestService.updateSRStatusSystemically(wo.serviceRequestId.toString(), 'on_progress');
     }
 
     return this.findOneInternal(id, user);
@@ -565,7 +565,7 @@ export class WorkOrderService {
     if (!wo) throw new NotFoundException('Work Order not found');
 
     this._checkOwnership(wo, user);
-    if (wo.status !== 'onprogress') throw new UnprocessableEntityException('Status tidak memenuhi syarat');
+    if (wo.status !== 'on_progress') throw new UnprocessableEntityException('Status tidak memenuhi syarat');
 
     const report = await this.workReportService.findOneQuietlyByWorkOrderId(id);
     if (!report || report.status !== 'approved') {
@@ -592,7 +592,7 @@ export class WorkOrderService {
     if (!wo) throw new NotFoundException('Work Order not found');
 
     this._checkOwnership(wo, user);
-    if (wo.status !== 'onprogress') throw new UnprocessableEntityException('Status tidak memenuhi syarat');
+    if (wo.status !== 'on_progress') throw new UnprocessableEntityException('Status tidak memenuhi syarat');
 
     const report = await this.workReportService.findOneQuietlyByWorkOrderId(id);
     if (!report || report.status !== 'approved') {

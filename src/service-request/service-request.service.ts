@@ -275,7 +275,7 @@ export class ServiceRequestService {
         })
       );
 
-      // Update sr status to workOrderCreated
+      // Update sr status to work_order_created
       sr.serviceRequestStatus = 'work_order_created';
       (sr as any).workOrderCreatedAt = new Date();
       await sr.save();
@@ -509,16 +509,16 @@ export class ServiceRequestService {
     const now = new Date();
     switch (targetStatus) {
       case 'unprocessable':
-        (sr as any).unprocessableAt = now;
+        sr.unprocessableAt = now;
         break;
       case 'on_progress':
-        (sr as any).onProgressAt = now;
+        sr.onProgressAt = now;
         break;
       case 'partial_completed':
-        (sr as any).partialCompletedAt = now;
+        sr.partialCompletedAt = now;
         break;
       case 'failed':
-        (sr as any).failedAt = now;
+        sr.failedAt = now;
         break;
       case 'completed':
         sr.completedAt = now;
@@ -613,7 +613,7 @@ export class ServiceRequestService {
         })
       );
 
-      // Update sr status to workOrderCreated
+      // Update sr status to work_order_created
       sr.serviceRequestStatus = 'work_order_created';
       sr.workOrderCreatedAt = now;
       await sr.save();

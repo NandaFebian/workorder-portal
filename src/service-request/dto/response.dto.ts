@@ -26,6 +26,10 @@ export class ProviderServiceRequestResponseDto {
   rejectedAt: Date | null;
   cancelledAt: Date | null;
   workOrderCreatedAt: Date | null;
+  onProgressAt: Date | null;
+  unprocessableAt: Date | null;
+  partialCompletedAt: Date | null;
+  failedAt: Date | null;
   completedAt: Date | null;
   closedAt: Date | null;
 }
@@ -47,6 +51,10 @@ export class RequesterServiceRequestResponseDto {
   rejectedAt: Date | null;
   cancelledAt: Date | null;
   workOrderCreatedAt: Date | null;
+  onProgressAt: Date | null;
+  unprocessableAt: Date | null;
+  partialCompletedAt: Date | null;
+  failedAt: Date | null;
   completedAt: Date | null;
   closedAt: Date | null;
 }

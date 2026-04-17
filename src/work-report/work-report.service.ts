@@ -36,7 +36,10 @@ export class WorkReportService {
 
   async findOne(id: string): Promise<any> {
     if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Invalid ID');
-    const report = await this.workReportModel.findOne({ _id: id, deletedAt: null }).exec();
+    const report = await this.workReportModel
+      .findOne({ _id: id, deletedAt: null })
+      .populate('approvedBy', 'name email role')
+      .exec();
     if (!report) throw new NotFoundException('Work Report not found');
     return this._hydrateReport(report, null);
   }
@@ -52,6 +55,7 @@ export class WorkReportService {
     const report = await this.workReportModel
       .findOne({ workOrderId: new Types.ObjectId(workOrderId), deletedAt: null })
       .populate('workOrderId')
+      .populate('approvedBy', 'name email role')
       .exec();
 
     if (!report) throw new NotFoundException('Work Report not found');
@@ -98,7 +102,7 @@ export class WorkReportService {
 
     return {
       ...base,
-      reportForm,
+      reportFormDetail: reportForm,
       submissions,
     };
   }

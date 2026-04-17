@@ -124,7 +124,7 @@ export class WorkOrderInternalController {
 
   @Patch(':id/sent')
   @HttpCode(HttpStatus.OK)
-  @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
   async markAsSent(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const result = await this.workOrderService.markAsSent(id, user);
     return ResponseUtil.success('Work Order marked as sent', result.data, result.meta);
@@ -146,7 +146,7 @@ export class WorkOrderInternalController {
 
   @Post(':id/recreate')
   @HttpCode(HttpStatus.CREATED)
-  @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
   async recreate(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const result = await this.workOrderService.recreate(id, user);
     return ResponseUtil.success('Work Order recreated', result.data, result.meta);
@@ -154,7 +154,7 @@ export class WorkOrderInternalController {
 
   @Patch(':id/cancel')
   @HttpCode(HttpStatus.OK)
-  @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
   async cancel(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const result = await this.workOrderService.cancel(id, user);
     return ResponseUtil.success('Work Order cancelled', result.data, result.meta);
@@ -169,7 +169,7 @@ export class WorkOrderInternalController {
 
   @Patch(':id/complete')
   @HttpCode(HttpStatus.OK)
-  @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
   async complete(
     @Param('id') id: string,
     @Body('issue') issue: string,
@@ -181,7 +181,7 @@ export class WorkOrderInternalController {
 
   @Patch(':id/fail')
   @HttpCode(HttpStatus.OK)
-  @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
   async fail(
     @Param('id') id: string,
     @Body('issue') issue: string,

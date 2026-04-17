@@ -111,7 +111,16 @@ export class WorkOrderService {
         return [];
       }
       query.assignedStaff = user._id;
-      query.status = { $in: ['sent', 'onprogress', 'completed', 'failed', 'approved', 'rejected', 'cancelled', 'failed'] };
+      query.status = { $in: ['sent', 'onprogress', 'completed', 'failed', 'approved', 'rejected', 'cancelled'] };
+    } else if (user.role === 'manager_company') {
+      query.$or = [
+        { createdBy: user._id },
+        { workOrderApprovalAccessType: 'auto' },
+      ];
+      if (filterDto.status) query.status = filterDto.status;
+      if (filterDto.assignedStaffId) {
+        query.assignedStaff = new Types.ObjectId(filterDto.assignedStaffId);
+      }
     } else {
       if (filterDto.status) query.status = filterDto.status;
       if (filterDto.assignedStaffId) {
@@ -320,14 +329,18 @@ export class WorkOrderService {
 
     const errors: string[] = [];
 
-    if (assignStaffDto.staff_pic) {
-      const picUser = await (this as any).usersService.findOneByEmail(assignStaffDto.staff_pic);
-      if (!picUser) {
-        errors.push(`PIC Staff with email ${assignStaffDto.staff_pic} not found`);
-      } else if (picUser.companyId && picUser.companyId.toString() !== user.company._id.toString()) {
-        errors.push(`PIC Staff with email ${assignStaffDto.staff_pic} does not belong to your company`);
+    if (assignStaffDto.staff_pic !== undefined) {
+      if (!assignStaffDto.staff_pic || assignStaffDto.staff_pic === '') {
+        wo.staffPIC = null;
       } else {
-        wo.staffPIC = picUser._id as any;
+        const picUser = await (this as any).usersService.findOneByEmail(assignStaffDto.staff_pic);
+        if (!picUser) {
+          errors.push(`PIC Staff with email ${assignStaffDto.staff_pic} not found`);
+        } else if (picUser.companyId && picUser.companyId.toString() !== user.company._id.toString()) {
+          errors.push(`PIC Staff with email ${assignStaffDto.staff_pic} does not belong to your company`);
+        } else {
+          wo.staffPIC = picUser._id as any;
+        }
       }
     }
 
@@ -511,7 +524,17 @@ export class WorkOrderService {
 
     if (wo.status !== 'approved') throw new UnprocessableEntityException('Status tidak memenuhi syarat');
 
-    this._checkOnlyStaffPic(wo, user);
+    const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
+    const isAssigned = wo.assignedStaff && wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
+    const isOwner = user.role === 'owner_company';
+    const isCreator = wo.createdBy && wo.createdBy.toString() === user._id.toString();
+    const isManager = user.role === 'manager_company' && (!wo.createdBy || isCreator);
+
+    const staffCanStart = wo.staffPIC ? isPIC : isAssigned;
+
+    if (!staffCanStart && !isOwner && !isCreator && !isManager) {
+      throw new ForbiddenException('Only the assigned PIC (or any assigned staff if no PIC is set), creator, or valid manager can start the work order.');
+    }
 
     if (wo.serviceRequestId) {
       const siblings = await this.workOrderModel.find({ serviceRequestId: wo.serviceRequestId, deletedAt: null });
@@ -723,6 +746,12 @@ export class WorkOrderService {
   }
 
   private _checkOnlyStaffPic(wo: any, user: AuthenticatedUser) {
+    if (user.role === 'owner_company') return;
+    const isCreator = wo.createdBy && wo.createdBy.toString() === user._id.toString();
+    if (isCreator) return;
+    const isManagerWithRights = user.role === 'manager_company' && (!wo.createdBy || isCreator);
+    if (isManagerWithRights) return;
+
     if (wo.workOrderApprovalAccessType !== 'staff_pic') {
       return;
     }

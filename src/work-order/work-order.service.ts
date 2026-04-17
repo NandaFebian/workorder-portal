@@ -528,14 +528,11 @@ export class WorkOrderService {
 
     const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
     const isAssigned = wo.assignedStaff && wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
-    const isOwner = user.role === 'owner_company';
-    const isCreator = wo.createdBy && wo.createdBy.toString() === user._id.toString();
-    const isManager = user.role === 'manager_company' && (!wo.createdBy || isCreator);
 
     const staffCanStart = wo.staffPIC ? isPIC : isAssigned;
 
-    if (!staffCanStart && !isOwner && !isCreator && !isManager) {
-      throw new ForbiddenException('Only the assigned PIC (or any assigned staff if no PIC is set), creator, or valid manager can start the work order.');
+    if (!staffCanStart) {
+      throw new ForbiddenException('Only the assigned PIC (or any assigned staff if no PIC is set) can start the work order.');
     }
 
     if (wo.serviceRequestId) {

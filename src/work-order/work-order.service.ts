@@ -306,12 +306,28 @@ export class WorkOrderService {
       meta.workOrderCapabilities.can_start = isApproved;
     }
 
-    if (wo.configId) {
-      const history = await this.workOrderModel.find({ configId: wo.configId, deletedAt: null }).exec();
+    const parentQuery = wo.serviceRequestId ? { serviceRequestId: wo.serviceRequestId } : (wo.batchId ? { batchId: wo.batchId } : null);
+    const taskId = wo.configId || (wo.positionId?.['_id'] ? wo.positionId['_id'].toString() : wo.positionId?.toString());
+
+    if (taskId && parentQuery) {
+      const history = await this.workOrderModel.find({
+        ...parentQuery,
+        $or: [
+          { configId: taskId },
+          { positionId: Types.ObjectId.isValid(taskId) ? new Types.ObjectId(taskId) : taskId }
+        ],
+        deletedAt: null,
+      }).sort({ createdAt: -1 }).exec();
+
       if (history.length > 0) {
-        // can_recreate ONLY if current WO is rejected AND all historical versions are also rejected
-        meta.workOrderCapabilities.can_recreate = isRejected && history.every(h => h.status === 'rejected');
+        const latest = history[0] as any;
+        const isLatest = latest._id.toString() === wo._id.toString();
+        // can_recreate if current WO is rejected AND it is the latest version for this task
+        meta.workOrderCapabilities.can_recreate = isRejected && isLatest;
       }
+    } else {
+      // Fallback: if no taskId or parent, just allow recreate if rejected
+      meta.workOrderCapabilities.can_recreate = isRejected;
     }
 
     try {

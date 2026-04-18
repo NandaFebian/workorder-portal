@@ -705,39 +705,52 @@ export class WorkOrderService {
   }
 
   private async _checkAndUpdateSRStatus(srId: string) {
-    const siblings = await this.workOrderModel.find({ serviceRequestId: new Types.ObjectId(srId), deletedAt: null });
-    if (!siblings.length) return;
+    const rawSiblings = await this.workOrderModel.find({
+      serviceRequestId: new Types.ObjectId(srId),
+      deletedAt: null,
+    });
+    if (!rawSiblings.length) return;
 
-    let allTerminated = true; // All are either completed or failed
-    let allCompleted = true;
-    let allFailed = true;
-
-    for (const sib of siblings) {
-      if (sib.status !== 'completed' && sib.status !== 'failed') {
-        allTerminated = false;
-      }
-      if (sib.status !== 'completed') {
-        allCompleted = false;
-      }
-      if (sib.status !== 'failed') {
-        allFailed = false;
+    // Filter to latest version of each task (using configId or positionId as task identifier)
+    const latestMap = new Map();
+    for (const sib of rawSiblings) {
+      const taskId = sib.configId?.toString() || sib.positionId?.toString() || (sib as any)._id.toString();
+      if (!latestMap.has(taskId) || (sib as any).createdAt > latestMap.get(taskId).createdAt) {
+        latestMap.set(taskId, sib);
       }
     }
+    const siblings = Array.from(latestMap.values()) as any[];
+
+    // Check if all latest versions are in a terminal state
+    const terminalStatuses = ['completed', 'failed', 'cancelled'];
+    const allTerminal = siblings.every((s) => terminalStatuses.includes(s.status));
+
+    if (!allTerminal) {
+      // Still some WOs in progress or pending
+      return;
+    }
+
+    const allCancelled = siblings.every((s) => s.status === 'cancelled');
+    const allFailed = siblings.every((s) => s.status === 'failed');
+    const allCompleted = siblings.every((s) => s.status === 'completed');
+    const someFailed = siblings.some((s) => s.status === 'failed');
 
     let srStatus = 'on_progress';
-    if (allTerminated) {
-      if (allCompleted) {
-        srStatus = 'completed';
-      } else if (allFailed) {
-        srStatus = 'unprocessable'; // As requested: unprocessable if all WOs failed
-      } else {
-        srStatus = 'partial_completed';
-      }
+
+    if (allCancelled) {
+      srStatus = 'unprocessable';
+    } else if (allFailed) {
+      srStatus = 'unprocessable';
+    } else if (allCompleted) {
+      srStatus = 'completed';
+    } else if (someFailed) {
+      srStatus = 'partial_completed';
+    } else {
+      // Mixed case (e.g., some completed, some cancelled)
+      srStatus = 'partial_completed';
     }
 
-    if (srStatus !== 'on_progress') {
-      await this.serviceRequestService.updateSRStatusSystemically(srId, srStatus);
-    }
+    await this.serviceRequestService.updateSRStatusSystemically(srId, srStatus);
   }
 
   async createSubmissions(id: string, createSubmissionsDto: CreateSubmissionsDto, user: AuthenticatedUser): Promise<any> {

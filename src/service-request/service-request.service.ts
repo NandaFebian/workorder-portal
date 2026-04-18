@@ -151,33 +151,10 @@ export class ServiceRequestService {
       }
     }
 
-    // Strict schema & required fields validation
-    if (submission && submission.formId === intakeFormId?.toString()) {
-      const submissionData = submission.fieldsData || [];
-      const submittedOrders = submissionData.map(f => f.order);
-      const missingFields: Record<string, string>[] = [];
-      for (const tField of templateFields) {
-        if (tField.required && !submittedOrders.includes(tField.order)) {
-          missingFields.push({ [tField.label || 'unknown']: 'Missing required field' });
-        }
-      }
-      
-      if (missingFields.length > 0) {
-        throw new UnprocessableEntityException({
-          message: 'Validation failed',
-          errors: { field: missingFields },
-        });
-      }
+    // Use centralized validation helper (which now handles required fields)
+    if (intakeFormId) {
+      const submissionData = submission?.fieldsData || [];
       validateFormSubmission(templateFields, submissionData);
-    } else if (intakeFormId) {
-       // Check if there are any required fields in the template, if yes and no submission, throw error
-       const hasRequired = templateFields.some(f => f.required);
-       if (hasRequired) {
-          throw new UnprocessableEntityException({
-            message: 'Validation failed',
-            errors: { field: [{ '*' : 'Intake form submission is required.' }] },
-          });
-       }
     }
     
     const newSR = await this.srModel.create({
@@ -275,8 +252,7 @@ export class ServiceRequestService {
         })
       );
 
-      // Update sr status to work_order_created
-      sr.serviceRequestStatus = 'work_order_created';
+      // Update sr workOrderCreatedAt timestamp
       (sr as any).workOrderCreatedAt = new Date();
       await sr.save();
     }
@@ -323,20 +299,6 @@ export class ServiceRequestService {
     }
 
     const submissionData = submission.fieldsData || [];
-    const submittedOrders = submissionData.map(f => f.order);
-    const missingFields: Record<string, string>[] = [];
-    for (const tField of templateFields) {
-      if (tField.required && !submittedOrders.includes(tField.order)) {
-        missingFields.push({ [tField.label || 'unknown']: 'Missing required field' });
-      }
-    }
-
-    if (missingFields.length > 0) {
-      throw new UnprocessableEntityException({
-        message: 'Validation failed',
-        errors: { field: missingFields },
-      });
-    }
     validateFormSubmission(templateFields, submissionData);
       
     const subDocId = new Types.ObjectId();
@@ -613,8 +575,7 @@ export class ServiceRequestService {
         })
       );
 
-      // Update sr status to work_order_created
-      sr.serviceRequestStatus = 'work_order_created';
+      // Update sr workOrderCreatedAt timestamp
       sr.workOrderCreatedAt = now;
       await sr.save();
 

@@ -69,29 +69,59 @@ export function validateFormSubmission(
   submittedFields: Array<{ order: number; value: any }>,
 ): void {
   const errorsAcc: Record<string, string>[] = [];
+  const submittedOrders = submittedFields.map((f) => f.order);
 
+  // 1. Check for missing or empty required fields
+  for (const tField of templateFields) {
+    if (tField.required) {
+      const submission = submittedFields.find((f) => f.order === tField.order);
+      const isMissing = !submittedOrders.includes(tField.order);
+      const isEmpty =
+        submission &&
+        (submission.value === null ||
+          submission.value === undefined ||
+          submission.value === '' ||
+          (Array.isArray(submission.value) && submission.value.length === 0));
+
+      if (isMissing || isEmpty) {
+        errorsAcc.push({
+          [tField.label || 'unknown']: `Field "${tField.label}" is required`,
+        });
+      }
+    }
+  }
+
+  // 2. Validate values of submitted fields
   for (const submittedField of submittedFields) {
     const templateField = templateFields.find(
       (f) => f.order === submittedField.order,
     );
 
     if (!templateField) {
-      errorsAcc.push({ [`order_${submittedField.order}`]: `Field with order ${submittedField.order} not found in form template` });
+      errorsAcc.push({
+        [`order_${submittedField.order}`]: `Field with order ${submittedField.order} not found in form template`,
+      });
       continue;
     }
 
-    try {
-      // Validate the field value
-      validateFieldValue(
-        templateField,
-        submittedField.value,
-        submittedField.order,
-      );
-    } catch (e: any) {
-      if (e instanceof UnprocessableEntityException) {
-        errorsAcc.push({ [templateField.label || 'unknown']: e.message });
-      } else {
-        throw e;
+    // Only validate non-empty values (empty required fields are already handled above)
+    if (
+      submittedField.value !== null &&
+      submittedField.value !== undefined &&
+      submittedField.value !== ''
+    ) {
+      try {
+        validateFieldValue(
+          templateField,
+          submittedField.value,
+          submittedField.order,
+        );
+      } catch (e: any) {
+        if (e instanceof UnprocessableEntityException) {
+          errorsAcc.push({ [templateField.label || 'unknown']: e.message });
+        } else {
+          throw e;
+        }
       }
     }
   }

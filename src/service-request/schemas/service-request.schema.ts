@@ -34,7 +34,6 @@ export class ServiceRequest {
       'cancelled',
       'rejected',
       'approved',
-      'work_order_created',
       'unprocessable',
       'on_progress',
       'partial_completed',

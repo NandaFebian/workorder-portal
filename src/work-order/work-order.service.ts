@@ -136,7 +136,7 @@ export class WorkOrderService {
       };
     }
 
-    const workOrders = await this.workOrderModel
+    const workOrdersRaw = await this.workOrderModel
       .find(query)
       .populate('createdBy', 'name email role')
       .populate('approvedBy', 'name email role')
@@ -147,16 +147,50 @@ export class WorkOrderService {
       .sort({ createdAt: -1 })
       .exec();
 
+    const latestMap = new Map();
+    const workOrders: any[] = [];
+    for (const wo of workOrdersRaw) {
+      const parentId = wo.serviceRequestId?.toString() || wo.batchId?.toString() || '';
+      const taskId = wo.configId?.toString() || ((wo.positionId as any)?._id ? (wo.positionId as any)._id.toString() : wo.positionId?.toString());
+
+      if (!taskId) {
+        workOrders.push(wo);
+      } else {
+        const key = `${parentId}_${taskId}`;
+        if (!latestMap.has(key)) {
+          latestMap.set(key, wo);
+          workOrders.push(wo);
+        }
+      }
+    }
+
     return Promise.all(workOrders.map((doc) => this._hydrateOne(doc, false)));
   }
 
   async findAllAssigned(user: AuthenticatedUser): Promise<any[]> {
-    const workOrders = await this.workOrderModel
+    const workOrdersRaw = await this.workOrderModel
       .find({ assignedStaff: user._id, status: 'sent', deletedAt: null })
       .populate('serviceId', 'title description')
       .populate('positionId', '-__v')
       .sort({ createdAt: -1 })
       .exec();
+
+    const latestMap = new Map();
+    const workOrders: any[] = [];
+    for (const wo of workOrdersRaw) {
+      const parentId = wo.serviceRequestId?.toString() || wo.batchId?.toString() || '';
+      const taskId = wo.configId?.toString() || ((wo.positionId as any)?._id ? (wo.positionId as any)._id.toString() : wo.positionId?.toString());
+
+      if (!taskId) {
+        workOrders.push(wo);
+      } else {
+        const key = `${parentId}_${taskId}`;
+        if (!latestMap.has(key)) {
+          latestMap.set(key, wo);
+          workOrders.push(wo);
+        }
+      }
+    }
 
     return Promise.all(workOrders.map((doc) => this._hydrateOne(doc)));
   }
@@ -231,17 +265,29 @@ export class WorkOrderService {
     const isRejected = wo.status === 'rejected';
 
     let siblingsQuery: any = null;
-    if (wo.batchId) {
-      siblingsQuery = { batchId: wo.batchId };
-    } else if (wo.serviceRequestId) {
+    if (wo.serviceRequestId) {
       siblingsQuery = { serviceRequestId: wo.serviceRequestId };
+    } else if (wo.batchId) {
+      siblingsQuery = { batchId: wo.batchId };
     }
 
     if (siblingsQuery) {
-      const siblings = await this.workOrderModel.find(
+      const siblingsRaw = await this.workOrderModel.find(
         { ...siblingsQuery, deletedAt: null },
-        { _id: 1, code: 1, status: 1, positionId: 1 }
-      ).populate('positionId', 'name').exec();
+        { _id: 1, code: 1, status: 1, positionId: 1, configId: 1, createdAt: 1 }
+      ).populate('positionId', 'name').sort({ createdAt: -1 }).exec();
+
+      const latestSiblingsMap = new Map();
+      const siblings: any[] = [];
+      for (const s of siblingsRaw) {
+        const sid = s.configId?.toString() || ((s.positionId as any)?._id ? (s.positionId as any)._id.toString() : s.positionId?.toString());
+        if (!sid) {
+          siblings.push(s);
+        } else if (!latestSiblingsMap.has(sid)) {
+          latestSiblingsMap.set(sid, s);
+          siblings.push(s);
+        }
+      }
 
       meta.workOrderSiblings = siblings.map((s: any) => ({
         _id: s._id,
@@ -478,7 +524,8 @@ export class WorkOrderService {
     const newWo = new this.workOrderModel({
       code: `WO-${generateCode()}`,
       serviceRequestId: wo.serviceRequestId,
-      createdBy: user._id,
+      batchId: wo.batchId,
+      createdBy: wo.createdBy,
       serviceId: wo.serviceId,
       companyId: wo.companyId,
       positionId: wo.positionId,
@@ -548,8 +595,22 @@ export class WorkOrderService {
     }
 
     if (wo.serviceRequestId) {
-      const siblings = await this.workOrderModel.find({ serviceRequestId: wo.serviceRequestId, deletedAt: null });
-      const allApproved = siblings.length > 0 && siblings.every(s => s.status === 'approved' || s.status === 'on_progress' || s.status === 'completed');
+      const siblingsRaw = await this.workOrderModel.find({ serviceRequestId: wo.serviceRequestId, deletedAt: null }).sort({ createdAt: -1 });
+      const latestSiblingsMap = new Map();
+      const siblings: any[] = [];
+      for (const s of siblingsRaw) {
+        const taskId = s.configId?.toString() || s.positionId?.toString();
+        if (!taskId) {
+          siblings.push(s);
+        } else if (!latestSiblingsMap.has(taskId)) {
+          latestSiblingsMap.set(taskId, s);
+          siblings.push(s);
+        }
+      }
+
+      const allApproved = siblings.length > 0 && siblings.every(s => 
+        ['approved', 'on_progress', 'completed', 'failed'].includes(s.status)
+      );
       if (!allApproved) {
         throw new UnprocessableEntityException('All sibling WOs must be approved before any can start');
       }

@@ -388,6 +388,11 @@ export class WorkOrderService {
     }
 
     await wo.save();
+
+    if (wo.serviceRequestId) {
+      await this._checkAndUpdateSRStatus(wo.serviceRequestId.toString());
+    }
+
     return this.findOneInternal(id, user);
   }
 
@@ -589,7 +594,7 @@ export class WorkOrderService {
       );
 
       const srId = wo.serviceRequestId.toString();
-      await this.serviceRequestService.updateSRStatusSystemically(srId, 'unprocessable');
+      await this._checkAndUpdateSRStatus(srId);
     }
 
     return this.findOneInternal(id, user);
@@ -815,6 +820,11 @@ export class WorkOrderService {
     const deletedAt = new Date();
     wo.deletedAt = deletedAt;
     await wo.save();
+
+    if (wo.serviceRequestId) {
+      await this._checkAndUpdateSRStatus(wo.serviceRequestId.toString());
+    }
+
     return { data: { ...woDetail.data, deletedAt }, meta: woDetail.meta };
   }
 

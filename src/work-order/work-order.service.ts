@@ -42,9 +42,11 @@ export class WorkOrderService {
   ) { }
 
   async createInternal(data: any): Promise<WorkOrderDocument> {
+    const now = new Date();
     const newWorkOrder = new this.workOrderModel({
       ...data,
       code: `WO-${generateCode()}`,
+      draftedAt: (data.status === 'drafted' || !data.status) ? now : undefined,
     });
     const saved = await newWorkOrder.save();
 
@@ -69,6 +71,7 @@ export class WorkOrderService {
       companyId: user.company._id,
       createdBy: user._id,
       status: 'drafted',
+      draftedAt: new Date(),
     });
     const saved = await newWorkOrder.save();
 
@@ -498,7 +501,7 @@ export class WorkOrderService {
     if (wo.workOrderApprovalAccessType === 'auto') {
       wo.status = 'approved';
       wo.approvedAt = now;
-      // Note: No sentAt if auto
+      wo.sentAt = now;
       await wo.save();
       return this.findOneInternal(id, user);
     } else {

@@ -160,6 +160,9 @@ export class WorkReportService {
         submittedAt: new Date(),
       });
       await submission.save();
+
+      workReport.submittedAt = new Date();
+      await workReport.save();
     }
 
     return this.findByWorkOrderId(workOrderId, user);
@@ -216,6 +219,9 @@ export class WorkReportService {
         submittedAt: new Date(),
       });
       await submission.save();
+
+      workReport.submittedAt = new Date();
+      await workReport.save();
     }
 
     return this.findOne((workReport._id as any).toString());

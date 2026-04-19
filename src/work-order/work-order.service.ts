@@ -256,6 +256,7 @@ export class WorkOrderService {
         can_complete: false,
         can_fail: false,
         can_recreate: false,
+        can_cancel: false,
       },
       workOrderSiblings: [],
     };
@@ -301,9 +302,17 @@ export class WorkOrderService {
         ['approved', 'on_progress', 'completed', 'failed'].includes(s.status)
       );
       meta.workOrderCapabilities.can_start = isApproved && allSiblingsReady;
+
+      // can_cancel only if no sibling is in progress
+      const isAnyOnProgress = siblings.some(s => s.status === 'on_progress');
+      const allowedCancelStatuses = ['drafted', 'approved', 'sent', 'rejected'];
+      meta.workOrderCapabilities.can_cancel = allowedCancelStatuses.includes(wo.status) && !isAnyOnProgress;
     } else {
       // If no siblings, just check if current WO is approved
       meta.workOrderCapabilities.can_start = isApproved;
+      
+      const allowedCancelStatuses = ['drafted', 'approved', 'sent', 'rejected'];
+      meta.workOrderCapabilities.can_cancel = allowedCancelStatuses.includes(wo.status);
     }
 
     const parentQuery = wo.serviceRequestId ? { serviceRequestId: wo.serviceRequestId } : (wo.batchId ? { batchId: wo.batchId } : null);
@@ -577,6 +586,19 @@ export class WorkOrderService {
     if (!wo) throw new NotFoundException('Work Order not found');
 
     this._checkOwnership(wo, user);
+
+    const siblingsQuery = wo.serviceRequestId ? { serviceRequestId: wo.serviceRequestId } : (wo.batchId ? { batchId: wo.batchId } : null);
+    if (siblingsQuery) {
+      const inProgressSibling = await this.workOrderModel.findOne({
+        ...siblingsQuery,
+        status: 'on_progress',
+        deletedAt: null,
+      });
+      if (inProgressSibling) {
+        throw new UnprocessableEntityException('Tidak dapat membatalkan karena terdapat tugas yang sedang dalam pengerjaan');
+      }
+    }
+
     const allowedCancelStatuses = ['drafted', 'approved', 'sent', 'rejected'];
     if (!allowedCancelStatuses.includes(wo.status)) {
       throw new UnprocessableEntityException('Status tidak memenuhi syarat');
@@ -589,7 +611,12 @@ export class WorkOrderService {
     // Cancel all siblings
     if (wo.serviceRequestId) {
       await this.workOrderModel.updateMany(
-        { serviceRequestId: wo.serviceRequestId, _id: { $ne: wo._id }, deletedAt: null },
+        {
+          serviceRequestId: wo.serviceRequestId,
+          _id: { $ne: wo._id },
+          deletedAt: null,
+          status: { $in: ['drafted', 'sent', 'approved', 'rejected'] }
+        },
         { $set: { status: 'cancelled', cancelledAt: new Date() } }
       );
 

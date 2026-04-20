@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Get,
   Body,
   UseGuards,
   HttpCode,
@@ -20,6 +21,12 @@ import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interfa
 @Controller('notifications')
 export class NotificationsController {
   constructor(private readonly fcmService: FcmService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'Get notification inbox' })
+  async getInbox(@GetUser() user: AuthenticatedUser) {
+    return this.fcmService.getInbox(user._id.toString());
+  }
 
   @Post('fcm-token')
   @HttpCode(HttpStatus.OK)

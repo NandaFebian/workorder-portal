@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as admin from 'firebase-admin';
 import { User, UserDocument } from '../users/schemas/user.schema';
+import { Notification, NotificationDocument } from './schemas/notification.schema';
 
 @Injectable()
 export class FcmService {
@@ -11,6 +12,8 @@ export class FcmService {
   constructor(
     @InjectModel(User.name)
     private userModel: Model<UserDocument>,
+    @InjectModel(Notification.name)
+    private notificationModel: Model<NotificationDocument>,
   ) {
     this.initializeFirebase();
   }
@@ -185,6 +188,9 @@ export class FcmService {
     data?: { [key: string]: string },
   ): Promise<void> {
     try {
+      // Persist to inbox
+      await this.saveNotification(userId, title, body, data);
+
       const user = await this.userModel.findById(userId).select('fcmTokens').exec();
       if (!user || !user.fcmTokens || user.fcmTokens.length === 0) {
         this.logger.debug(`No FCM tokens found for user ${userId}`);
@@ -195,6 +201,44 @@ export class FcmService {
     } catch (error: any) {
       this.logger.error(`Error sending notification to user ${userId}: ${error.message}`);
     }
+  }
+
+  /**
+   * Save a notification to the database for the user's inbox
+   */
+  private async saveNotification(
+    userId: string,
+    title: string,
+    body: string,
+    data?: { [key: string]: string },
+  ): Promise<void> {
+    try {
+      await this.notificationModel.create({
+        userId,
+        title,
+        body,
+        data: data || {},
+        isRead: false,
+      });
+    } catch (error: any) {
+      this.logger.error(`Error saving notification to database: ${error.message}`);
+    }
+  }
+
+  async getInbox(userId: string): Promise<NotificationDocument[]> {
+    const notifications = await this.notificationModel
+      .find({ userId })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .exec();
+
+    // Mark unread as read for next time
+    this.notificationModel
+      .updateMany({ userId, isRead: false }, { $set: { isRead: true } })
+      .exec()
+      .catch((err) => this.logger.error(`Error updating read status: ${err.message}`));
+
+    return notifications;
   }
 
   /**

@@ -290,8 +290,8 @@ export class WorkReportService {
       for (const userId of targets) {
         await this.fcmService.sendToUser(
           userId,
-          'Work Report Approved',
-          `The report for Work Order ${wo.code} has been approved.`,
+          'Laporan Penugasan Disetujui',
+          `Laporan penugasan lapangan Anda untuk Work Order (${wo.code}) telah disetujui.`,
           { workOrderId: wo._id.toString(), status: 'approved' }
         );
       }
@@ -328,8 +328,8 @@ export class WorkReportService {
       for (const userId of targets) {
         await this.fcmService.sendToUser(
           userId,
-          'Work Report Rejected',
-          `The report for Work Order ${wo.code} has been rejected.`,
+          'Laporan Penugasan Ditolak',
+          `Laporan penugasan lapangan Anda untuk Work Order (${wo.code}) telah ditolak. Harap periksa kembali.`,
           { workOrderId: wo._id.toString(), status: 'rejected' }
         );
       }

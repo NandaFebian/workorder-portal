@@ -190,8 +190,8 @@ export class ServiceRequestService {
     // Notify requester about SR creation
     await this.fcmService.sendToUser(
       user._id.toString(),
-      'Service Request Created',
-      `Your request ${newSR.code} has been created and is pending review.`,
+      'Service Request Diterima',
+      `Pengajuan Anda (${newSR.code}) telah berhasil dibuat dan sedang menunggu peninjauan.`,
       { serviceRequestId: (newSR as any)._id.toString() }
     );
     
@@ -532,8 +532,8 @@ export class ServiceRequestService {
       const requesterId = sr.requestedBy._id ? sr.requestedBy._id.toString() : sr.requestedBy.toString();
       await this.fcmService.sendToUser(
         requesterId,
-        'Service Request Status Updated',
-        `Your request ${sr.code} status has been updated to ${status}.`,
+        'Status Service Request Diperbarui',
+        `Status pengajuan Anda (${sr.code}) telah diperbarui menjadi: ${status}.`,
         { serviceRequestId: id, status }
       );
     }

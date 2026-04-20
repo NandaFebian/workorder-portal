@@ -411,8 +411,8 @@ export class WorkOrderService {
     if (wo.createdBy) {
       await this.fcmService.sendToUser(
         wo.createdBy.toString(),
-        'Work Order Status Updated',
-        `Work Order ${wo.code} status has been updated to ${updateStatusDto.status}.`,
+        'Status Work Order Diperbarui',
+        `Status Work Order (${wo.code}) Anda telah diperbarui menjadi: ${updateStatusDto.status}.`,
         { workOrderId: id, status: updateStatusDto.status }
       );
     }
@@ -472,8 +472,8 @@ export class WorkOrderService {
     if (assignStaffDto.staff_pic && wo.staffPIC) {
       await this.fcmService.sendToUser(
         wo.staffPIC.toString(),
-        'Assigned as PIC',
-        `You have been assigned as PIC for Work Order ${wo.code}.`,
+        'Ditugaskan sebagai PIC',
+        `Anda telah ditunjuk sebagai Penanggung Jawab (PIC) untuk Work Order: ${wo.code}.`,
         { workOrderId: id }
       );
     }
@@ -483,8 +483,8 @@ export class WorkOrderService {
       for (const staffId of wo.assignedStaff) {
         await this.fcmService.sendToUser(
           staffId.toString(),
-          'New Work Order Assignment',
-          `You have been assigned to Work Order ${wo.code}.`,
+          'Penugasan Work Order Baru',
+          `Anda telah ditugaskan sebagai staf pelaksana untuk Work Order: ${wo.code}.`,
           { workOrderId: id }
         );
       }

@@ -1,11 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import * as admin from 'firebase-admin';
+import { User, UserDocument } from '../users/schemas/user.schema';
 
 @Injectable()
 export class FcmService {
   private readonly logger = new Logger(FcmService.name);
 
-  constructor() {
+  constructor(
+    @InjectModel(User.name)
+    private userModel: Model<UserDocument>,
+  ) {
     this.initializeFirebase();
   }
 
@@ -117,14 +123,71 @@ export class FcmService {
   }
 
   /**
-   * Handle invalid or expired tokens
+   * Register a new FCM token for a user
    */
-  private handleInvalidTokens(response: any, failedTokens?: string[]) {
-    // Optional placeholder
-    // Implementation to remove unregistered or invalid tokens from database
+  async registerToken(userId: string, token: string): Promise<void> {
+    try {
+      await this.userModel.updateOne(
+        { _id: userId },
+        { $addToSet: { fcmTokens: token } },
+      );
+      this.logger.log(`Registered FCM token for user ${userId}`);
+    } catch (error: any) {
+      this.logger.error(`Error registering FCM token: ${error.message}`);
+    }
+  }
+
+  /**
+   * Remove an FCM token from all user profiles
+   */
+  async removeToken(token: string): Promise<void> {
+    try {
+      await this.userModel.updateMany(
+        { fcmTokens: token },
+        { $pull: { fcmTokens: token } },
+      );
+      this.logger.log(`Removed FCM token: ${token}`);
+    } catch (error: any) {
+      this.logger.error(`Error removing FCM token: ${error.message}`);
+    }
+  }
+
+  /**
+   * Send a notification to all devices of a user
+   */
+  async sendToUser(
+    userId: string,
+    title: string,
+    body: string,
+    data?: { [key: string]: string },
+  ): Promise<void> {
+    try {
+      const user = await this.userModel.findById(userId).select('fcmTokens').exec();
+      if (!user || !user.fcmTokens || user.fcmTokens.length === 0) {
+        this.logger.debug(`No FCM tokens found for user ${userId}`);
+        return;
+      }
+
+      await this.sendToMultipleDevices(user.fcmTokens, title, body, data);
+    } catch (error: any) {
+      this.logger.error(`Error sending notification to user ${userId}: ${error.message}`);
+    }
+  }
+
+  /**
+   * Handle invalid or expired tokens by removing them from the database
+   */
+  private async handleInvalidTokens(response: any, failedTokens?: string[]) {
     if (failedTokens && failedTokens.length > 0) {
-      this.logger.debug(`Invalid tokens to handle: ${failedTokens.join(', ')}`);
-      // TODO: Remove these failed tokens from the corresponding user profiles or token tables.
+      this.logger.warn(`Found invalid FCM tokens. Removing from database: ${failedTokens.join(', ')}`);
+      try {
+        await this.userModel.updateMany(
+          { fcmTokens: { $in: failedTokens } },
+          { $pull: { fcmTokens: { $in: failedTokens } } },
+        );
+      } catch (error: any) {
+        this.logger.error(`Error cleaning up invalid tokens: ${error.message}`);
+      }
     }
   }
 }

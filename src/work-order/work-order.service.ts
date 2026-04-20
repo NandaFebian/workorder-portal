@@ -26,6 +26,7 @@ import { WorkOrderResource } from './resources/work-order.resource';
 import { SubmissionType } from '../common/enums/submission-type.enum';
 import { validateFormSubmission } from 'src/form/helpers/form-validation.helper';
 import { ServiceRequestService } from 'src/service-request/service-request.service';
+import { FcmService } from 'src/fcm/fcm.service';
 
 @Injectable()
 export class WorkOrderService {
@@ -39,6 +40,7 @@ export class WorkOrderService {
     private readonly workReportService: WorkReportService,
     @Inject(forwardRef(() => ServiceRequestService))
     private readonly serviceRequestService: ServiceRequestService,
+    private readonly fcmService: FcmService,
   ) { }
 
   async createInternal(data: any): Promise<WorkOrderDocument> {
@@ -405,6 +407,16 @@ export class WorkOrderService {
       await this._checkAndUpdateSRStatus(wo.serviceRequestId.toString());
     }
 
+    // Notify requester/creator about the status update
+    if (wo.createdBy) {
+      await this.fcmService.sendToUser(
+        wo.createdBy.toString(),
+        'Work Order Status Updated',
+        `Work Order ${wo.code} status has been updated to ${updateStatusDto.status}.`,
+        { workOrderId: id, status: updateStatusDto.status }
+      );
+    }
+
     return this.findOneInternal(id, user);
   }
 
@@ -455,6 +467,29 @@ export class WorkOrderService {
     if (errors.length > 0) throw new UnprocessableEntityException(errors.join(', '));
 
     await wo.save();
+
+    // Notify new PIC
+    if (assignStaffDto.staff_pic && wo.staffPIC) {
+      await this.fcmService.sendToUser(
+        wo.staffPIC.toString(),
+        'Assigned as PIC',
+        `You have been assigned as PIC for Work Order ${wo.code}.`,
+        { workOrderId: id }
+      );
+    }
+
+    // Notify assigned staff
+    if (assignStaffDto.assign_staffs && wo.assignedStaff.length > 0) {
+      for (const staffId of wo.assignedStaff) {
+        await this.fcmService.sendToUser(
+          staffId.toString(),
+          'New Work Order Assignment',
+          `You have been assigned to Work Order ${wo.code}.`,
+          { workOrderId: id }
+        );
+      }
+    }
+
     return this.findOneInternal(id, user);
   }
 

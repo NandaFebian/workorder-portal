@@ -12,6 +12,7 @@ import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interf
 import { FormsService } from 'src/form/form.service';
 import { SubmissionType } from '../common/enums/submission-type.enum';
 import { validateFormSubmission } from 'src/form/helpers/form-validation.helper';
+import { FcmService } from 'src/fcm/fcm.service';
 
 @Injectable()
 export class WorkReportService {
@@ -19,8 +20,9 @@ export class WorkReportService {
     @InjectModel(WorkReport.name)
     private workReportModel: Model<WorkReportDocument>,
     @InjectModel(FormSubmission.name)
-    private formSubmissionModel: Model<FormSubmissionDocument>,
+    private readonly formSubmissionModel: Model<FormSubmissionDocument>,
     private readonly formsService: FormsService,
+    private readonly fcmService: FcmService,
   ) {}
 
   async create(createDto: CreateWorkReportDto): Promise<WorkReportDocument> {
@@ -279,6 +281,22 @@ export class WorkReportService {
     report.approvedAt = new Date();
     report.approvedBy = user._id as any;
     await report.save();
+
+    // Identify who to notify (PIC of the WO)
+    const reportFull = await this.workReportModel.findById(id).populate('workOrderId').exec();
+    const wo = reportFull?.workOrderId as any;
+    if (wo && (wo.staffPIC || (wo.assignedStaff && wo.assignedStaff.length > 0))) {
+      const targets = wo.staffPIC ? [wo.staffPIC.toString()] : wo.assignedStaff.map((s: any) => s.toString());
+      for (const userId of targets) {
+        await this.fcmService.sendToUser(
+          userId,
+          'Work Report Approved',
+          `The report for Work Order ${wo.code} has been approved.`,
+          { workOrderId: wo._id.toString(), status: 'approved' }
+        );
+      }
+    }
+
     return this.findOne(id);
   }
 
@@ -301,6 +319,22 @@ export class WorkReportService {
     report.status = 'rejected';
     report.rejectedAt = new Date();
     await report.save();
+
+    // Identify who to notify (PIC of the WO)
+    const reportFull = await this.workReportModel.findById(id).populate('workOrderId').exec();
+    const wo = reportFull?.workOrderId as any;
+    if (wo && (wo.staffPIC || (wo.assignedStaff && wo.assignedStaff.length > 0))) {
+      const targets = wo.staffPIC ? [wo.staffPIC.toString()] : wo.assignedStaff.map((s: any) => s.toString());
+      for (const userId of targets) {
+        await this.fcmService.sendToUser(
+          userId,
+          'Work Report Rejected',
+          `The report for Work Order ${wo.code} has been rejected.`,
+          { workOrderId: wo._id.toString(), status: 'rejected' }
+        );
+      }
+    }
+
     return this.findOne(id);
   }
 

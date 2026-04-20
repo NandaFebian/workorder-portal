@@ -187,28 +187,13 @@ export class ServiceRequestService {
       await newSR.save();
     }
     
-    // --- Example FCM Usage: Send Notification ---
-    // In a real scenario, you retrieve tokens for the staff of the company receiving this SR
-    // const providerTokens = ['token1', 'token2']; // e.g., await userModel.findTokensByCompany(service.companyId);
-    // if (providerTokens.length) {
-    //   await this.fcmService.sendToMultipleDevices(
-    //     providerTokens,
-    //     'New Service Request Received',
-    //     `SR ${newSR.code} has been submitted for service ${service.title}.`,
-    //     { serviceRequestId: (newSR as any)._id.toString() },
-    //   );
-    // }
-    
-    // Fallback/Mock sending to a supposed requested user or device
-    if (user && user['fcmToken']) {
-      await this.fcmService.sendToDevice(
-        user['fcmToken'] as string,
-        'Service Request Created',
-        `Your request ${newSR.code} is created and pending review.`,
-        { serviceRequestId: (newSR as any)._id.toString() }
-      );
-    }
-    // ---------------------------------------------
+    // Notify requester about SR creation
+    await this.fcmService.sendToUser(
+      user._id.toString(),
+      'Service Request Created',
+      `Your request ${newSR.code} has been created and is pending review.`,
+      { serviceRequestId: (newSR as any)._id.toString() }
+    );
     
     if ((src.serviceRequestApprovalAccessType ?? 'auto') === 'auto') {
       await this._autoApproveServiceRequest(newSR, user, service);
@@ -541,6 +526,17 @@ export class ServiceRequestService {
 
     Object.assign(sr, updateData);
     await sr.save();
+
+    // Notify requester about the status update
+    if (sr.requestedBy) {
+      const requesterId = sr.requestedBy._id ? sr.requestedBy._id.toString() : sr.requestedBy.toString();
+      await this.fcmService.sendToUser(
+        requesterId,
+        'Service Request Status Updated',
+        `Your request ${sr.code} status has been updated to ${status}.`,
+        { serviceRequestId: id, status }
+      );
+    }
 
     if (status === 'approved') {
       const serviceData = await this.servicesInternalService.findByVersionId(

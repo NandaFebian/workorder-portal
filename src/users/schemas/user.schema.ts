@@ -29,6 +29,9 @@ export class User {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Position', default: null })
   positionId: MongooseSchema.Types.ObjectId;
 
+  @Prop({ type: [String], default: [] })
+  fcmTokens: string[];
+
   @Prop({ type: Date, default: null })
   deletedAt: Date;
 }

@@ -29,11 +29,16 @@ export class FcmService {
       }
 
       if (!admin.apps.length) {
+        // More robust private key cleaning
+        const cleanPrivateKey = privateKey.startsWith('"') && privateKey.endsWith('"')
+          ? privateKey.substring(1, privateKey.length - 1).replace(/\\n/g, '\n')
+          : privateKey.replace(/\\n/g, '\n');
+
         admin.initializeApp({
           credential: admin.credential.cert({
             projectId,
             clientEmail,
-            privateKey,
+            privateKey: cleanPrivateKey,
           }),
         });
         this.logger.log('Firebase Admin SDK initialized successfully.');
@@ -58,13 +63,21 @@ export class FcmService {
         return;
       }
 
+      // Ensure all data values are strings (FCM requirement)
+      const sanitizedData: { [key: string]: string } = {};
+      if (data) {
+        Object.entries(data).forEach(([key, value]) => {
+          sanitizedData[key] = value !== null && value !== undefined ? String(value) : '';
+        });
+      }
+
       const message: admin.messaging.Message = {
         notification: {
           title,
           body,
         },
-        data: data || {},
-        token,
+        data: sanitizedData,
+        token: token.trim(),
       };
 
       const response = await admin.messaging().send(message);
@@ -90,8 +103,18 @@ export class FcmService {
         return;
       }
 
-      if (!tokens || tokens.length === 0) {
+      // Filter out empty or invalid tokens
+      const validTokens = tokens.filter(t => t && typeof t === 'string' && t.trim() !== '');
+      if (validTokens.length === 0) {
         return;
+      }
+
+      // Ensure all data values are strings
+      const sanitizedData: { [key: string]: string } = {};
+      if (data) {
+        Object.entries(data).forEach(([key, value]) => {
+          sanitizedData[key] = value !== null && value !== undefined ? String(value) : '';
+        });
       }
 
       const message: admin.messaging.MulticastMessage = {
@@ -99,8 +122,8 @@ export class FcmService {
           title,
           body,
         },
-        data: data || {},
-        tokens,
+        data: sanitizedData,
+        tokens: validTokens.map(t => t.trim()),
       };
 
       const response = await admin.messaging().sendEachForMulticast(message);

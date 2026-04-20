@@ -195,3 +195,7 @@ For instance, if `workOrderId` is present, redirect to the Work Order detail pag
 3.  **Token Rotation**: Always call `getToken` on app startup to ensure you have the latest token, as FCM may rotate them.
 4.  **Backend Cleanup**: The backend automatically removes tokens that FCM reports as expired or invalid.
 5.  **Permission Revocation**: Handle cases where a user provides permission then later revokes it via browser settings.
+6.  **🚫 Error 400 Invalid Argument**: This is almost always caused by:
+    - Sending the **VAPID Public Key** instead of the actual **Registration Token**.
+    - Sending `data` fields that are not strings (managed automatically by the backend now, but good to know).
+    - Mismatched Firebase Projects between frontend and backend.

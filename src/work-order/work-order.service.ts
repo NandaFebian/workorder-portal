@@ -152,77 +152,25 @@ export class WorkOrderService {
       .sort({ createdAt: -1 })
       .exec();
 
-    const latestMap = new Map();
-    const workOrders: any[] = [];
-    for (const wo of workOrdersRaw) {
-      const parentId = wo.serviceRequestId?.toString() || wo.batchId?.toString() || '';
-      const taskId = wo.configId?.toString() || ((wo.positionId as any)?._id ? (wo.positionId as any)._id.toString() : wo.positionId?.toString());
-
-      if (!taskId) {
-        workOrders.push(wo);
-      } else {
-        const key = `${parentId}_${taskId}`;
-        if (!latestMap.has(key)) {
-          latestMap.set(key, wo);
-          workOrders.push(wo);
-        }
-      }
-    }
-
-    return Promise.all(workOrders.map((doc) => this._hydrateOne(doc, false)));
-  }
-
-  async findAllAssigned(user: AuthenticatedUser): Promise<any[]> {
-    const workOrdersRaw = await this.workOrderModel
-      .find({ assignedStaff: user._id, status: 'sent', deletedAt: null })
-      .populate('serviceId', 'title description')
-      .populate('positionId', '-__v')
-      .sort({ createdAt: -1 })
-      .exec();
-
-    const latestMap = new Map();
-    const workOrders: any[] = [];
-    for (const wo of workOrdersRaw) {
-      const parentId = wo.serviceRequestId?.toString() || wo.batchId?.toString() || '';
-      const taskId = wo.configId?.toString() || ((wo.positionId as any)?._id ? (wo.positionId as any)._id.toString() : wo.positionId?.toString());
-
-      if (!taskId) {
-        workOrders.push(wo);
-      } else {
-        const key = `${parentId}_${taskId}`;
-        if (!latestMap.has(key)) {
-          latestMap.set(key, wo);
-          workOrders.push(wo);
-        }
-      }
-    }
-
-    return Promise.all(workOrders.map((doc) => this._hydrateOne(doc)));
+    return Promise.all(workOrdersRaw.map(wo => this._hydrateOne(wo)));
   }
 
   async findOneInternal(id: string, user: AuthenticatedUser): Promise<any> {
+    if (!user.company?._id) throw new ForbiddenException('User company information is missing');
     if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid Work Order ID');
 
+    const query: any = { _id: id, companyId: user.company._id, deletedAt: null };
+    if (user.role === 'staff_company') {
+      query.assignedStaff = user._id;
+    }
+
     const wo = await this.workOrderModel
-      .findOne({ _id: id, companyId: user.company!._id, deletedAt: null })
+      .findOne(query)
       .populate('createdBy', 'name email role')
       .populate('approvedBy', 'name email role')
       .populate('staffPIC', 'name email role')
       .populate('assignedStaff', 'name email role')
       .populate('serviceId', 'companyId title description accessType isActive')
-      .populate('positionId', '-__v')
-      .exec();
-
-    if (!wo) throw new NotFoundException('Work Order not found');
-    return this._hydrateOne(wo);
-  }
-
-  async findOneAssigned(id: string, user: AuthenticatedUser): Promise<any> {
-    if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid Work Order ID');
-
-    const wo = await this.workOrderModel
-      .findOne({ _id: id, assignedStaff: user._id, deletedAt: null })
-      .populate('serviceId', 'title description')
       .populate('positionId', '-__v')
       .exec();
 
@@ -284,34 +232,43 @@ export class WorkOrderService {
       ).populate('positionId', 'name').sort({ createdAt: -1 }).exec();
 
       const latestSiblingsMap = new Map();
-      const siblings: any[] = [];
+      const siblingsForMeta: any[] = [];
+      const siblingsForLogic: any[] = [];
       for (const s of siblingsRaw) {
         const sid = s.configId?.toString() || ((s.positionId as any)?._id ? (s.positionId as any)._id.toString() : s.positionId?.toString());
         if (!sid) {
-          siblings.push(s);
-        } else if (!latestSiblingsMap.has(sid)) {
-          latestSiblingsMap.set(sid, s);
-          siblings.push(s);
+          siblingsForMeta.push(s);
+          siblingsForLogic.push(s);
+        } else {
+          const isLatest = !latestSiblingsMap.has(sid);
+          if (isLatest) {
+            latestSiblingsMap.set(sid, s);
+            siblingsForLogic.push(s);
+          }
+          // meta.workOrderSiblings includes latest version + all rejected versions
+          if (isLatest || s.status === 'rejected') {
+            siblingsForMeta.push(s);
+          }
         }
       }
 
-      meta.workOrderSiblings = siblings.map((s: any) => ({
+      meta.workOrderSiblings = siblingsForMeta.map((s: any) => ({
         _id: s._id,
         code: s.code,
         status: s.status,
         position: s.positionId ? { _id: s.positionId._id, name: s.positionId.name } : null
       }));
 
-      // can_start ONLY if ALL siblings are ready AND current WO is approved
-      const allSiblingsReady = siblings.length > 0 && siblings.every(s => 
+      // can_start ONLY if ALL relevant siblings (latest versions) are ready AND current WO is approved
+      const allSiblingsReady = siblingsForLogic.length > 0 && siblingsForLogic.every(s => 
         ['approved', 'on_progress', 'completed', 'failed'].includes(s.status)
       );
       meta.workOrderCapabilities.can_start = isApproved && allSiblingsReady;
 
-      // can_cancel only if no sibling is in progress
-      const isAnyOnProgress = siblings.some(s => s.status === 'on_progress');
+      // can_cancel only if no relevant sibling is active (on_progress, completed, failed)
+      const isActiveSibling = siblingsForLogic.some(s => ['on_progress', 'completed', 'failed'].includes(s.status));
       const allowedCancelStatuses = ['drafted', 'approved', 'sent', 'rejected'];
-      meta.workOrderCapabilities.can_cancel = allowedCancelStatuses.includes(wo.status) && !isAnyOnProgress;
+      meta.workOrderCapabilities.can_cancel = allowedCancelStatuses.includes(wo.status) && !isActiveSibling;
     } else {
       // If no siblings, just check if current WO is approved
       meta.workOrderCapabilities.can_start = isApproved;
@@ -431,16 +388,19 @@ export class WorkOrderService {
     if (!wo) throw new NotFoundException('Work Order not found');
 
     const errors: string[] = [];
+    const requiredPositionId = wo.positionId?.toString();
 
     if (assignStaffDto.staff_pic !== undefined) {
       if (!assignStaffDto.staff_pic || assignStaffDto.staff_pic === '') {
         wo.staffPIC = null;
       } else {
-        const picUser = await (this as any).usersService.findOneByEmail(assignStaffDto.staff_pic);
+        const picUser = await this.usersService.findOneByEmail(assignStaffDto.staff_pic);
         if (!picUser) {
           errors.push(`PIC Staff with email ${assignStaffDto.staff_pic} not found`);
         } else if (picUser.companyId && picUser.companyId.toString() !== user.company._id.toString()) {
           errors.push(`PIC Staff with email ${assignStaffDto.staff_pic} does not belong to your company`);
+        } else if (requiredPositionId && picUser.positionId?.toString() !== requiredPositionId) {
+          errors.push(`Staf PIC dengan email ${assignStaffDto.staff_pic} tidak memiliki posisi yang sesuai dengan kebutuhan Perintah Kerja`);
         } else {
           wo.staffPIC = picUser._id as any;
         }
@@ -450,13 +410,17 @@ export class WorkOrderService {
     if (assignStaffDto.assign_staffs && Array.isArray(assignStaffDto.assign_staffs)) {
       const staffIds: Types.ObjectId[] = [];
       for (const email of assignStaffDto.assign_staffs) {
-        const staff = await (this as any).usersService.findOneByEmail(email);
+        const staff = await this.usersService.findOneByEmail(email);
         if (!staff) {
           errors.push(`Staff with email ${email} not found`);
           continue;
         }
         if (staff.companyId && staff.companyId.toString() !== user.company._id.toString()) {
           errors.push(`Staff with email ${email} does not belong to your company`);
+          continue;
+        }
+        if (requiredPositionId && staff.positionId?.toString() !== requiredPositionId) {
+          errors.push(`Staf dengan email ${email} tidak memiliki posisi yang sesuai dengan kebutuhan Perintah Kerja`);
           continue;
         }
         staffIds.push(staff._id as Types.ObjectId);
@@ -515,6 +479,10 @@ export class WorkOrderService {
     // Validation: Minimum Staff
     if (wo.assignedStaff.length < wo.minStaff) {
       throw new BadRequestException(`Jumlah staf minimal belum terpenuhi (${wo.assignedStaff.length}/${wo.minStaff})`);
+    }
+
+    if (wo.workOrderApprovalAccessType === 'staff_pic' && !wo.staffPIC) {
+      throw new BadRequestException('Staff PIC harus ditentukan jika metode persetujuan adalah Staff PIC');
     }
 
     // Verify all submissions are present for the work order form
@@ -625,15 +593,14 @@ export class WorkOrderService {
 
     this._checkOwnership(wo, user);
 
-    const siblingsQuery = wo.serviceRequestId ? { serviceRequestId: wo.serviceRequestId } : (wo.batchId ? { batchId: wo.batchId } : null);
     if (siblingsQuery) {
-      const inProgressSibling = await this.workOrderModel.findOne({
+      const activeSibling = await this.workOrderModel.findOne({
         ...siblingsQuery,
-        status: 'on_progress',
+        status: { $in: ['on_progress', 'completed', 'failed'] },
         deletedAt: null,
       });
-      if (inProgressSibling) {
-        throw new UnprocessableEntityException('Tidak dapat membatalkan karena terdapat tugas yang sedang dalam pengerjaan');
+      if (activeSibling) {
+        throw new UnprocessableEntityException('Tidak dapat membatalkan karena terdapat tugas yang sedang dalam pengerjaan atau telah selesai');
       }
     }
 
@@ -928,23 +895,23 @@ export class WorkOrderService {
     const isManagerWithRights = user.role === 'manager_company' && (!wo.createdBy || isCreator);
     if (isManagerWithRights) return;
 
-    if (wo.workOrderApprovalAccessType !== 'staff_pic') {
+    if (wo.workOrderApprovalAccessType === 'staff_pic') {
+      const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
+      if (!wo.staffPIC) {
+        throw new ForbiddenException('Staff PIC belum ditentukan untuk metode persetujuan Staff PIC');
+      }
+      if (!isPIC) {
+        throw new ForbiddenException('Hanya Staff PIC yang dapat melakukan aksi ini');
+      }
       return;
     }
-    const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
-    const isAssigned = wo.assignedStaff && wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
-    
-    // If PIC is set, only PIC can approve. If NO PIC is set, any assigned staff can approve.
-    const staffCanVerify = wo.staffPIC ? isPIC : isAssigned;
 
-    if (!staffCanVerify) {
-      if (wo.staffPIC) {
-        throw new ForbiddenException('Hanya Staff PIC yang dapat melakukan aksi ini');
-      } else if (wo.assignedStaff.length > 0) {
-        throw new ForbiddenException('Hanya Staff yang ditugaskan yang dapat melakukan aksi ini');
-      } else {
-        throw new ForbiddenException('Staff PIC atau Staff belum ditentukan');
+    if (wo.workOrderApprovalAccessType === 'staff_any') {
+      const isAssigned = wo.assignedStaff && wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
+      if (!isAssigned) {
+        throw new ForbiddenException('Hanya Staf yang ditugaskan yang dapat melakukan aksi ini');
       }
+      return;
     }
   }
 

@@ -28,6 +28,8 @@ import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interf
 import { WorkReportService } from 'src/work-report/work-report.service';
 import { SrResponseUtil } from './utils/sr-response.util';
 import { FcmService } from 'src/fcm/fcm.service';
+import { UsersService } from 'src/users/users.service';
+import { AssignStaffDto } from 'src/work-order/dto/assign-staff.dto';
 
 @Injectable()
 export class ServiceRequestService {
@@ -45,6 +47,7 @@ export class ServiceRequestService {
     private readonly workReportService: WorkReportService,
     private readonly membershipService: MembershipService,
     private readonly fcmService: FcmService,
+    private readonly usersService: UsersService,
   ) {}
 
   async create(data: any): Promise<ServiceRequestDocument> {
@@ -319,6 +322,7 @@ export class ServiceRequestService {
       .populate('serviceId', 'companyId title description accessType isActive')
       .populate('requestedBy', 'name email role')
       .populate('approvedBy', 'name email role')
+      .populate('staffPIC', 'name email role')
       .sort({ createdAt: -1 })
       .exec();
 
@@ -334,6 +338,7 @@ export class ServiceRequestService {
       .populate('serviceId', 'companyId title description accessType isActive')
       .populate('requestedBy', 'name email role')
       .populate('approvedBy', 'name email role')
+      .populate('staffPIC', 'name email role')
       .exec();
 
     if (!sr) throw new NotFoundException('Service Request not found');
@@ -353,6 +358,7 @@ export class ServiceRequestService {
       .populate('serviceId', 'companyId title description accessType isActive')
       .populate('requestedBy', 'name email role')
       .populate('approvedBy', 'name email role')
+      .populate('staffPIC', 'name email role')
       .sort({ createdAt: -1 })
       .exec();
 
@@ -368,6 +374,7 @@ export class ServiceRequestService {
       .populate('serviceId', 'companyId title description accessType isActive')
       .populate('requestedBy', 'name email role')
       .populate('approvedBy', 'name email role')
+      .populate('staffPIC', 'name email role')
       .exec();
 
     if (!sr) throw new NotFoundException('Service Request not found');
@@ -498,7 +505,26 @@ export class ServiceRequestService {
       }
     } else if (status === 'approved' || status === 'rejected') {
       if (!user.company?._id || user.company._id.toString() !== sr.companyId.toString()) {
-         throw new ForbiddenException('Only the provider company staff can perform this action.');
+        throw new ForbiddenException('Only the provider company staff can perform this action.');
+      }
+
+      if (sr.serviceRequestApprovalAccessType === 'manager') {
+        if (user.role !== 'owner_company' && user.role !== 'manager_company') {
+          throw new ForbiddenException('Hanya Manager atau Owner yang dapat melakukan aksi ini');
+        }
+      } else if (sr.serviceRequestApprovalAccessType === 'staff_pic') {
+        if (!sr.staffPIC) {
+          throw new UnprocessableEntityException('Staff PIC harus ditentukan sebelum menyetujui Service Request ini');
+        }
+        const isPIC = sr.staffPIC.toString() === user._id.toString();
+        const isPrivileged = user.role === 'owner_company' || user.role === 'manager_company';
+        if (!isPIC && !isPrivileged) {
+          throw new ForbiddenException('Hanya Staff PIC yang ditunjuk yang dapat melakukan aksi ini');
+        }
+      } else if (sr.serviceRequestApprovalAccessType === 'staff_any') {
+        // Mode staff_any allow any staff from the provider company
+        // This is already covered by the companyId check at the top of this block,
+        // but we explicitly label it here for clarity.
       }
     }
 
@@ -611,5 +637,44 @@ export class ServiceRequestService {
     await sr.save();
 
     return { ...srDetail, deletedAt };
+  }
+
+  async assignStaff(id: string, assignStaffDto: AssignStaffDto, user: AuthenticatedUser): Promise<any> {
+    if (!user.company?._id) throw new ForbiddenException('User company information is missing');
+
+    const sr = await this.srModel.findOne({
+      _id: id,
+      companyId: user.company._id,
+      deletedAt: null,
+    });
+    if (!sr) throw new NotFoundException('Service Request not found');
+
+    if (assignStaffDto.staff_pic !== undefined) {
+      if (!assignStaffDto.staff_pic || assignStaffDto.staff_pic === '') {
+        sr.staffPIC = null;
+      } else {
+        const picUser = await this.usersService.findOneByEmail(assignStaffDto.staff_pic);
+        if (!picUser) {
+          throw new UnprocessableEntityException(`PIC Staff dengan email ${assignStaffDto.staff_pic} tidak ditemukan`);
+        } else if (picUser.companyId && picUser.companyId.toString() !== user.company._id.toString()) {
+          throw new UnprocessableEntityException(`PIC Staff dengan email ${assignStaffDto.staff_pic} bukan dari perusahaan Anda`);
+        } else {
+          sr.staffPIC = picUser._id as any;
+        }
+      }
+    }
+    await sr.save();
+
+    // Notify PIC
+    if (sr.staffPIC) {
+      await this.fcmService.sendToUser(
+        sr.staffPIC.toString(),
+        'Ditugaskan sebagai PIC Service Request',
+        `Anda telah ditunjuk sebagai PIC untuk Service Request: ${sr.code}.`,
+        { serviceRequestId: id }
+      );
+    }
+
+    return this.findOneInternal(id, user);
   }
 }

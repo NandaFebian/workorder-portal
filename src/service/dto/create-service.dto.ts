@@ -24,7 +24,7 @@ class ServiceRequestConfigDto {
   @IsMongoId({ message: 'reviewFormId must be a valid MongoDB ObjectId' })
   reviewFormId?: string | null;
 
-  @IsEnum(['auto', 'manager'])
+  @IsEnum(['auto', 'manager', 'staff_pic', 'staff_any'])
   @IsNotEmpty({ message: 'serviceRequestApprovalAccessType is required' })
   serviceRequestApprovalAccessType?: string;
 
@@ -53,7 +53,7 @@ class WorkOrderConfigDto {
   @IsNotEmpty({ message: 'workReportFormId is required' })
   workReportFormId?: string;
 
-  @IsEnum(['auto', 'staff_pic'])
+  @IsEnum(['auto', 'staff_pic', 'staff_any'])
   @IsNotEmpty({ message: 'workOrderApprovalAccessType is required' })
   workOrderApprovalAccessType?: string;
 

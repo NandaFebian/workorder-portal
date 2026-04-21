@@ -13,7 +13,7 @@ class ServiceRequestConfig {
 
   @Prop({
     type: String,
-    enum: ['auto', 'manager'],
+    enum: ['auto', 'manager', 'staff_pic', 'staff_any'],
     default: 'auto',
   })
   serviceRequestApprovalAccessType: string;
@@ -45,7 +45,7 @@ class WorkOrderConfig {
 
   @Prop({
     type: String,
-    enum: ['auto', 'staff_pic'],
+    enum: ['auto', 'staff_pic', 'staff_any'],
     default: 'auto',
   })
   workOrderApprovalAccessType: string;

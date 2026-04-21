@@ -67,6 +67,7 @@ export class SrResponseUtil {
       service: buildService(doc.serviceId),
       requestedBy: buildUser(doc.requestedBy),
       approvedBy: buildUser(doc.approvedBy),
+      staffPIC: buildUser(doc.staffPIC),
       intakeForm,
       reviewForm,
       intakeSubmission,

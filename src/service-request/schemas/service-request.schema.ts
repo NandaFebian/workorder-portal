@@ -18,8 +18,11 @@ export class ServiceRequest {
   companyId: Types.ObjectId;
 
   // Snapshot config values from Service at time of SR creation
-  @Prop({ type: String, enum: ['auto', 'manager'], default: 'auto' })
+  @Prop({ type: String, enum: ['auto', 'manager', 'staff_pic', 'staff_any'], default: 'auto' })
   serviceRequestApprovalAccessType: string;
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', default: null })
+  staffPIC: Types.ObjectId | null;
 
   @Prop({ type: Boolean, default: false })
   reviewNeed: boolean;

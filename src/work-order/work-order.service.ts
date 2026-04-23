@@ -201,7 +201,8 @@ export class WorkOrderService {
       .sort({ createdAt: -1 })
       .exec();
 
-    return Promise.all(workOrdersRaw.map(wo => this._hydrateOne(wo)));
+    const hydrated = await Promise.all(workOrdersRaw.map(wo => this._hydrateOne(wo)));
+    return hydrated.map(h => ({ ...h.data, meta: h.meta }));
   }
 
   async findOneInternal(id: string, user: AuthenticatedUser): Promise<any> {

@@ -1,5 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
+import { WorkReportStatus } from '../../common/enums/work-report-status.enum';
+import { ApprovalAccessType } from '../../common/enums/approval-access-type.enum';
 
 export type WorkReportDocument = WorkReport & Document;
 
@@ -24,17 +26,17 @@ export class WorkReport {
 
   @Prop({
     type: String,
-    enum: ['auto', 'manager'],
-    default: 'auto',
+    enum: [ApprovalAccessType.AUTO, ApprovalAccessType.MANAGER],
+    default: ApprovalAccessType.AUTO,
   })
-  workReportApprovalAccessType: string;
+  workReportApprovalAccessType: ApprovalAccessType;
 
   @Prop({
     required: true,
-    enum: ['drafted', 'on_progress', 'submitted', 'rejected', 'approved'],
-    default: 'drafted',
+    enum: Object.values(WorkReportStatus),
+    default: WorkReportStatus.DRAFTED,
   })
-  status: string;
+  status: WorkReportStatus;
 
   @Prop({ type: Date, default: null })
   startedAt: Date | null;

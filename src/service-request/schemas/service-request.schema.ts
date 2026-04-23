@@ -1,5 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema, Types } from 'mongoose';
+import { ServiceRequestStatus } from '../../common/enums/service-request-status.enum';
+import { ApprovalAccessType } from '../../common/enums/approval-access-type.enum';
 
 export type ServiceRequestDocument = ServiceRequest & Document;
 
@@ -18,8 +20,8 @@ export class ServiceRequest {
   companyId: Types.ObjectId;
 
   // Snapshot config values from Service at time of SR creation
-  @Prop({ type: String, enum: ['auto', 'manager', 'staff_pic', 'staff_any'], default: 'auto' })
-  serviceRequestApprovalAccessType: string;
+  @Prop({ type: String, enum: Object.values(ApprovalAccessType), default: ApprovalAccessType.AUTO })
+  serviceRequestApprovalAccessType: ApprovalAccessType;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', default: null })
   staffPIC: Types.ObjectId | null;
@@ -32,21 +34,10 @@ export class ServiceRequest {
 
   @Prop({
     required: true,
-    enum: [
-      'received',
-      'cancelled',
-      'rejected',
-      'approved',
-      'unprocessable',
-      'on_progress',
-      'partial_completed',
-      'failed',
-      'completed',
-      'closed'
-    ],
-    default: 'received',
+    enum: Object.values(ServiceRequestStatus),
+    default: ServiceRequestStatus.RECEIVED,
   })
-  serviceRequestStatus: string;
+  serviceRequestStatus: ServiceRequestStatus;
 
   // Store snapshot form IDs at time of request creation
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormTemplate', default: null })

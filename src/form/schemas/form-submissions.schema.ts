@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 import { SubmissionType } from '../../common/enums/submission-type.enum';
+import { FormSubmissionStatus } from '../../common/enums/form-submission-status.enum';
 
 @Schema({ _id: false })
 class FieldData {
@@ -51,8 +52,12 @@ export class FormSubmission {
   @Prop({ type: [FieldDataSchema] })
   fieldsData: FieldData[]; // Ubah dari answers ke fieldsData agar sesuai JSON
 
-  @Prop({ default: 'submitted' })
-  status: string;
+  @Prop({
+    type: String,
+    enum: Object.values(FormSubmissionStatus),
+    default: FormSubmissionStatus.SUBMITTED,
+  })
+  status: FormSubmissionStatus;
 
   @Prop({ type: Date, default: Date.now })
   submittedAt: Date;

@@ -13,6 +13,10 @@ import { FormsService } from 'src/form/form.service';
 import { SubmissionType } from '../common/enums/submission-type.enum';
 import { validateFormSubmission } from 'src/form/helpers/form-validation.helper';
 import { FcmService } from 'src/fcm/fcm.service';
+import { FormSubmissionStatus } from 'src/common/enums/form-submission-status.enum';
+import { Role } from 'src/common/enums/role.enum';
+import { WorkReportStatus } from 'src/common/enums/work-report-status.enum';
+import { ApprovalAccessType } from 'src/common/enums/approval-access-type.enum';
 
 @Injectable()
 export class WorkReportService {
@@ -30,8 +34,8 @@ export class WorkReportService {
       workOrderId: createDto.workOrderId,
       companyId: createDto.companyId,
       reportFormId: createDto.reportFormId ?? null,
-      status: createDto.status ?? 'drafted',
-      workReportApprovalAccessType: createDto.workReportApprovalAccessType ?? 'auto',
+      status: createDto.status ?? WorkReportStatus.DRAFTED,
+      workReportApprovalAccessType: createDto.workReportApprovalAccessType ?? ApprovalAccessType.AUTO,
     });
     return newReport.save();
   }
@@ -66,7 +70,7 @@ export class WorkReportService {
     if (wo && typeof wo === 'object' && wo._id) {
       const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
       const isAssigned = wo.assignedStaff && wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
-      if (!isPIC && !isAssigned && user.role !== 'owner_company' && user.role !== 'manager_company') {
+      if (!isPIC && !isAssigned && user.role !== Role.CompanyOwner && user.role !== Role.CompanyManager) {
          throw new ForbiddenException('Only assigned staff, PIC, or manager can access this report.');
       }
       report.workOrderId = wo._id;
@@ -133,7 +137,7 @@ export class WorkReportService {
     if (wo && typeof wo === 'object' && wo._id) {
       const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
       const isAssigned = wo.assignedStaff && wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
-      if (!isPIC && !isAssigned && user.role !== 'owner_company' && user.role !== 'manager_company') {
+      if (!isPIC && !isAssigned && user.role !== Role.CompanyOwner && user.role !== Role.CompanyManager) {
          throw new ForbiddenException('Only assigned staff, PIC, or manager can submit this report.');
       }
       workReport.workOrderId = wo._id;
@@ -158,7 +162,7 @@ export class WorkReportService {
         formId: new Types.ObjectId(formId),
         submittedBy: user._id,
         fieldsData,
-        status: 'submitted',
+        status: FormSubmissionStatus.SUBMITTED,
         submittedAt: new Date(),
       });
       await submission.save();
@@ -197,7 +201,7 @@ export class WorkReportService {
     if (wo && typeof wo === 'object' && wo._id) {
       const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
       const isAssigned = wo.assignedStaff && wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
-      if (!isPIC && !isAssigned && user.role !== 'owner_company' && user.role !== 'manager_company') {
+      if (!isPIC && !isAssigned && user.role !== Role.CompanyOwner && user.role !== Role.CompanyManager) {
          throw new ForbiddenException('Only assigned staff, PIC, or manager can submit this report.');
       }
       workReport.workOrderId = wo._id;
@@ -217,7 +221,7 @@ export class WorkReportService {
         formId: new Types.ObjectId(formId),
         submittedBy: user._id,
         fieldsData,
-        status: 'submitted',
+        status: FormSubmissionStatus.SUBMITTED,
         submittedAt: new Date(),
       });
       await submission.save();
@@ -234,7 +238,7 @@ export class WorkReportService {
     const report = await this.workReportModel.findOne({ _id: id, deletedAt: null }).populate('workOrderId').exec();
     if (!report) throw new NotFoundException('Work Report not found');
 
-    if (report.status !== 'on_progress' && report.status !== 'drafted' && report.status !== 'rejected') {
+    if (report.status !== WorkReportStatus.ON_PROGRESS && report.status !== WorkReportStatus.DRAFTED && report.status !== WorkReportStatus.REJECTED) {
       throw new BadRequestException('Only on_progress, drafted, or rejected report can be sent');
     }
 
@@ -242,19 +246,19 @@ export class WorkReportService {
     if (wo && typeof wo === 'object' && wo._id) {
       const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
       const isAssigned = wo.assignedStaff && wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
-      if (!isPIC && !isAssigned && user.role !== 'owner_company' && user.role !== 'manager_company') {
+      if (!isPIC && !isAssigned && user.role !== Role.CompanyOwner && user.role !== Role.CompanyManager) {
          throw new ForbiddenException('Only assigned staff, PIC, or manager can send this report.');
       }
       report.workOrderId = wo._id;
     }
 
     report.submittedAt = new Date();
-    if (report.workReportApprovalAccessType === 'auto') {
-      report.status = 'approved';
+    if (report.workReportApprovalAccessType === ApprovalAccessType.AUTO) {
+      report.status = WorkReportStatus.APPROVED;
       report.approvedAt = new Date();
       report.approvedBy = user._id as any;
     } else {
-      report.status = 'submitted';
+      report.status = WorkReportStatus.SUBMITTED;
     }
     
     await report.save();
@@ -266,18 +270,18 @@ export class WorkReportService {
     const report = await this.workReportModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!report) throw new NotFoundException('Work Report not found');
 
-    if (report.status !== 'submitted') {
+    if (report.status !== WorkReportStatus.SUBMITTED) {
       throw new BadRequestException('Work Report status harus SUBMITTED sebelum dapat di-approve');
     }
 
-    if (report.workReportApprovalAccessType === 'auto') {
+    if (report.workReportApprovalAccessType === ApprovalAccessType.AUTO) {
       throw new BadRequestException('Report is set to auto approve, manual action not allowed');
     }
-    if (user.role !== 'owner_company' && user.role !== 'manager_company') {
+    if (user.role !== Role.CompanyOwner && user.role !== Role.CompanyManager) {
       throw new ForbiddenException('Only managers can approve this work report');
     }
 
-    report.status = 'approved';
+    report.status = WorkReportStatus.APPROVED;
     report.approvedAt = new Date();
     report.approvedBy = user._id as any;
     await report.save();
@@ -292,7 +296,7 @@ export class WorkReportService {
           userId,
           'Laporan Penugasan Disetujui',
           `Laporan penugasan lapangan Anda untuk Work Order (${wo.code}) telah disetujui.`,
-          { workOrderId: wo._id.toString(), status: 'approved' }
+          { workOrderId: wo._id.toString(), status: WorkReportStatus.APPROVED }
         );
       }
     }
@@ -305,18 +309,18 @@ export class WorkReportService {
     const report = await this.workReportModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!report) throw new NotFoundException('Work Report not found');
 
-    if (report.status !== 'submitted') {
+    if (report.status !== WorkReportStatus.SUBMITTED) {
       throw new BadRequestException('Only submitted report can be rejected');
     }
 
-    if (report.workReportApprovalAccessType === 'auto') {
+    if (report.workReportApprovalAccessType === ApprovalAccessType.AUTO) {
       throw new BadRequestException('Report is set to auto approve, manual action not allowed');
     }
-    if (user.role !== 'owner_company' && user.role !== 'manager_company') {
+    if (user.role !== Role.CompanyOwner && user.role !== Role.CompanyManager) {
       throw new ForbiddenException('Only managers can reject this work report');
     }
 
-    report.status = 'rejected';
+    report.status = WorkReportStatus.REJECTED;
     report.rejectedAt = new Date();
     await report.save();
 
@@ -330,7 +334,7 @@ export class WorkReportService {
           userId,
           'Laporan Penugasan Ditolak',
           `Laporan penugasan lapangan Anda untuk Work Order (${wo.code}) telah ditolak. Harap periksa kembali.`,
-          { workOrderId: wo._id.toString(), status: 'rejected' }
+          { workOrderId: wo._id.toString(), status: WorkReportStatus.REJECTED }
         );
       }
     }

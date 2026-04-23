@@ -24,14 +24,14 @@ export class WorkOrderStaffController {
   @Get()
   @HttpCode(HttpStatus.OK)
   async findAll(@GetUser() user: AuthenticatedUser) {
-    const data = await this.workOrderService.findAllAssigned(user);
+    const data = await this.workOrderService.findAllInternal(user, {});
     return ResponseUtil.success('Load data success', data);
   }
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   async findOne(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-    const result = await this.workOrderService.findOneAssigned(id, user);
+    const result = await this.workOrderService.findOneInternal(id, user);
     return ResponseUtil.success('Load data success', result.data, result.meta);
   }
 }

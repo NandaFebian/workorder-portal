@@ -14,6 +14,7 @@ import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { ResponseUtil } from 'src/common/utils/response.util';
+import { ServiceRequestStatus } from 'src/common/enums/service-request-status.enum';
 
 @Controller()
 @UseGuards(AuthGuard)
@@ -68,7 +69,7 @@ export class ServiceRequestPublicController {
   @Patch('service-requests/:id/cancel')
   @HttpCode(HttpStatus.OK)
   async cancelSr(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-    const data = await this.csrService.updateStatus(id, 'cancelled', user);
+    const data = await this.csrService.updateStatus(id, ServiceRequestStatus.CANCELLED, user);
     return ResponseUtil.success('Cancel SR success', data);
   }
 }

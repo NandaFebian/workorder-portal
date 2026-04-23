@@ -18,6 +18,7 @@ import { Role } from 'src/common/enums/role.enum';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { ResponseUtil } from 'src/common/utils/response.util';
+import { ServiceRequestStatus } from 'src/common/enums/service-request-status.enum';
 import { AssignStaffDto } from 'src/work-order/dto/assign-staff.dto';
 
 @Controller()
@@ -46,7 +47,7 @@ export class ServiceRequestInternalController {
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
   @HttpCode(HttpStatus.OK)
   async approve(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-    const data = await this.csrService.updateStatus(id, 'approved', user);
+    const data = await this.csrService.updateStatus(id, ServiceRequestStatus.APPROVED, user);
     return ResponseUtil.success('Request approved successfully', data);
   }
 
@@ -54,7 +55,7 @@ export class ServiceRequestInternalController {
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
   @HttpCode(HttpStatus.OK)
   async reject(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-    const data = await this.csrService.updateStatus(id, 'rejected', user);
+    const data = await this.csrService.updateStatus(id, ServiceRequestStatus.REJECTED, user);
     return ResponseUtil.success('Request rejected successfully', data);
   }
 

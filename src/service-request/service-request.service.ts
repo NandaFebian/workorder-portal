@@ -30,6 +30,13 @@ import { SrResponseUtil } from './utils/sr-response.util';
 import { FcmService } from 'src/fcm/fcm.service';
 import { UsersService } from 'src/users/users.service';
 import { AssignStaffDto } from 'src/work-order/dto/assign-staff.dto';
+import { Role } from 'src/common/enums/role.enum';
+import { ServiceRequestStatus } from 'src/common/enums/service-request-status.enum';
+import { FormSubmissionStatus } from 'src/common/enums/form-submission-status.enum';
+import { SubmissionType } from 'src/common/enums/submission-type.enum';
+import { ApprovalAccessType } from 'src/common/enums/approval-access-type.enum';
+import { WorkOrderStatus } from 'src/common/enums/work-order-status.enum';
+import { WorkReportStatus } from 'src/common/enums/work-report-status.enum';
 
 @Injectable()
 export class ServiceRequestService {
@@ -54,7 +61,7 @@ export class ServiceRequestService {
     const newRequest = new this.srModel({
       ...data,
       code: `SR-${generateCode()}`,
-      serviceRequestStatus: 'received',
+      serviceRequestStatus: ServiceRequestStatus.RECEIVED,
       receivedAt: new Date(),
     });
     return newRequest.save();
@@ -167,9 +174,9 @@ export class ServiceRequestService {
       companyId: service.companyId,
       intakeFormId,
       reviewFormId,
-      serviceRequestApprovalAccessType: src.serviceRequestApprovalAccessType ?? 'auto',
+      serviceRequestApprovalAccessType: src.serviceRequestApprovalAccessType ?? ApprovalAccessType.AUTO,
       reviewNeed: src.reviewNeed ?? false,
-      serviceRequestStatus: 'received',
+      serviceRequestStatus: ServiceRequestStatus.RECEIVED,
       receivedAt: new Date(),
     });
 
@@ -180,10 +187,10 @@ export class ServiceRequestService {
         _id: subDocId,
         ownerId: (newSR as any)._id,
         formId: new Types.ObjectId(submission.formId),
-        submissionType: 'intake',
+        submissionType: SubmissionType.Intake,
         submittedBy: new Types.ObjectId(user._id.toString()),
         fieldsData: submission.fieldsData,
-        status: 'submitted',
+        status: FormSubmissionStatus.SUBMITTED,
         submittedAt: new Date(),
       });
       newSR.intakeSubmissionId = subDocId;
@@ -198,7 +205,7 @@ export class ServiceRequestService {
       { serviceRequestId: (newSR as any)._id.toString() }
     );
     
-    if ((src.serviceRequestApprovalAccessType ?? 'auto') === 'auto') {
+    if ((src.serviceRequestApprovalAccessType ?? ApprovalAccessType.AUTO) === ApprovalAccessType.AUTO) {
       await this._autoApproveServiceRequest(newSR, user, service);
     }
     
@@ -207,7 +214,7 @@ export class ServiceRequestService {
 
   private async _autoApproveServiceRequest(sr: ServiceRequestDocument, user: AuthenticatedUser, service: any): Promise<void> {
     const now = new Date();
-    sr.serviceRequestStatus = 'approved';
+    sr.serviceRequestStatus = ServiceRequestStatus.APPROVED;
     (sr as any).approvedAt = now;
     await sr.save();
 
@@ -235,7 +242,7 @@ export class ServiceRequestService {
             minStaff: config.minStaff ?? 0,
             maxStaff: config.maxStaff ?? 1,
             createdBy: null,
-            status: 'drafted',
+            status: WorkOrderStatus.DRAFTED,
           });
         })
       );
@@ -261,7 +268,7 @@ export class ServiceRequestService {
       throw new ForbiddenException('Only the requester who made this SR can submit a review.');
     }
 
-    if (sr.serviceRequestStatus !== 'completed' && sr.serviceRequestStatus !== 'closed') {
+    if (sr.serviceRequestStatus !== ServiceRequestStatus.COMPLETED && sr.serviceRequestStatus !== ServiceRequestStatus.CLOSED) {
       throw new UnprocessableEntityException('Review can only be submitted when SR status is completed or closed.');
     }
 
@@ -294,20 +301,20 @@ export class ServiceRequestService {
       _id: subDocId,
       ownerId: (sr as any)._id,
       formId: sr.reviewFormId,
-      submissionType: 'review',
+      submissionType: SubmissionType.Review,
       submittedBy: new Types.ObjectId(user._id.toString()),
       fieldsData: submissionData,
-      status: 'submitted',
+      status: FormSubmissionStatus.SUBMITTED,
       submittedAt: new Date(),
     });
       
     sr.reviewSubmissionId = subDocId;
       
     if (sr.reviewNeed) {
-      sr.serviceRequestStatus = 'completed';
+      sr.serviceRequestStatus = ServiceRequestStatus.COMPLETED;
       sr.completedAt = new Date();
     } else {
-      sr.serviceRequestStatus = 'closed';
+      sr.serviceRequestStatus = ServiceRequestStatus.CLOSED;
       sr.closedAt = new Date();
     }
     await sr.save();
@@ -436,13 +443,13 @@ export class ServiceRequestService {
     // Find intake and review submissions (filter by submissionType to avoid cross-contamination)
     const intakeSubmission = doc.intakeFormId
       ? await this.submissionModel
-          .findOne({ ownerId: doc._id, formId: doc.intakeFormId, submissionType: 'intake' })
+          .findOne({ ownerId: doc._id, formId: doc.intakeFormId, submissionType: SubmissionType.Intake })
           .exec()
       : null;
 
     const reviewSubmission = doc.reviewFormId
       ? await this.submissionModel
-          .findOne({ ownerId: doc._id, formId: doc.reviewFormId, submissionType: 'review' })
+          .findOne({ ownerId: doc._id, formId: doc.reviewFormId, submissionType: SubmissionType.Review })
           .exec()
       : null;
 
@@ -451,33 +458,33 @@ export class ServiceRequestService {
       : SrResponseUtil.formatPublic(doc, intakeForm, reviewForm, intakeSubmission, reviewSubmission);
   }
 
-  async updateSRStatusSystemically(id: string, status: string): Promise<void> {
+  async updateSRStatusSystemically(id: string, status: ServiceRequestStatus): Promise<void> {
     const sr = await this.srModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!sr) return;
     let targetStatus = status;
-    if (targetStatus === 'completed' && !sr.reviewNeed) {
-      targetStatus = 'closed';
+    if (targetStatus === ServiceRequestStatus.COMPLETED && !sr.reviewNeed) {
+      targetStatus = ServiceRequestStatus.CLOSED;
     }
 
     sr.serviceRequestStatus = targetStatus;
     const now = new Date();
     switch (targetStatus) {
-      case 'unprocessable':
+      case ServiceRequestStatus.UNPROCESSABLE:
         sr.unprocessableAt = now;
         break;
-      case 'on_progress':
+      case ServiceRequestStatus.ON_PROGRESS:
         sr.onProgressAt = now;
         break;
-      case 'partial_completed':
+      case ServiceRequestStatus.PARTIAL_COMPLETED:
         sr.partialCompletedAt = now;
         break;
-      case 'failed':
+      case ServiceRequestStatus.FAILED:
         sr.failedAt = now;
         break;
-      case 'completed':
+      case ServiceRequestStatus.COMPLETED:
         sr.completedAt = now;
         break;
-      case 'closed':
+      case ServiceRequestStatus.CLOSED:
         sr.closedAt = now;
         break;
     }
@@ -486,7 +493,7 @@ export class ServiceRequestService {
 
   async updateStatus(
     id: string,
-    status: string,
+    status: ServiceRequestStatus,
     user: AuthenticatedUser,
   ): Promise<any> {
     if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
@@ -494,34 +501,34 @@ export class ServiceRequestService {
     const sr = await this.srModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!sr) throw new NotFoundException('Service Request not found');
 
-    if (sr.serviceRequestStatus !== 'received' && (status === 'cancelled' || status === 'approved' || status === 'rejected')) {
+    if (sr.serviceRequestStatus !== ServiceRequestStatus.RECEIVED && (status === ServiceRequestStatus.CANCELLED || status === ServiceRequestStatus.APPROVED || status === ServiceRequestStatus.REJECTED)) {
        throw new UnprocessableEntityException('This action can only be performed when SR status is received.');
     }
 
-    if (status === 'cancelled') {
+    if (status === ServiceRequestStatus.CANCELLED) {
       const requestedById = sr.requestedBy?._id ? sr.requestedBy._id.toString() : sr.requestedBy?.toString();
       if (requestedById !== user._id.toString()) {
         throw new ForbiddenException('Only the requester can cancel this Service Request.');
       }
-    } else if (status === 'approved' || status === 'rejected') {
+    } else if (status === ServiceRequestStatus.APPROVED || status === ServiceRequestStatus.REJECTED) {
       if (!user.company?._id || user.company._id.toString() !== sr.companyId.toString()) {
         throw new ForbiddenException('Only the provider company staff can perform this action.');
       }
 
-      if (sr.serviceRequestApprovalAccessType === 'manager') {
-        if (user.role !== 'owner_company' && user.role !== 'manager_company') {
+      if (sr.serviceRequestApprovalAccessType === ApprovalAccessType.MANAGER) {
+        if (user.role !== Role.CompanyOwner && user.role !== Role.CompanyManager) {
           throw new ForbiddenException('Hanya Manager atau Owner yang dapat melakukan aksi ini');
         }
-      } else if (sr.serviceRequestApprovalAccessType === 'staff_pic') {
+      } else if (sr.serviceRequestApprovalAccessType === ApprovalAccessType.STAFF_PIC) {
         if (!sr.staffPIC) {
           throw new UnprocessableEntityException('Staff PIC harus ditentukan sebelum menyetujui Service Request ini');
         }
         const isPIC = sr.staffPIC.toString() === user._id.toString();
-        const isPrivileged = user.role === 'owner_company' || user.role === 'manager_company';
+        const isPrivileged = user.role === Role.CompanyOwner || user.role === Role.CompanyManager;
         if (!isPIC && !isPrivileged) {
           throw new ForbiddenException('Hanya Staff PIC yang ditunjuk yang dapat melakukan aksi ini');
         }
-      } else if (sr.serviceRequestApprovalAccessType === 'staff_any') {
+      } else if (sr.serviceRequestApprovalAccessType === ApprovalAccessType.STAFF_ANY) {
         // Mode staff_any allow any staff from the provider company
         // This is already covered by the companyId check at the top of this block,
         // but we explicitly label it here for clarity.
@@ -532,20 +539,20 @@ export class ServiceRequestService {
     const updateData: any = { serviceRequestStatus: status };
 
     switch (status) {
-      case 'approved':
+      case ServiceRequestStatus.APPROVED:
         updateData.approvedBy = user._id;
         updateData.approvedAt = now;
         break;
-      case 'rejected':
+      case ServiceRequestStatus.REJECTED:
         updateData.rejectedAt = now;
         break;
-      case 'cancelled':
+      case ServiceRequestStatus.CANCELLED:
         updateData.cancelledAt = now;
         break;
-      case 'completed':
+      case ServiceRequestStatus.COMPLETED:
         updateData.completedAt = now;
         break;
-      case 'closed':
+      case ServiceRequestStatus.CLOSED:
         updateData.closedAt = now;
         break;
     }
@@ -564,7 +571,7 @@ export class ServiceRequestService {
       );
     }
 
-    if (status === 'approved') {
+    if (status === ServiceRequestStatus.APPROVED) {
       const serviceData = await this.servicesInternalService.findByVersionId(
         sr.serviceId.toString(),
         user,
@@ -592,7 +599,7 @@ export class ServiceRequestService {
             minStaff: config.minStaff ?? 0,
             maxStaff: config.maxStaff ?? 1,
             createdBy: user._id,
-            status: 'drafted',
+            status: WorkOrderStatus.DRAFTED,
           });
         })
       );

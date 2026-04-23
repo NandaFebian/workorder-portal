@@ -1,5 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
+import { WorkOrderStatus } from '../../common/enums/work-order-status.enum';
+import { ApprovalAccessType } from '../../common/enums/approval-access-type.enum';
 
 export type WorkOrderDocument = WorkOrder & Document;
 
@@ -54,17 +56,17 @@ export class WorkOrder {
 
   @Prop({
     type: String,
-    enum: ['auto', 'staff_pic'],
-    default: 'auto',
+    enum: [ApprovalAccessType.AUTO, ApprovalAccessType.STAFF_PIC],
+    default: ApprovalAccessType.AUTO,
   })
-  workOrderApprovalAccessType: string;
+  workOrderApprovalAccessType: ApprovalAccessType;
 
   @Prop({
     type: String,
-    enum: ['auto', 'manager'],
-    default: 'auto',
+    enum: [ApprovalAccessType.AUTO, ApprovalAccessType.MANAGER],
+    default: ApprovalAccessType.AUTO,
   })
-  workReportApprovalAccessType: string;
+  workReportApprovalAccessType: ApprovalAccessType;
 
   @Prop({ default: 0 })
   minStaff: number;
@@ -74,10 +76,10 @@ export class WorkOrder {
 
   @Prop({
     required: true,
-    enum: ['drafted', 'sent', 'approved', 'rejected', 'cancelled', 'on_progress', 'completed', 'failed'],
-    default: 'drafted',
+    enum: Object.values(WorkOrderStatus),
+    default: WorkOrderStatus.DRAFTED,
   })
-  status: string;
+  status: WorkOrderStatus;
 
   @Prop({ type: Boolean, default: false })
   has_issue: boolean;

@@ -420,7 +420,7 @@ export class WorkOrderService {
         wo.createdBy.toString(),
         'Status Work Order Diperbarui',
         `Status Work Order (${wo.code}) Anda telah diperbarui menjadi: ${updateStatusDto.status}.`,
-        { workOrderId: id, status: updateStatusDto.status }
+        { resource: 'work_order', resourceId: id, status: updateStatusDto.status }
       );
     }
 
@@ -499,7 +499,7 @@ export class WorkOrderService {
         wo.staffPIC.toString(),
         'Ditugaskan sebagai PIC',
         `Anda telah ditunjuk sebagai Penanggung Jawab (PIC) untuk Work Order: ${wo.code}.`,
-        { workOrderId: id }
+        { resource: 'work_order', resourceId: id }
       );
     }
 
@@ -510,7 +510,7 @@ export class WorkOrderService {
           staffId.toString(),
           'Penugasan Work Order Baru',
           `Anda telah ditugaskan sebagai staf pelaksana untuk Work Order: ${wo.code}.`,
-          { workOrderId: id }
+          { resource: 'work_order', resourceId: id }
         );
       }
     }

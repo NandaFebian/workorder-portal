@@ -23,6 +23,7 @@ import { UserDocument } from 'src/users/schemas/user.schema';
 import { Role } from 'src/common/enums/role.enum';
 import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { InvitationResource } from '../invitations/resources/invitation.resource';
+import { FcmService } from 'src/fcm/fcm.service';
 
 @Injectable()
 export class CompaniesInternalService {
@@ -32,6 +33,7 @@ export class CompaniesInternalService {
     private invitationModel: Model<InvitationDocument>,
     private usersService: UsersService,
     private positionsService: PositionsService,
+    private fcmService: FcmService,
   ) {}
 
   async create(createCompanyDto: {
@@ -165,6 +167,7 @@ export class CompaniesInternalService {
     }
 
     // Second Pass: All entries valid — safely create all invitations
+    const company = await this.companyModel.findById(companyId).select('name').exec();
     const newlyCreatedInviteIds: any[] = [];
     for (const validInvite of usersToInvite) {
       const { inviteData, user } = validInvite;
@@ -192,6 +195,15 @@ export class CompaniesInternalService {
         status: 'pending',
         expiresAt,
       });
+
+      // Notify user about the invitation
+      await this.fcmService.sendToUser(
+        (user as any)._id.toString(),
+        'Undangan Bergabung Perusahaan',
+        `Anda telah diundang untuk bergabung dengan ${company?.name || 'perusahaan'} sebagai ${inviteData.role.replace('_', ' ')}.`,
+        { resource: 'invitation', resourceId: (newInvitation as any)._id.toString() }
+      );
+
       newlyCreatedInviteIds.push(newInvitation._id);
     }
 

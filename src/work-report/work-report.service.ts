@@ -296,7 +296,7 @@ export class WorkReportService {
           userId,
           'Laporan Penugasan Disetujui',
           `Laporan penugasan lapangan Anda untuk Work Order (${wo.code}) telah disetujui.`,
-          { workOrderId: wo._id.toString(), status: WorkReportStatus.APPROVED }
+          { resource: 'work_order', resourceId: wo._id.toString(), status: WorkReportStatus.APPROVED }
         );
       }
     }
@@ -334,7 +334,7 @@ export class WorkReportService {
           userId,
           'Laporan Penugasan Ditolak',
           `Laporan penugasan lapangan Anda untuk Work Order (${wo.code}) telah ditolak. Harap periksa kembali.`,
-          { workOrderId: wo._id.toString(), status: WorkReportStatus.REJECTED }
+          { resource: 'work_order', resourceId: wo._id.toString(), status: WorkReportStatus.REJECTED }
         );
       }
     }

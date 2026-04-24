@@ -202,8 +202,23 @@ export class ServiceRequestService {
       user._id.toString(),
       'Service Request Diterima',
       `Pengajuan Anda (${newSR.code}) telah berhasil dibuat dan sedang menunggu peninjauan.`,
-      { serviceRequestId: (newSR as any)._id.toString() }
+      { resource: 'service_request', resourceId: (newSR as any)._id.toString() }
     );
+
+    // Notify provider company managers/owner
+    const providerManagers = await this.usersService.findAllByCompanyId(
+      service.companyId as any,
+      [Role.CompanyOwner, Role.CompanyManager],
+    );
+
+    for (const manager of providerManagers) {
+      await this.fcmService.sendToUser(
+        (manager as any)._id.toString(),
+        'Service Request Baru',
+        `Terdapat pengajuan layanan baru (${newSR.code}) dari ${user.name}.`,
+        { resource: 'service_request', resourceId: (newSR as any)._id.toString() }
+      );
+    }
     
     if ((src.serviceRequestApprovalAccessType ?? ApprovalAccessType.AUTO) === ApprovalAccessType.AUTO) {
       await this._autoApproveServiceRequest(newSR, user, service);
@@ -567,7 +582,7 @@ export class ServiceRequestService {
         requesterId,
         'Status Service Request Diperbarui',
         `Status pengajuan Anda (${sr.code}) telah diperbarui menjadi: ${status}.`,
-        { serviceRequestId: id, status }
+        { resource: 'service_request', resourceId: id, status }
       );
     }
 
@@ -678,7 +693,7 @@ export class ServiceRequestService {
         sr.staffPIC.toString(),
         'Ditugaskan sebagai PIC Service Request',
         `Anda telah ditunjuk sebagai PIC untuk Service Request: ${sr.code}.`,
-        { serviceRequestId: id }
+        { resource: 'service_request', resourceId: id }
       );
     }
 

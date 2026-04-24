@@ -17,6 +17,7 @@ import { User, UserDocument } from '../users/schemas/user.schema';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { Role } from '../common/enums/role.enum'; // Impor enum Role
 import { InvitationResource } from './resources/invitation.resource';
+import { FcmService } from 'src/fcm/fcm.service';
 
 @Injectable()
 export class InvitationsService {
@@ -24,8 +25,7 @@ export class InvitationsService {
     @InjectModel(Invitation.name)
     private invitationModel: Model<InvitationDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    // Opsional: bisa inject UsersService jika ada method helper yang berguna
-    // private usersService: UsersService,
+    private fcmService: FcmService,
   ) {}
 
   async findPendingForUser(userId: string): Promise<any[]> {
@@ -172,10 +172,21 @@ export class InvitationsService {
       }
 
       await invitation.populate([
-        { path: 'companyId', select: 'name' },
+        { path: 'companyId', select: 'name ownerId' },
         { path: 'positionId', select: 'name' },
         { path: 'userId', select: 'name email' },
       ]);
+
+      // Notify Company Owner about acceptance
+      const company = invitation.companyId as any;
+      if (company && company.ownerId) {
+        await this.fcmService.sendToUser(
+          company.ownerId.toString(),
+          'Undangan Diterima',
+          `${(invitation.userId as any).name} telah menerima undangan dan resmi bergabung dengan ${company.name}.`,
+          { resource: 'invitation', resourceId: (invitation as any)._id.toString(), status: 'accepted' }
+        );
+      }
 
       return InvitationResource.transformInvitation(invitation);
     } catch (error) {
@@ -233,10 +244,21 @@ export class InvitationsService {
     await invitation.save();
 
     await invitation.populate([
-      { path: 'companyId', select: 'name' },
+      { path: 'companyId', select: 'name ownerId' },
       { path: 'positionId', select: 'name' },
       { path: 'userId', select: 'name email' },
     ]);
+
+    // Notify Company Owner about rejection
+    const company = invitation.companyId as any;
+    if (company && company.ownerId) {
+      await this.fcmService.sendToUser(
+        company.ownerId.toString(),
+        'Undangan Ditolak',
+        `${(invitation.userId as any).name} telah menolak undangan untuk bergabung dengan ${company.name}.`,
+        { resource: 'invitation', resourceId: (invitation as any)._id.toString(), status: 'rejected' }
+      );
+    }
 
     return InvitationResource.transformInvitation(invitation);
   }

@@ -504,6 +504,17 @@ export class ServiceRequestService {
         break;
     }
     await sr.save();
+
+    // Notify requester about the systemic status update
+    if (sr.requestedBy) {
+      const requesterId = sr.requestedBy._id ? sr.requestedBy._id.toString() : sr.requestedBy.toString();
+      await this.fcmService.sendToUser(
+        requesterId,
+        'Status Service Request Diperbarui',
+        `Status pengajuan Anda (${sr.code}) telah diperbarui menjadi: ${targetStatus}.`,
+        { resource: 'service_request', resourceId: id, status: targetStatus }
+      );
+    }
   }
 
   async updateStatus(

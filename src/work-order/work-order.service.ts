@@ -493,25 +493,28 @@ export class WorkOrderService {
 
     await wo.save();
 
-    // Notify new PIC
-    if (assignStaffDto.staff_pic && wo.staffPIC) {
-      await this.fcmService.sendToUser(
-        wo.staffPIC.toString(),
-        'Ditugaskan sebagai PIC',
-        `Anda telah ditunjuk sebagai Penanggung Jawab (PIC) untuk Work Order: ${wo.code}.`,
-        { resource: 'work_order', resourceId: id }
-      );
-    }
-
-    // Notify assigned staff
-    if (assignStaffDto.assign_staffs && wo.assignedStaff.length > 0) {
-      for (const staffId of wo.assignedStaff) {
+    // Notify staff ONLY if WO is not in DRAFT status
+    if (wo.status !== WorkOrderStatus.DRAFTED) {
+      // Notify new PIC
+      if (assignStaffDto.staff_pic && wo.staffPIC) {
         await this.fcmService.sendToUser(
-          staffId.toString(),
-          'Penugasan Work Order Baru',
-          `Anda telah ditugaskan sebagai staf pelaksana untuk Work Order: ${wo.code}.`,
+          wo.staffPIC.toString(),
+          'Ditugaskan sebagai PIC',
+          `Anda telah ditunjuk sebagai Penanggung Jawab (PIC) untuk Work Order: ${wo.code}.`,
           { resource: 'work_order', resourceId: id }
         );
+      }
+
+      // Notify assigned staff
+      if (assignStaffDto.assign_staffs && wo.assignedStaff.length > 0) {
+        for (const staffId of wo.assignedStaff) {
+          await this.fcmService.sendToUser(
+            staffId.toString(),
+            'Penugasan Work Order Baru',
+            `Anda telah ditugaskan sebagai staf pelaksana untuk Work Order: ${wo.code}.`,
+            { resource: 'work_order', resourceId: id }
+          );
+        }
       }
     }
 
@@ -566,14 +569,38 @@ export class WorkOrderService {
       wo.status = WorkOrderStatus.APPROVED;
       wo.approvedAt = now;
       wo.sentAt = now;
-      await wo.save();
-      return this.findOneInternal(id, user);
     } else {
       wo.status = WorkOrderStatus.SENT;
       if (!wo.sentAt) wo.sentAt = now;
-      await wo.save();
-      return this.findOneInternal(id, user);
     }
+
+    await wo.save();
+
+    // Notify staff that the Work Order is now active/sent
+    if (wo.staffPIC) {
+      await this.fcmService.sendToUser(
+        wo.staffPIC.toString(),
+        wo.status === WorkOrderStatus.APPROVED ? 'Work Order Disetujui' : 'Work Order Baru',
+        `Work Order (${wo.code}) telah ${wo.status === WorkOrderStatus.APPROVED ? 'disetujui' : 'dikirim'} dan siap untuk Anda tindak lanjuti.`,
+        { resource: 'work_order', resourceId: id, status: wo.status }
+      );
+    }
+
+    if (wo.assignedStaff && wo.assignedStaff.length > 0) {
+      for (const staffId of wo.assignedStaff) {
+        // Skip if staff is also the PIC (already notified)
+        if (wo.staffPIC && staffId.toString() === wo.staffPIC.toString()) continue;
+
+        await this.fcmService.sendToUser(
+          staffId.toString(),
+          wo.status === WorkOrderStatus.APPROVED ? 'Work Order Disetujui' : 'Work Order Baru',
+          `Anda memiliki tugas baru untuk Work Order (${wo.code}).`,
+          { resource: 'work_order', resourceId: id, status: wo.status }
+        );
+      }
+    }
+
+    return this.findOneInternal(id, user);
   }
 
   async approve(id: string, user: AuthenticatedUser): Promise<any> {
@@ -591,6 +618,17 @@ export class WorkOrderService {
     wo.approvedBy = user._id as any;
     if (!wo.approvedAt) wo.approvedAt = new Date();
     await wo.save();
+
+    // Notify creator/manager about approval
+    if (wo.createdBy) {
+      await this.fcmService.sendToUser(
+        wo.createdBy.toString(),
+        'Work Order Disetujui',
+        `Work Order (${wo.code}) telah disetujui oleh PIC.`,
+        { resource: 'work_order', resourceId: id, status: WorkOrderStatus.APPROVED }
+      );
+    }
+
     return this.findOneInternal(id, user);
   }
 
@@ -608,6 +646,17 @@ export class WorkOrderService {
     wo.status = WorkOrderStatus.REJECTED;
     if (!wo.rejectedAt) wo.rejectedAt = new Date();
     await wo.save();
+
+    // Notify creator/manager about rejection
+    if (wo.createdBy) {
+      await this.fcmService.sendToUser(
+        wo.createdBy.toString(),
+        'Work Order Ditolak',
+        `Work Order (${wo.code}) telah ditolak oleh PIC.`,
+        { resource: 'work_order', resourceId: id, status: WorkOrderStatus.REJECTED }
+      );
+    }
+
     return this.findOneInternal(id, user);
   }
 

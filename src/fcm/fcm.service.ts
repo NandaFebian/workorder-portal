@@ -75,8 +75,8 @@ export class FcmService {
       }
 
       // Add title and body to data payload
-      sanitizedData.title = title;
-      sanitizedData.body = body;
+      sanitizedData.title = String(title || '');
+      sanitizedData.body = String(body || '');
 
       const message: admin.messaging.Message = {
         notification: {
@@ -125,8 +125,8 @@ export class FcmService {
       }
 
       // Add title and body to data payload
-      sanitizedData.title = title;
-      sanitizedData.body = body;
+      sanitizedData.title = String(title || '');
+      sanitizedData.body = String(body || '');
 
       const message: admin.messaging.MulticastMessage = {
         notification: {

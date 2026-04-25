@@ -526,7 +526,7 @@ export class ServiceRequestService {
 
     // Notify requester about the systemic status update
     if (sr.requestedBy) {
-      const requesterId = sr.requestedBy.toString();
+      const requesterId = sr.requestedBy._id ? sr.requestedBy._id.toString() : sr.requestedBy.toString();
       await this.fcmService.sendToUser(
         requesterId,
         'Status Service Request Diperbarui',
@@ -611,7 +611,7 @@ export class ServiceRequestService {
 
     // Notify requester about the status update
     if (sr.requestedBy) {
-      const requesterId = sr.requestedBy.toString();
+      const requesterId = sr.requestedBy._id ? sr.requestedBy._id.toString() : sr.requestedBy.toString();
       await this.fcmService.sendToUser(
         requesterId,
         'Status Service Request Diperbarui',

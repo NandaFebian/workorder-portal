@@ -37,6 +37,7 @@ import { SubmissionType } from 'src/common/enums/submission-type.enum';
 import { ApprovalAccessType } from 'src/common/enums/approval-access-type.enum';
 import { WorkOrderStatus } from 'src/common/enums/work-order-status.enum';
 import { WorkReportStatus } from 'src/common/enums/work-report-status.enum';
+import { StatusTranslator } from 'src/common/utils/status-translator.util';
 
 @Injectable()
 export class ServiceRequestService {
@@ -154,10 +155,10 @@ export class ServiceRequestService {
     // Strict Request Payload Validation: Ensure user doesn't submit random form IDs
     if (submission) {
       if (!intakeFormId) {
-        throw new BadRequestException('This service does not require any intake form submission.');
+        throw new BadRequestException('Layanan ini tidak memerlukan pengiriman formulir intake.');
       }
       if (submission.formId !== intakeFormId.toString()) {
-        throw new BadRequestException(`Submitted form ID ${submission.formId} does not match the required intake form for this service.`);
+        throw new BadRequestException(`ID formulir yang dikirimkan (${submission.formId}) tidak cocok dengan formulir intake yang diperlukan untuk layanan ini.`);
       }
     }
 
@@ -200,8 +201,8 @@ export class ServiceRequestService {
     // Notify requester about SR creation
     await this.fcmService.sendToUser(
       user._id.toString(),
-      'Service Request Diterima',
-      `Pengajuan Anda (${newSR.code}) telah berhasil dibuat dan sedang menunggu peninjauan.`,
+      'Permintaan Layanan Diterima',
+      `Permintaan layanan Anda (${newSR.code}) telah berhasil dibuat dan sedang menunggu peninjauan.`,
       { resource: 'service_request', resourceId: (newSR as any)._id.toString() }
     );
 
@@ -214,8 +215,8 @@ export class ServiceRequestService {
     for (const manager of providerManagers) {
       await this.fcmService.sendToUser(
         (manager as any)._id.toString(),
-        'Service Request Baru',
-        `Terdapat pengajuan layanan baru (${newSR.code}) dari ${user.name}.`,
+        'Permintaan Layanan Baru',
+        `Terdapat permintaan layanan baru (${newSR.code}) dari ${user.name}.`,
         { resource: 'service_request', resourceId: (newSR as any)._id.toString() }
       );
     }
@@ -280,32 +281,32 @@ export class ServiceRequestService {
 
     const requestedById = sr.requestedBy?._id ? sr.requestedBy._id.toString() : sr.requestedBy?.toString();
     if (requestedById !== user._id.toString()) {
-      throw new ForbiddenException('Only the requester who made this SR can submit a review.');
+      throw new ForbiddenException('Hanya pemohon yang membuat permintaan layanan ini yang dapat mengirimkan ulasan.');
     }
 
     if (sr.serviceRequestStatus !== ServiceRequestStatus.COMPLETED && sr.serviceRequestStatus !== ServiceRequestStatus.CLOSED) {
-      throw new UnprocessableEntityException('Review can only be submitted when SR status is completed or closed.');
+      throw new UnprocessableEntityException('Ulasan hanya dapat dikirimkan saat status permintaan layanan selesai atau ditutup.');
     }
 
     if (!sr.reviewFormId) {
-      throw new UnprocessableEntityException('This SR does not have a review form associated.');
+      throw new UnprocessableEntityException('Permintaan layanan ini tidak memiliki formulir ulasan.');
     }
 
     const template = await this.formsService.findTemplateById(sr.reviewFormId!.toString());
-    if (!template) throw new UnprocessableEntityException('Review form template not found.');
+    if (!template) throw new UnprocessableEntityException('Templat formulir ulasan tidak ditemukan.');
     const templateFields = template.fields || [];
 
     const submission = dto.submission || null;
 
     if (!submission) {
       throw new UnprocessableEntityException({
-        message: 'Validation failed',
-        errors: { field: [{ '*' : 'Review submission payload is empty or invalid.' }] },
+        message: 'Validasi gagal',
+        errors: { field: [{ '*' : 'Payload ulasan kosong atau tidak valid.' }] },
       });
     }
 
     if (submission.formId !== sr.reviewFormId!.toString()) {
-      throw new BadRequestException(`Submitted form ID ${submission.formId} does not match the review form for this service request.`);
+      throw new BadRequestException(`ID formulir yang dikirimkan (${submission.formId}) tidak cocok dengan formulir ulasan untuk permintaan layanan ini.`);
     }
 
     const submissionData = submission.fieldsData || [];
@@ -343,8 +344,8 @@ export class ServiceRequestService {
     for (const manager of providerManagers) {
       await this.fcmService.sendToUser(
         (manager as any)._id.toString(),
-        'Review Service Request Masuk',
-        `Requester ${user.name} telah mengirimkan review untuk ${sr.code}.`,
+        'Ulasan Permintaan Layanan Masuk',
+        `Pemohon ${user.name} telah mengirimkan ulasan untuk ${sr.code}.`,
         {
           resource: 'service_request',
           resourceId: (sr as any)._id.toString(),
@@ -386,7 +387,7 @@ export class ServiceRequestService {
     
     const requestedById = sr.requestedBy?._id ? sr.requestedBy._id.toString() : sr.requestedBy?.toString();
     if (requestedById !== userId) {
-      throw new ForbiddenException('You are not authorized to access this Service Request.');
+      throw new ForbiddenException('Anda tidak memiliki akses ke Permintaan Layanan ini.');
     }
 
     return this._enrichAndFormat(sr, false);
@@ -422,7 +423,7 @@ export class ServiceRequestService {
 
     const companyIdStr = sr.companyId?._id ? sr.companyId._id.toString() : sr.companyId?.toString();
     if (user?.company?._id && companyIdStr !== user.company._id.toString()) {
-      throw new ForbiddenException('You are not authorized to access this Service Request.');
+      throw new ForbiddenException('Anda tidak memiliki akses ke Permintaan Layanan ini.');
     }
 
     return this._enrichAndFormat(sr, true);
@@ -443,7 +444,7 @@ export class ServiceRequestService {
     } else if (isProvider) {
       return this.findOneInternal(id, user);
     } else {
-      throw new ForbiddenException('You are not authorized to access this Service Request.');
+      throw new ForbiddenException('Anda tidak memiliki akses ke Permintaan Layanan ini.');
     }
   }
 
@@ -527,10 +528,11 @@ export class ServiceRequestService {
     // Notify requester about the systemic status update
     if (sr.requestedBy) {
       const requesterId = sr.requestedBy._id ? sr.requestedBy._id.toString() : sr.requestedBy.toString();
+      const statusLabel = StatusTranslator.translateSRStatus(targetStatus);
       await this.fcmService.sendToUser(
         requesterId,
-        'Status Service Request Diperbarui',
-        `Status pengajuan Anda (${sr.code}) telah diperbarui menjadi: ${targetStatus}.`,
+        'Status Permintaan Layanan Diperbarui',
+        `Status permintaan layanan Anda (${sr.code}) telah diperbarui menjadi: ${statusLabel}.`,
         {
           resource: 'service_request',
           resourceId: id,
@@ -557,7 +559,7 @@ export class ServiceRequestService {
     if (status === ServiceRequestStatus.CANCELLED) {
       const requestedById = sr.requestedBy?._id ? sr.requestedBy._id.toString() : sr.requestedBy?.toString();
       if (requestedById !== user._id.toString()) {
-        throw new ForbiddenException('Only the requester can cancel this Service Request.');
+        throw new ForbiddenException('Hanya pemohon yang dapat membatalkan Permintaan Layanan ini.');
       }
     } else if (status === ServiceRequestStatus.APPROVED || status === ServiceRequestStatus.REJECTED) {
       if (!user.company?._id || user.company._id.toString() !== sr.companyId.toString()) {
@@ -612,10 +614,11 @@ export class ServiceRequestService {
     // Notify requester about the status update
     if (sr.requestedBy) {
       const requesterId = sr.requestedBy._id ? sr.requestedBy._id.toString() : sr.requestedBy.toString();
+      const statusLabel = StatusTranslator.translateSRStatus(status);
       await this.fcmService.sendToUser(
         requesterId,
-        'Status Service Request Diperbarui',
-        `Status pengajuan Anda (${sr.code}) telah diperbarui menjadi: ${status}.`,
+        'Status Permintaan Layanan Diperbarui',
+        `Status permintaan layanan Anda (${sr.code}) telah diperbarui menjadi: ${statusLabel}.`,
         {
           resource: 'service_request',
           resourceId: id,
@@ -729,8 +732,8 @@ export class ServiceRequestService {
     if (sr.staffPIC) {
       await this.fcmService.sendToUser(
         sr.staffPIC.toString(),
-        'Ditugaskan sebagai PIC Service Request',
-        `Anda telah ditunjuk sebagai PIC untuk Service Request: ${sr.code}.`,
+        'Ditugaskan sebagai PIC Permintaan Layanan',
+        `Anda telah ditunjuk sebagai PIC untuk Permintaan Layanan: ${sr.code}.`,
         { resource: 'service_request', resourceId: id }
       );
     }

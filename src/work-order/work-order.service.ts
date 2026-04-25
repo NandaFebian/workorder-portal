@@ -33,6 +33,7 @@ import { ApprovalAccessType } from 'src/common/enums/approval-access-type.enum';
 import { ServiceRequestStatus } from 'src/common/enums/service-request-status.enum';
 import { WorkReportStatus } from 'src/common/enums/work-report-status.enum';
 import { FormSubmissionStatus } from 'src/common/enums/form-submission-status.enum';
+import { StatusTranslator } from 'src/common/utils/status-translator.util';
 
 @Injectable()
 export class WorkOrderService {
@@ -416,10 +417,11 @@ export class WorkOrderService {
 
     // Notify requester/creator about the status update
     if (wo.createdBy) {
+      const statusLabel = StatusTranslator.translateWOStatus(updateStatusDto.status);
       await this.fcmService.sendToUser(
         wo.createdBy.toString(),
-        'Status Work Order Diperbarui',
-        `Status Work Order (${wo.code}) Anda telah diperbarui menjadi: ${updateStatusDto.status}.`,
+        'Status Perintah Kerja Diperbarui',
+        `Status Perintah Kerja (${wo.code}) Anda telah diperbarui menjadi: ${statusLabel}.`,
         { resource: 'work_order', resourceId: id, status: updateStatusDto.status }
       );
     }
@@ -449,9 +451,9 @@ export class WorkOrderService {
       } else {
         const picUser = await this.usersService.findOneByEmail(assignStaffDto.staff_pic);
         if (!picUser) {
-          errors.push(`PIC Staff with email ${assignStaffDto.staff_pic} not found`);
+          errors.push(`Staf PIC dengan email ${assignStaffDto.staff_pic} tidak ditemukan`);
         } else if (picUser.companyId && picUser.companyId.toString() !== user.company._id.toString()) {
-          errors.push(`PIC Staff with email ${assignStaffDto.staff_pic} does not belong to your company`);
+          errors.push(`Staf PIC dengan email ${assignStaffDto.staff_pic} bukan dari perusahaan Anda`);
         } else if (requiredPositionId && picUser.positionId?.toString() !== requiredPositionId) {
           errors.push(`Staf PIC dengan email ${assignStaffDto.staff_pic} tidak memiliki posisi yang sesuai dengan kebutuhan Perintah Kerja`);
         } else {
@@ -465,11 +467,11 @@ export class WorkOrderService {
       for (const email of assignStaffDto.assign_staffs) {
         const staff = await this.usersService.findOneByEmail(email);
         if (!staff) {
-          errors.push(`Staff with email ${email} not found`);
+          errors.push(`Staf dengan email ${email} tidak ditemukan`);
           continue;
         }
         if (staff.companyId && staff.companyId.toString() !== user.company._id.toString()) {
-          errors.push(`Staff with email ${email} does not belong to your company`);
+          errors.push(`Staf dengan email ${email} bukan dari perusahaan Anda`);
           continue;
         }
         if (requiredPositionId && staff.positionId?.toString() !== requiredPositionId) {
@@ -499,8 +501,8 @@ export class WorkOrderService {
       if (assignStaffDto.staff_pic && wo.staffPIC) {
         await this.fcmService.sendToUser(
           wo.staffPIC.toString(),
-          'Ditugaskan sebagai PIC',
-          `Anda telah ditunjuk sebagai Penanggung Jawab (PIC) untuk Work Order: ${wo.code}.`,
+          'Ditugaskan sebagai PIC Perintah Kerja',
+          `Anda telah ditunjuk sebagai Penanggung Jawab (PIC) untuk Perintah Kerja: ${wo.code}.`,
           { resource: 'work_order', resourceId: id }
         );
       }
@@ -510,8 +512,8 @@ export class WorkOrderService {
         for (const staffId of wo.assignedStaff) {
           await this.fcmService.sendToUser(
             staffId.toString(),
-            'Penugasan Work Order Baru',
-            `Anda telah ditugaskan sebagai staf pelaksana untuk Work Order: ${wo.code}.`,
+            'Penugasan Perintah Kerja Baru',
+            `Anda telah ditugaskan sebagai staf pelaksana untuk Perintah Kerja: ${wo.code}.`,
             { resource: 'work_order', resourceId: id }
           );
         }
@@ -559,7 +561,7 @@ export class WorkOrderService {
           submissionType: SubmissionType.WorkOrder,
         });
         if (!submission) {
-          throw new UnprocessableEntityException('Work order form must be submitted before marking as sent');
+          throw new UnprocessableEntityException('Formulir perintah kerja harus dikirimkan sebelum ditandai sebagai terkirim');
         }
       }
     }
@@ -576,12 +578,13 @@ export class WorkOrderService {
 
     await wo.save();
 
-    // Notify staff that the Work Order is now active/sent
+    // Notify staff that the Perintah Kerja is now active/sent
     if (wo.staffPIC) {
+      const statusLabel = StatusTranslator.translateWOStatus(wo.status);
       await this.fcmService.sendToUser(
         wo.staffPIC.toString(),
-        wo.status === WorkOrderStatus.APPROVED ? 'Work Order Disetujui' : 'Work Order Baru',
-        `Work Order (${wo.code}) telah ${wo.status === WorkOrderStatus.APPROVED ? 'disetujui' : 'dikirim'} dan siap untuk Anda tindak lanjuti.`,
+        wo.status === WorkOrderStatus.APPROVED ? 'Perintah Kerja Disetujui' : 'Perintah Kerja Baru',
+        `Perintah Kerja (${wo.code}) telah ${statusLabel.toLowerCase()} dan siap untuk Anda tindak lanjuti.`,
         { resource: 'work_order', resourceId: id, status: wo.status }
       );
     }
@@ -593,8 +596,8 @@ export class WorkOrderService {
 
         await this.fcmService.sendToUser(
           staffId.toString(),
-          wo.status === WorkOrderStatus.APPROVED ? 'Work Order Disetujui' : 'Work Order Baru',
-          `Anda memiliki tugas baru untuk Work Order (${wo.code}).`,
+          wo.status === WorkOrderStatus.APPROVED ? 'Perintah Kerja Disetujui' : 'Perintah Kerja Baru',
+          `Anda memiliki tugas baru untuk Perintah Kerja (${wo.code}).`,
           { resource: 'work_order', resourceId: id, status: wo.status }
         );
       }
@@ -623,8 +626,8 @@ export class WorkOrderService {
     if (wo.createdBy) {
       await this.fcmService.sendToUser(
         wo.createdBy.toString(),
-        'Work Order Disetujui',
-        `Work Order (${wo.code}) telah disetujui oleh PIC.`,
+        'Perintah Kerja Disetujui',
+        `Perintah Kerja (${wo.code}) telah disetujui oleh PIC.`,
         { resource: 'work_order', resourceId: id, status: WorkOrderStatus.APPROVED }
       );
     }
@@ -651,8 +654,8 @@ export class WorkOrderService {
     if (wo.createdBy) {
       await this.fcmService.sendToUser(
         wo.createdBy.toString(),
-        'Work Order Ditolak',
-        `Work Order (${wo.code}) telah ditolak oleh PIC.`,
+        'Perintah Kerja Ditolak',
+        `Perintah Kerja (${wo.code}) telah ditolak oleh PIC.`,
         { resource: 'work_order', resourceId: id, status: WorkOrderStatus.REJECTED }
       );
     }
@@ -756,7 +759,7 @@ export class WorkOrderService {
     const staffCanStart = wo.staffPIC ? isPIC : isAssigned;
 
     if (!staffCanStart) {
-      throw new ForbiddenException('Only the assigned PIC (or any assigned staff if no PIC is set) can start the work order.');
+      throw new ForbiddenException('Hanya PIC yang ditunjuk (atau staf yang ditugaskan jika tidak ada PIC) yang dapat memulai perintah kerja.');
     }
 
     if (wo.serviceRequestId) {

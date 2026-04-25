@@ -334,6 +334,25 @@ export class ServiceRequestService {
     }
     await sr.save();
 
+    // Notify provider company managers/owner about review submission
+    const providerManagers = await this.usersService.findAllByCompanyId(
+      sr.companyId as any,
+      [Role.CompanyOwner, Role.CompanyManager],
+    );
+
+    for (const manager of providerManagers) {
+      await this.fcmService.sendToUser(
+        (manager as any)._id.toString(),
+        'Review Service Request Masuk',
+        `Requester ${user.name} telah mengirimkan review untuk ${sr.code}.`,
+        {
+          resource: 'service_request',
+          resourceId: (sr as any)._id.toString(),
+          status: sr.serviceRequestStatus,
+        },
+      );
+    }
+
     return this.findOneForClient((sr as any)._id.toString(), user._id.toString());
   }
 
@@ -507,12 +526,16 @@ export class ServiceRequestService {
 
     // Notify requester about the systemic status update
     if (sr.requestedBy) {
-      const requesterId = sr.requestedBy._id ? sr.requestedBy._id.toString() : sr.requestedBy.toString();
+      const requesterId = sr.requestedBy.toString();
       await this.fcmService.sendToUser(
         requesterId,
         'Status Service Request Diperbarui',
         `Status pengajuan Anda (${sr.code}) telah diperbarui menjadi: ${targetStatus}.`,
-        { resource: 'service_request', resourceId: id, status: targetStatus }
+        {
+          resource: 'service_request',
+          resourceId: id,
+          status: targetStatus,
+        },
       );
     }
   }
@@ -588,12 +611,16 @@ export class ServiceRequestService {
 
     // Notify requester about the status update
     if (sr.requestedBy) {
-      const requesterId = sr.requestedBy._id ? sr.requestedBy._id.toString() : sr.requestedBy.toString();
+      const requesterId = sr.requestedBy.toString();
       await this.fcmService.sendToUser(
         requesterId,
         'Status Service Request Diperbarui',
         `Status pengajuan Anda (${sr.code}) telah diperbarui menjadi: ${status}.`,
-        { resource: 'service_request', resourceId: id, status }
+        {
+          resource: 'service_request',
+          resourceId: id,
+          status,
+        },
       );
     }
 

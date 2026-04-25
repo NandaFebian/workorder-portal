@@ -74,6 +74,10 @@ export class FcmService {
         });
       }
 
+      // Add title and body to data payload
+      sanitizedData.title = title;
+      sanitizedData.body = body;
+
       const message: admin.messaging.Message = {
         notification: {
           title,
@@ -119,6 +123,10 @@ export class FcmService {
           sanitizedData[key] = value !== null && value !== undefined ? String(value) : '';
         });
       }
+
+      // Add title and body to data payload
+      sanitizedData.title = title;
+      sanitizedData.body = body;
 
       const message: admin.messaging.MulticastMessage = {
         notification: {

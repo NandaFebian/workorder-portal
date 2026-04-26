@@ -225,7 +225,7 @@ export class CompaniesInternalService {
     };
   }
 
-  async getInvitationHistory(companyId: string) {
+  async getInvitationHistory(companyId: string, userId?: string) {
     const invitations = await this.invitationModel
       .find({ companyId: new Types.ObjectId(companyId), deletedAt: null })
       .sort({ createdAt: -1 })
@@ -235,6 +235,11 @@ export class CompaniesInternalService {
         { path: 'userId', select: 'name email' },
       ])
       .exec();
+
+    // Mark invitation notifications as read if userId is provided
+    if (userId) {
+      this.fcmService.markAsReadByType(userId, 'invitation').catch(() => {});
+    }
 
     const transformedInvitations = InvitationResource.transformInvitationList(invitations);
 

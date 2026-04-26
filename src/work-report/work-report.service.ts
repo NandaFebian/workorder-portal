@@ -58,6 +58,9 @@ export class WorkReportService {
   async findByWorkOrderId(workOrderId: string, user: AuthenticatedUser): Promise<any> {
     if (!Types.ObjectId.isValid(workOrderId)) throw new NotFoundException('Invalid Work Order ID');
 
+    // Mark notifications as read when report for a WO is fetched
+    this.fcmService.markAsReadByResource(user._id.toString(), 'work_order', workOrderId).catch(() => {});
+
     const report = await this.workReportModel
       .findOne({ workOrderId: new Types.ObjectId(workOrderId), deletedAt: null })
       .populate('workOrderId')

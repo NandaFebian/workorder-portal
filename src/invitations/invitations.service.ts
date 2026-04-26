@@ -63,6 +63,9 @@ export class InvitationsService {
 
     const transformedInvitations = InvitationResource.transformInvitationList(pendingInvitationsDocs);
 
+    // Mark invitation notifications as read when pending list is fetched
+    this.fcmService.markAsReadByType(userId, 'invitation').catch(() => {});
+
     // Handle undangan yang sudah expired
     const expiredPending = await this.invitationModel
       .find({

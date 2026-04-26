@@ -236,17 +236,59 @@ export class FcmService {
   async getInbox(userId: string): Promise<NotificationDocument[]> {
     const notifications = await this.notificationModel
       .find({ userId })
+      .select('-__v -updatedAt')
       .sort({ createdAt: -1 })
       .limit(50)
       .exec();
 
-    // Mark unread as read for next time
-    this.notificationModel
-      .updateMany({ userId, isRead: false }, { $set: { isRead: true } })
-      .exec()
-      .catch((err) => this.logger.error(`Error updating read status: ${err.message}`));
-
     return notifications;
+  }
+
+  /**
+   * Mark notifications as read based on resource and resourceId
+   */
+  async markAsReadByResource(
+    userId: string,
+    resource: string,
+    resourceId: string,
+  ): Promise<void> {
+    try {
+      await this.notificationModel
+        .updateMany(
+          {
+            userId,
+            'data.resource': resource,
+            'data.resourceId': resourceId,
+            isRead: false,
+          },
+          { $set: { isRead: true } },
+        )
+        .exec();
+    } catch (error: any) {
+      this.logger.error(`Error marking notifications as read: ${error.message}`);
+    }
+  }
+
+  /**
+   * Mark all notifications of a certain resource type as read
+   */
+  async markAsReadByType(userId: string, resource: string): Promise<void> {
+    try {
+      await this.notificationModel
+        .updateMany(
+          {
+            userId,
+            'data.resource': resource,
+            isRead: false,
+          },
+          { $set: { isRead: true } },
+        )
+        .exec();
+    } catch (error: any) {
+      this.logger.error(
+        `Error marking notifications type as read: ${error.message}`,
+      );
+    }
   }
 
   /**

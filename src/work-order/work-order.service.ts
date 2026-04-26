@@ -226,6 +226,10 @@ export class WorkOrderService {
       .exec();
 
     if (!wo) throw new NotFoundException('Work Order not found');
+
+    // Mark notifications as read when detail is fetched
+    this.fcmService.markAsReadByResource(user._id.toString(), 'work_order', id).catch(() => {});
+
     return this._hydrateOne(wo);
   }
 

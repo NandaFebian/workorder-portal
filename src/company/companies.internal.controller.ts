@@ -91,6 +91,7 @@ export class CompaniesInternalController {
     }
     return this.companiesInternalService.getInvitationHistory(
       user.company._id.toString(),
+      user._id.toString(),
     );
   }
 

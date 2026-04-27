@@ -276,12 +276,20 @@ export class WorkReportService {
           [Role.CompanyOwner, Role.CompanyManager],
         );
         for (const manager of managers) {
-          await this.fcmService.sendToUser(
-            (manager as any)._id.toString(),
-            'Laporan Penugasan Lapangan Masuk',
-            `Staf ${user.name} telah mengirimkan laporan untuk Perintah Kerja (${wo.code}).`,
-            { resource: 'work_order', resourceId: wo._id.toString(), status: WorkReportStatus.SUBMITTED }
-          );
+          const m = manager as any;
+          const isOwner = m.role === Role.CompanyOwner;
+          const isCreator = wo.createdBy && wo.createdBy.toString() === m._id.toString();
+          const isSystemGenerated = !wo.createdBy;
+          const isPIC = wo.staffPIC && wo.staffPIC.toString() === m._id.toString();
+
+          if (isOwner || isCreator || isSystemGenerated || isPIC) {
+            await this.fcmService.sendToUser(
+              m._id.toString(),
+              'Laporan Penugasan Lapangan Masuk',
+              `Staf ${user.name} telah mengirimkan laporan untuk Perintah Kerja (${wo.code}).`,
+              { resource: 'work_order', resourceId: wo._id.toString(), status: WorkReportStatus.SUBMITTED }
+            );
+          }
         }
       } else if (report.status === WorkReportStatus.APPROVED) {
         // Notify PIC/Staff about auto-approval

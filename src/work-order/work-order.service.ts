@@ -425,16 +425,14 @@ export class WorkOrderService {
       await this._checkAndUpdateSRStatus(wo.serviceRequestId.toString());
     }
 
-    // Notify requester/creator about the status update
-    if (wo.createdBy) {
-      const statusLabel = StatusTranslator.translateWOStatus(updateStatusDto.status);
-      await this.fcmService.sendToUser(
-        wo.createdBy.toString(),
-        'Status Perintah Kerja Diperbarui',
-        `Status Perintah Kerja (${wo.code}) Anda telah diperbarui menjadi: ${statusLabel}.`,
-        { resource: 'work_order', resourceId: id, status: updateStatusDto.status }
-      );
-    }
+    // Notify authorized managers about the status update
+    const statusLabel = StatusTranslator.translateWOStatus(updateStatusDto.status);
+    await this._notifyAuthorizedManagers(
+      wo,
+      'Status Perintah Kerja Diperbarui',
+      `Status Perintah Kerja (${wo.code}) telah diperbarui menjadi: ${statusLabel}.`,
+      updateStatusDto.status,
+    );
 
     return this.findOneInternal(id, user);
   }
@@ -632,15 +630,13 @@ export class WorkOrderService {
     if (!wo.approvedAt) wo.approvedAt = new Date();
     await wo.save();
 
-    // Notify creator/manager about approval
-    if (wo.createdBy) {
-      await this.fcmService.sendToUser(
-        wo.createdBy.toString(),
-        'Perintah Kerja Disetujui',
-        `Perintah Kerja (${wo.code}) telah disetujui oleh PIC.`,
-        { resource: 'work_order', resourceId: id, status: WorkOrderStatus.APPROVED }
-      );
-    }
+    // Notify authorized managers about approval
+    await this._notifyAuthorizedManagers(
+      wo,
+      'Perintah Kerja Disetujui',
+      `Perintah Kerja (${wo.code}) telah disetujui oleh PIC.`,
+      WorkOrderStatus.APPROVED,
+    );
 
     return this.findOneInternal(id, user);
   }
@@ -660,15 +656,13 @@ export class WorkOrderService {
     if (!wo.rejectedAt) wo.rejectedAt = new Date();
     await wo.save();
 
-    // Notify creator/manager about rejection
-    if (wo.createdBy) {
-      await this.fcmService.sendToUser(
-        wo.createdBy.toString(),
-        'Perintah Kerja Ditolak',
-        `Perintah Kerja (${wo.code}) telah ditolak oleh PIC.`,
-        { resource: 'work_order', resourceId: id, status: WorkOrderStatus.REJECTED }
-      );
-    }
+    // Notify authorized managers about rejection
+    await this._notifyAuthorizedManagers(
+      wo,
+      'Perintah Kerja Ditolak',
+      `Perintah Kerja (${wo.code}) telah ditolak oleh PIC.`,
+      WorkOrderStatus.REJECTED,
+    );
 
     return this.findOneInternal(id, user);
   }
@@ -807,6 +801,14 @@ export class WorkOrderService {
       await this.serviceRequestService.updateSRStatusSystemically(wo.serviceRequestId.toString(), ServiceRequestStatus.ON_PROGRESS);
     }
 
+    // Notify authorized managers that work has started
+    await this._notifyAuthorizedManagers(
+      wo,
+      'Perintah Kerja Dimulai',
+      `Staf telah mulai mengerjakan Perintah Kerja (${wo.code}).`,
+      WorkOrderStatus.ON_PROGRESS,
+    );
+
     return this.findOneInternal(id, user);
   }
 
@@ -833,6 +835,14 @@ export class WorkOrderService {
     if (wo.serviceRequestId) {
       await this._checkAndUpdateSRStatus(wo.serviceRequestId.toString());
     }
+
+    // Notify authorized managers about completion
+    await this._notifyAuthorizedManagers(
+      wo,
+      'Perintah Kerja Selesai',
+      `Perintah Kerja (${wo.code}) telah selesai dikerjakan.`,
+      WorkOrderStatus.COMPLETED,
+    );
 
     return this.findOneInternal(id, user);
   }
@@ -862,6 +872,14 @@ export class WorkOrderService {
     if (wo.serviceRequestId) {
       await this._checkAndUpdateSRStatus(wo.serviceRequestId.toString());
     }
+
+    // Notify authorized managers about failure
+    await this._notifyAuthorizedManagers(
+      wo,
+      'Perintah Kerja Gagal',
+      `Perintah Kerja (${wo.code}) ditandai sebagai gagal. Alasan: ${issue}`,
+      WorkOrderStatus.FAILED,
+    );
 
     return this.findOneInternal(id, user);
   }
@@ -1043,6 +1061,29 @@ export class WorkOrderService {
   private _checkApprovalRequiresManual(wo: any) {
     if (wo.workOrderApprovalAccessType === ApprovalAccessType.AUTO) {
       throw new ForbiddenException('Status auto tidak memenuhi syarat');
+    }
+  }
+
+  private async _notifyAuthorizedManagers(wo: any, title: string, body: string, status: string) {
+    const managers = await this.usersService.findAllByCompanyId(
+      wo.companyId.toString(),
+      [Role.CompanyOwner, Role.CompanyManager],
+    );
+
+    for (const manager of managers) {
+      const m = manager as any;
+      const isOwner = m.role === Role.CompanyOwner;
+      const isCreator = wo.createdBy && wo.createdBy.toString() === m._id.toString();
+      const isSystemGenerated = !wo.createdBy;
+
+      if (isOwner || isCreator || isSystemGenerated) {
+        await this.fcmService.sendToUser(
+          m._id.toString(),
+          title,
+          body,
+          { resource: 'work_order', resourceId: (wo as any)._id.toString(), status }
+        );
+      }
     }
   }
 }

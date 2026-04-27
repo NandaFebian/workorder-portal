@@ -403,7 +403,7 @@ export class ServiceRequestService {
     const isProvider = user.company?._id && sr.companyId.toString() === user.company._id.toString();
 
     // Mark notifications as read when detail is fetched
-    this.fcmService.markAsReadByResource(user._id.toString(), 'service_request', id).catch(() => {});
+    await this.fcmService.markAsReadByResource(user._id.toString(), 'service_request', id);
 
     if (isRequester) {
       return this.findOneForClient(id, user._id.toString());

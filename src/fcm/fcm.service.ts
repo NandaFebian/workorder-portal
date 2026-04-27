@@ -248,7 +248,7 @@ export class FcmService {
       await this.notificationModel
         .updateMany(
           {
-            userId,
+            userId: new Types.ObjectId(userId),
             'data.resource': resource,
             'data.resourceId': resourceId,
             isRead: false,
@@ -269,7 +269,7 @@ export class FcmService {
       await this.notificationModel
         .updateMany(
           {
-            userId,
+            userId: new Types.ObjectId(userId),
             'data.resource': resource,
             isRead: false,
           },

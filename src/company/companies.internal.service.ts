@@ -238,7 +238,7 @@ export class CompaniesInternalService {
 
     // Mark invitation notifications as read if userId is provided
     if (userId) {
-      this.fcmService.markAsReadByType(userId, 'invitation').catch(() => {});
+      await this.fcmService.markAsReadByType(userId, 'invitation');
     }
 
     const transformedInvitations = InvitationResource.transformInvitationList(invitations);

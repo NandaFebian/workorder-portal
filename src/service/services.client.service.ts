@@ -1,5 +1,5 @@
 // src/service/services.client.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Service, type ServiceDocument } from './schemas/service.schema';
@@ -52,7 +52,7 @@ export class ServicesClientService {
       .exec();
 
     // 3. If requested ID is not the latest version, reject it
-    if (!latestVersion || latestVersion._id.toString() !== id) {
+    if (!latestVersion || (latestVersion._id as any).toString() !== id) {
       throw new NotFoundException(`Service version is outdated or no longer available`);
     }
 

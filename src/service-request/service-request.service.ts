@@ -729,7 +729,7 @@ export class ServiceRequestService {
       .sort({ __v: -1 })
       .exec();
 
-    if (!latestVersion || latestVersion._id.toString() !== serviceId) {
+    if (!latestVersion || (latestVersion._id as any).toString() !== serviceId) {
       throw new BadRequestException('Hanya versi terbaru dari layanan yang dapat digunakan untuk membuat permintaan baru.');
     }
 

@@ -36,33 +36,48 @@ export class ServicesClientService {
       throw new NotFoundException(`Invalid service ID: ${id}`);
     }
 
-    const service = await this.serviceModel
-      .findById(id)
-      .select(
-        'companyId title description accessType isActive serviceRequestConfig workOrdersConfig',
-      )
+    // 1. Find the requested service version
+    const requestedService = await this.serviceModel
+      .findOne({ _id: new Types.ObjectId(id), deletedAt: null })
       .exec();
 
-    if (!service || !service.isActive) {
-      throw new NotFoundException(`Service with ID ${id} not found`);
+    if (!requestedService) {
+      throw new NotFoundException(`Service not found`);
     }
 
-    if (service.accessType === 'public') {
-      return service;
+    // 2. Find the absolute latest version for this serviceKey
+    const latestVersion = await this.serviceModel
+      .findOne({ serviceKey: requestedService.serviceKey, deletedAt: null })
+      .sort({ __v: -1 })
+      .exec();
+
+    // 3. If requested ID is not the latest version, reject it
+    if (!latestVersion || latestVersion._id.toString() !== id) {
+      throw new NotFoundException(`Service version is outdated or no longer available`);
     }
 
-    if (service.accessType === 'member_only' && user?._id) {
+    // 4. Check if latest version is active
+    if (!latestVersion.isActive) {
+      throw new NotFoundException(`Service is currently inactive`);
+    }
+
+    // 5. Access Control
+    if (latestVersion.accessType === 'public') {
+      return latestVersion;
+    }
+
+    if (latestVersion.accessType === 'member_only' && user?._id) {
       const isMember = await this.membershipService.isUserSubscribed(
         user._id.toString(),
-        service.companyId.toString(),
+        latestVersion.companyId.toString(),
       );
 
       if (isMember) {
-        return service;
+        return latestVersion;
       }
     }
 
-    throw new NotFoundException(
+    throw new ForbiddenException(
       `Service with ID ${id} not found or is not accessible`,
     );
   }

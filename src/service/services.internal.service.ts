@@ -138,11 +138,14 @@ export class ServicesInternalService {
       ? await this.buildWorkOrdersConfig(dto.workOrdersConfig)
       : latestVersion.workOrdersConfig;
 
+    const { isActive: _, ...updateData } = dto as any;
+
     const newVersionData = {
       ...latestVersion.toObject(),
-      ...dto,
+      ...updateData,
       serviceRequestConfig,
       workOrdersConfig,
+      isActive: latestVersion.isActive,
       _id: undefined,
       __v: latestVersion.__v + 1,
     };

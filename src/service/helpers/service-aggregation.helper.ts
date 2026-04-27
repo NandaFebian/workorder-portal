@@ -26,8 +26,14 @@ export async function getServicesWithAggregation(
     projectStage.workOrdersConfig = 1;
   }
 
+  // Extract base match criteria (companyId, deletedAt) to be applied before grouping
+  // Other filters (isActive, accessType) must be applied after grouping to prevent fallback to old versions
+  const { companyId, ...otherFilters } = matchQuery;
+  const initialMatch: any = { deletedAt: null };
+  if (companyId) initialMatch.companyId = companyId;
+
   const pipeline: PipelineStage[] = [
-    { $match: { ...matchQuery, deletedAt: null } },
+    { $match: initialMatch },
     { $sort: { __v: -1 } },
     {
       $group: {
@@ -36,6 +42,7 @@ export async function getServicesWithAggregation(
       },
     },
     { $replaceRoot: { newRoot: '$latest_doc' } },
+    { $match: otherFilters }, // Apply isActive, accessType, etc. on the latest version only
     { $sort: { createdAt: -1 } },
     { $project: projectStage },
   ];

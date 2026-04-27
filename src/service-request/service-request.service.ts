@@ -73,29 +73,7 @@ export class ServiceRequestService {
     user: AuthenticatedUser | null,
     attemptType: 'public' | 'internal',
   ): Promise<any> {
-    if (!Types.ObjectId.isValid(serviceId)) throw new BadRequestException('Invalid Service ID');
-    
-    const service = await this.serviceModel.findOne({ _id: new Types.ObjectId(serviceId), deletedAt: null, isActive: true }).exec();
-    if (!service) throw new NotFoundException('Service not found or inactive');
-
-    if (attemptType === 'public') {
-      if (service.accessType === 'internal') {
-        throw new ForbiddenException('External clients are not allowed to access internal services.');
-      }
-      if (service.accessType === 'member_only') {
-        if (!user || (!user._id)) {
-           throw new ForbiddenException('You must log in to access this member-only service.');
-        }
-        const isMember = await this.membershipService.isUserSubscribed(user._id.toString(), service.companyId.toString());
-        if (!isMember) {
-          throw new ForbiddenException('You must be a registered member of the Provider company to access this service.');
-        }
-      }
-    } else if (attemptType === 'internal') {
-      if (!user || !user.company?._id || user.company._id.toString() !== service.companyId.toString()) {
-        throw new ForbiddenException('Only internal staff of the provider company can access this form.');
-      }
-    }
+    const service = await this._getValidatedLatestService(serviceId, user, attemptType);
 
     const src = (service as any).serviceRequestConfig || {};
     if (!src.intakeFormId) return null;
@@ -113,22 +91,7 @@ export class ServiceRequestService {
     user: AuthenticatedUser,
     dto: any,
   ): Promise<any> {
-    if (!Types.ObjectId.isValid(serviceId)) throw new BadRequestException('Invalid Service ID');
-    
-    const service = await this.serviceModel.findOne({ _id: new Types.ObjectId(serviceId), deletedAt: null, isActive: true }).exec();
-    if (!service) throw new NotFoundException('Service not found or inactive');
-
-    // Access Control Check
-    if (service.accessType === 'internal') {
-      if (!user.company?._id || user.company._id.toString() !== service.companyId.toString()) {
-        throw new ForbiddenException('External Clients are not allowed to submit internal requests.');
-      }
-    } else if (service.accessType === 'member_only') {
-      const isMember = await this.membershipService.isUserSubscribed(user._id.toString(), service.companyId.toString());
-      if (!isMember) {
-        throw new ForbiddenException('Requester must be a registered member of the Provider company.');
-      }
-    } // public allows everyone
+    const service = await this._getValidatedLatestService(serviceId, user, 'public');
 
     const src = (service as any).serviceRequestConfig || {};
     
@@ -742,5 +705,60 @@ export class ServiceRequestService {
     }
 
     return this.findOneInternal(id, user);
+  }
+
+  private async _getValidatedLatestService(
+    serviceId: string,
+    user: AuthenticatedUser | null,
+    attemptType: 'public' | 'internal' = 'public',
+  ): Promise<ServiceDocument> {
+    if (!Types.ObjectId.isValid(serviceId)) {
+      throw new BadRequestException('Invalid Service ID');
+    }
+
+    const requestedService = await this.serviceModel
+      .findOne({ _id: new Types.ObjectId(serviceId), deletedAt: null })
+      .exec();
+
+    if (!requestedService) {
+      throw new NotFoundException('Service not found');
+    }
+
+    const latestVersion = await this.serviceModel
+      .findOne({ serviceKey: requestedService.serviceKey, deletedAt: null })
+      .sort({ __v: -1 })
+      .exec();
+
+    if (!latestVersion || latestVersion._id.toString() !== serviceId) {
+      throw new BadRequestException('Hanya versi terbaru dari layanan yang dapat digunakan untuk membuat permintaan baru.');
+    }
+
+    if (!latestVersion.isActive) {
+      throw new NotFoundException('Layanan ini sedang tidak aktif.');
+    }
+
+    if (attemptType === 'public') {
+      if (latestVersion.accessType === 'internal') {
+        throw new ForbiddenException('Klien eksternal tidak diizinkan untuk mengakses layanan internal.');
+      }
+      if (latestVersion.accessType === 'member_only') {
+        if (!user || !user._id) {
+          throw new ForbiddenException('Anda harus login untuk mengakses layanan khusus member ini.');
+        }
+        const isMember = await this.membershipService.isUserSubscribed(
+          user._id.toString(),
+          latestVersion.companyId.toString(),
+        );
+        if (!isMember) {
+          throw new ForbiddenException('Anda harus menjadi member perusahaan penyedia untuk mengakses layanan ini.');
+        }
+      }
+    } else if (attemptType === 'internal') {
+      if (!user || !user.company?._id || user.company._id.toString() !== latestVersion.companyId.toString()) {
+        throw new ForbiddenException('Hanya staf internal perusahaan penyedia yang dapat mengakses form ini.');
+      }
+    }
+
+    return latestVersion;
   }
 }

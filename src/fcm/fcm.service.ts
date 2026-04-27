@@ -58,7 +58,7 @@ export class FcmService {
     token: string,
     title: string,
     body: string,
-    data?: { [key: string]: string },
+    data?: Record<string, any>,
   ): Promise<void> {
     try {
       if (!admin.apps.length) {
@@ -67,12 +67,7 @@ export class FcmService {
       }
 
       // Ensure all data values are strings (FCM requirement)
-      const sanitizedData: { [key: string]: string } = {};
-      if (data) {
-        Object.entries(data).forEach(([key, value]) => {
-          sanitizedData[key] = value !== null && value !== undefined ? String(value) : '';
-        });
-      }
+      const sanitizedData = this.toFcmData(data || {});
 
       // Add title and body to data payload
       sanitizedData.title = String(title || '');
@@ -98,7 +93,7 @@ export class FcmService {
     tokens: string[],
     title: string,
     body: string,
-    data?: { [key: string]: string },
+    data?: Record<string, any>,
   ): Promise<void> {
     try {
       if (!admin.apps.length) {
@@ -113,12 +108,7 @@ export class FcmService {
       }
 
       // Ensure all data values are strings
-      const sanitizedData: { [key: string]: string } = {};
-      if (data) {
-        Object.entries(data).forEach(([key, value]) => {
-          sanitizedData[key] = value !== null && value !== undefined ? String(value) : '';
-        });
-      }
+      const sanitizedData = this.toFcmData(data || {});
 
       // Add title and body to data payload
       sanitizedData.title = String(title || '');
@@ -185,7 +175,7 @@ export class FcmService {
     userId: string,
     title: string,
     body: string,
-    data?: { [key: string]: string },
+    data?: Record<string, any>,
   ): Promise<void> {
     try {
       // Persist to inbox
@@ -210,7 +200,7 @@ export class FcmService {
     userId: string,
     title: string,
     body: string,
-    data?: { [key: string]: string },
+    data?: Record<string, any>,
   ): Promise<void> {
     try {
       await this.notificationModel.create({
@@ -298,5 +288,17 @@ export class FcmService {
         this.logger.error(`Error cleaning up invalid tokens: ${error.message}`);
       }
     }
+  }
+
+  /**
+   * Convert an object to FCM-compatible data (all values as strings)
+   */
+  private toFcmData(obj: Record<string, any>): Record<string, string> {
+    return Object.fromEntries(
+      Object.entries(obj).map(([k, v]) => [
+        k,
+        v !== null && v !== undefined ? String(v) : '',
+      ]),
+    );
   }
 }

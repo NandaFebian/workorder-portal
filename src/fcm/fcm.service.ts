@@ -74,6 +74,10 @@ export class FcmService {
       sanitizedData.body = String(body || '');
 
       const message: admin.messaging.Message = {
+        notification: {
+          title,
+          body,
+        },
         data: sanitizedData,
         token: token.trim(),
       };
@@ -115,6 +119,10 @@ export class FcmService {
       sanitizedData.body = String(body || '');
 
       const message: admin.messaging.MulticastMessage = {
+        notification: {
+          title,
+          body,
+        },
         data: sanitizedData,
         tokens: validTokens.map(t => t.trim()),
       };

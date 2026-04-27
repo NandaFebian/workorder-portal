@@ -13,6 +13,7 @@ import { FormsService } from 'src/form/form.service';
 import { SubmissionType } from '../common/enums/submission-type.enum';
 import { validateFormSubmission } from 'src/form/helpers/form-validation.helper';
 import { FcmService } from 'src/fcm/fcm.service';
+import { UsersService } from 'src/users/users.service';
 import { FormSubmissionStatus } from 'src/common/enums/form-submission-status.enum';
 import { Role } from 'src/common/enums/role.enum';
 import { WorkReportStatus } from 'src/common/enums/work-report-status.enum';
@@ -27,6 +28,7 @@ export class WorkReportService {
     private readonly formSubmissionModel: Model<FormSubmissionDocument>,
     private readonly formsService: FormsService,
     private readonly fcmService: FcmService,
+    private readonly usersService: UsersService,
   ) {}
 
   async create(createDto: CreateWorkReportDto): Promise<WorkReportDocument> {
@@ -263,8 +265,38 @@ export class WorkReportService {
     } else {
       report.status = WorkReportStatus.SUBMITTED;
     }
-    
     await report.save();
+
+    // Notify about status change
+    if (wo && typeof wo === 'object' && wo._id) {
+      if (report.status === WorkReportStatus.SUBMITTED) {
+        // Notify managers about report submission
+        const managers = await this.usersService.findAllByCompanyId(
+          report.companyId as any,
+          [Role.CompanyOwner, Role.CompanyManager],
+        );
+        for (const manager of managers) {
+          await this.fcmService.sendToUser(
+            (manager as any)._id.toString(),
+            'Laporan Penugasan Lapangan Masuk',
+            `Staf ${user.name} telah mengirimkan laporan untuk Perintah Kerja (${wo.code}).`,
+            { resource: 'work_order', resourceId: wo._id.toString(), status: WorkReportStatus.SUBMITTED }
+          );
+        }
+      } else if (report.status === WorkReportStatus.APPROVED) {
+        // Notify PIC/Staff about auto-approval
+        const targets = wo.staffPIC ? [wo.staffPIC.toString()] : (wo.assignedStaff || []).map((s: any) => s.toString());
+        for (const userId of targets) {
+          await this.fcmService.sendToUser(
+            userId,
+            'Laporan Penugasan Lapangan Disetujui (Otomatis)',
+            `Laporan penugasan lapangan Anda untuk Perintah Kerja (${wo.code}) telah disetujui secara otomatis.`,
+            { resource: 'work_order', resourceId: wo._id.toString(), status: WorkReportStatus.APPROVED }
+          );
+        }
+      }
+    }
+
     return this.findOne(id);
   }
 

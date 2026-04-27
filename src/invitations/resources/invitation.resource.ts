@@ -17,6 +17,9 @@ export class InvitationResource {
       ? invitation.toObject()
       : { ...invitation };
 
+    delete invObj.__v;
+    delete invObj.updatedAt;
+
     // Transform positionId to position if populated
     if (invObj.positionId) {
       invObj.position = PositionResource.transformPosition(invObj.positionId);
@@ -46,6 +49,9 @@ export class InvitationResource {
     const invObj = invitation.toObject
       ? invitation.toObject()
       : { ...invitation };
+
+    delete invObj.__v;
+    delete invObj.updatedAt;
 
     // Transform position
     if (invObj.positionId) {

@@ -185,9 +185,15 @@ export class WorkOrderService {
     }
 
     if (filterDto.startDate && filterDto.endDate) {
+      const start = new Date(filterDto.startDate);
+      start.setHours(0, 0, 0, 0);
+      
+      const end = new Date(filterDto.endDate);
+      end.setHours(23, 59, 59, 999);
+
       query.createdAt = {
-        $gte: new Date(filterDto.startDate),
-        $lte: new Date(filterDto.endDate),
+        $gte: start,
+        $lte: end,
       };
     }
 

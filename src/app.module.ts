@@ -9,6 +9,7 @@ import { OperationsModule } from './operations/operations.module';
 import { OrganizationModule } from './organization/organization.module';
 import { MembershipModule } from './membership/membership.module';
 import { FcmModule } from './fcm/fcm.module';
+import { NotificationQueueModule } from './notification-queue/notification-queue.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { FcmModule } from './fcm/fcm.module';
     OperationsModule,
     MembershipModule,
     FcmModule,
+    NotificationQueueModule,
   ],
   controllers: [AppController],
   providers: [AppService],

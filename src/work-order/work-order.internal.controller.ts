@@ -56,8 +56,12 @@ export class WorkOrderInternalController {
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
-  async findOne(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-    const result = await this.workOrderService.findOneInternal(id, user);
+  async findOne(
+    @Param('id') id: string,
+    @GetUser() user: AuthenticatedUser,
+    @Query('notificationId') notificationId?: string,
+  ) {
+    const result = await this.workOrderService.findOneInternal(id, user, notificationId);
     return ResponseUtil.success('Load data success', result.data, result.meta);
   }
 

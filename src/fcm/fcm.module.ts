@@ -4,6 +4,7 @@ import { FcmService } from './fcm.service';
 import { User, UserSchema } from '../users/schemas/user.schema';
 import { NotificationsController } from './notifications.controller';
 import { Notification, NotificationSchema } from './schemas/notification.schema';
+import { NotificationService } from './notification.service';
 
 @Global()
 @Module({
@@ -14,7 +15,7 @@ import { Notification, NotificationSchema } from './schemas/notification.schema'
     ]),
   ],
   controllers: [NotificationsController],
-  providers: [FcmService],
-  exports: [FcmService],
+  providers: [FcmService, NotificationService],
+  exports: [FcmService, NotificationService],
 })
 export class FcmModule {}

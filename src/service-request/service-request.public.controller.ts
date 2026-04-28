@@ -8,6 +8,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Query,
 } from '@nestjs/common';
 import { ServiceRequestService } from './service-request.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
@@ -35,8 +36,9 @@ export class ServiceRequestPublicController {
   async getDetailSr(
     @Param('id') id: string,
     @GetUser() user: AuthenticatedUser,
+    @Query('notificationId') notificationId?: string,
   ) {
-    const data = await this.csrService.getUnifiedDetail(id, user);
+    const data = await this.csrService.getUnifiedDetail(id, user, notificationId);
     return ResponseUtil.success('Load detail success', data);
   }
 

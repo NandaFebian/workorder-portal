@@ -27,6 +27,7 @@ import { SubmissionType } from '../common/enums/submission-type.enum';
 import { validateFormSubmission } from 'src/form/helpers/form-validation.helper';
 import { ServiceRequestService } from 'src/service-request/service-request.service';
 import { FcmService } from 'src/fcm/fcm.service';
+import { NotificationProducer } from 'src/notification-queue/notification.producer';
 import { Role } from 'src/common/enums/role.enum';
 import { WorkOrderStatus } from 'src/common/enums/work-order-status.enum';
 import { ApprovalAccessType } from 'src/common/enums/approval-access-type.enum';
@@ -48,6 +49,7 @@ export class WorkOrderService {
     @Inject(forwardRef(() => ServiceRequestService))
     private readonly serviceRequestService: ServiceRequestService,
     private readonly fcmService: FcmService,
+    private readonly notificationProducer: NotificationProducer,
   ) { }
 
   async createInternal(data: any): Promise<WorkOrderDocument> {
@@ -212,7 +214,7 @@ export class WorkOrderService {
     return hydrated.map(h => ({ ...h.data, meta: h.meta }));
   }
 
-  async findOneInternal(id: string, user: AuthenticatedUser): Promise<any> {
+  async findOneInternal(id: string, user: AuthenticatedUser, notificationId?: string): Promise<any> {
     if (!user.company?._id) throw new ForbiddenException('User company information is missing');
     if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid Work Order ID');
 
@@ -233,8 +235,13 @@ export class WorkOrderService {
 
     if (!wo) throw new NotFoundException('Work Order not found');
 
-    // Mark notifications as read when detail is fetched
-    await this.fcmService.markAsReadByResource(user._id.toString(), 'work_order', id);
+    // Mark notifications as read using background job if notificationId is provided
+    if (notificationId) {
+      this.notificationProducer.enqueueMarkAsRead(notificationId);
+    } else {
+      // Fallback for async fire-and-forget without BullMQ, using resource-based update if no ID
+      this.fcmService.markAsReadByResource(user._id.toString(), 'work_order', id).catch(console.error);
+    }
 
     return this._hydrateOne(wo);
   }

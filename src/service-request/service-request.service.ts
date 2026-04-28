@@ -28,6 +28,7 @@ import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interf
 import { WorkReportService } from 'src/work-report/work-report.service';
 import { SrResponseUtil } from './utils/sr-response.util';
 import { FcmService } from 'src/fcm/fcm.service';
+import { NotificationProducer } from 'src/notification-queue/notification.producer';
 import { UsersService } from 'src/users/users.service';
 import { AssignStaffDto } from 'src/work-order/dto/assign-staff.dto';
 import { Role } from 'src/common/enums/role.enum';
@@ -55,6 +56,7 @@ export class ServiceRequestService {
     private readonly workReportService: WorkReportService,
     private readonly membershipService: MembershipService,
     private readonly fcmService: FcmService,
+    private readonly notificationProducer: NotificationProducer,
     private readonly usersService: UsersService,
   ) {}
 
@@ -392,7 +394,7 @@ export class ServiceRequestService {
     return this._enrichAndFormat(sr, true);
   }
 
-  async getUnifiedDetail(id: string, user: AuthenticatedUser): Promise<any> {
+  async getUnifiedDetail(id: string, user: AuthenticatedUser, notificationId?: string): Promise<any> {
     if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
     
     const sr = await this.srModel.findOne({ _id: id, deletedAt: null }).exec();
@@ -402,8 +404,13 @@ export class ServiceRequestService {
     const isRequester = requestedById === user._id.toString();
     const isProvider = user.company?._id && sr.companyId.toString() === user.company._id.toString();
 
-    // Mark notifications as read when detail is fetched
-    await this.fcmService.markAsReadByResource(user._id.toString(), 'service_request', id);
+    // Mark notifications as read using background job if notificationId is provided
+    if (notificationId) {
+      this.notificationProducer.enqueueMarkAsRead(notificationId);
+    } else {
+      // Fallback
+      this.fcmService.markAsReadByResource(user._id.toString(), 'service_request', id).catch(console.error);
+    }
 
     if (isRequester) {
       return this.findOneForClient(id, user._id.toString());

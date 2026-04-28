@@ -20,6 +20,9 @@ export class Notification {
   @Prop({ default: false, index: true })
   isRead: boolean;
 
+  @Prop({ type: Date, default: null })
+  readAt: Date;
+
   @Prop({ type: Date, default: Date.now, index: true, expires: '30d' })
   createdAt: Date;
 }

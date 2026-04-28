@@ -111,7 +111,7 @@ export class ServiceRequestService {
       } catch {}
     }
     
-    if (src.reviewFormId && src.reviewNeed) {
+    if (src.reviewFormId) {
       reviewFormId = src.reviewFormId as Types.ObjectId;
     }
     
@@ -291,13 +291,8 @@ export class ServiceRequestService {
       
     sr.reviewSubmissionId = subDocId;
       
-    if (sr.reviewNeed) {
-      sr.serviceRequestStatus = ServiceRequestStatus.COMPLETED;
-      sr.completedAt = new Date();
-    } else {
-      sr.serviceRequestStatus = ServiceRequestStatus.CLOSED;
-      sr.closedAt = new Date();
-    }
+    sr.serviceRequestStatus = ServiceRequestStatus.CLOSED;
+    sr.closedAt = new Date();
     await sr.save();
 
     // Notify provider company managers/owner about review submission
@@ -469,13 +464,14 @@ export class ServiceRequestService {
   async updateSRStatusSystemically(id: string, status: ServiceRequestStatus): Promise<void> {
     const sr = await this.srModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!sr) return;
+    const now = new Date();
     let targetStatus = status;
     if (targetStatus === ServiceRequestStatus.COMPLETED && !sr.reviewNeed) {
       targetStatus = ServiceRequestStatus.CLOSED;
+      sr.completedAt = now;
     }
 
     sr.serviceRequestStatus = targetStatus;
-    const now = new Date();
     switch (targetStatus) {
       case ServiceRequestStatus.UNPROCESSABLE:
         sr.unprocessableAt = now;
@@ -560,9 +556,14 @@ export class ServiceRequestService {
     }
 
     const now = new Date();
-    const updateData: any = { serviceRequestStatus: status };
+    let targetStatus = status;
+    if (targetStatus === ServiceRequestStatus.COMPLETED && !sr.reviewNeed) {
+      targetStatus = ServiceRequestStatus.CLOSED;
+    }
 
-    switch (status) {
+    const updateData: any = { serviceRequestStatus: targetStatus };
+
+    switch (targetStatus) {
       case ServiceRequestStatus.APPROVED:
         updateData.approvedBy = user._id;
         updateData.approvedAt = now;
@@ -578,6 +579,10 @@ export class ServiceRequestService {
         break;
       case ServiceRequestStatus.CLOSED:
         updateData.closedAt = now;
+        // If it was supposed to be COMPLETED but moved to CLOSED, set completedAt too
+        if (status === ServiceRequestStatus.COMPLETED) {
+          updateData.completedAt = now;
+        }
         break;
     }
 
@@ -587,7 +592,7 @@ export class ServiceRequestService {
     // Notify requester about the status update
     if (sr.requestedBy) {
       const requesterId = sr.requestedBy._id ? sr.requestedBy._id.toString() : sr.requestedBy.toString();
-      const statusLabel = StatusTranslator.translateSRStatus(status);
+      const statusLabel = StatusTranslator.translateSRStatus(targetStatus);
       await this.fcmService.sendToUser(
         requesterId,
         'Status Permintaan Layanan Diperbarui',
@@ -595,7 +600,7 @@ export class ServiceRequestService {
         {
           resource: 'service_request',
           resourceId: id,
-          status,
+          status: targetStatus,
         },
       );
     }

@@ -47,18 +47,13 @@ export class ServicesClientService {
 
     // 2. Find the absolute latest version for this serviceKey
     const latestVersion = await this.serviceModel
-      .findOne({ serviceKey: requestedService.serviceKey, deletedAt: null })
+      .findOne({ serviceKey: requestedService.serviceKey })
       .sort({ __v: -1 })
       .exec();
 
-    // 3. If requested ID is not the latest version, reject it
-    if (!latestVersion || (latestVersion._id as any).toString() !== id) {
-      throw new NotFoundException(`Service version is outdated or no longer available`);
-    }
-
-    // 4. Check if latest version is active
-    if (!latestVersion.isActive) {
-      throw new NotFoundException(`Service is currently inactive`);
+    // 3. Check if latest version is active and not deleted
+    if (!latestVersion || latestVersion.deletedAt !== null || !latestVersion.isActive) {
+      throw new NotFoundException(`Service is currently inactive or has been deleted`);
     }
 
     // 5. Access Control
@@ -165,8 +160,9 @@ export class ServicesClientService {
     if (!intakeFormId) return [];
 
     try {
-      const form =
-        await this.formsService.findTemplateById(intakeFormId.toString());
+      const specificForm = await this.formsService.findTemplateById(intakeFormId.toString());
+      if (!specificForm) return [];
+      const form = await this.formsService.findLatestTemplateByKey(specificForm.formKey);
       if (!form) return [];
       return [{ form }];
     } catch {
@@ -185,8 +181,28 @@ export class ServicesClientService {
     );
     const src = (service as any).serviceRequestConfig || {};
 
-    const intakeFormId: any = src.intakeFormId || null;
-    const reviewFormId: any = (src.reviewFormId && src.reviewNeed) ? src.reviewFormId : null;
+    let intakeFormId: any = src.intakeFormId || null;
+    let reviewFormId: any = (src.reviewFormId && src.reviewNeed) ? src.reviewFormId : null;
+
+    if (intakeFormId) {
+      try {
+        const sf = await this.formsService.findTemplateById(intakeFormId.toString());
+        if (sf) {
+          const lf = await this.formsService.findLatestTemplateByKey(sf.formKey);
+          if (lf) intakeFormId = lf._id;
+        }
+      } catch {}
+    }
+
+    if (reviewFormId) {
+      try {
+        const sf = await this.formsService.findTemplateById(reviewFormId.toString());
+        if (sf) {
+          const lf = await this.formsService.findLatestTemplateByKey(sf.formKey);
+          if (lf) reviewFormId = lf._id;
+        }
+      } catch {}
+    }
 
     const newCSR = await this.csrService.create({
       serviceId: service._id as any,
@@ -206,11 +222,23 @@ export class ServicesClientService {
       if (!intakeFormId) {
         throw new NotFoundException('This service does not have an intake form.');
       }
-      if (submission.formId !== intakeFormId.toString()) {
+      
+      let isValidForm = false;
+      try {
+        const submittedForm = await this.formsService.findTemplateById(submission.formId);
+        const expectedForm = await this.formsService.findTemplateById(intakeFormId.toString());
+        if (submittedForm && expectedForm && submittedForm.formKey === expectedForm.formKey) {
+          isValidForm = true;
+        }
+      } catch {}
+
+      if (!isValidForm) {
         throw new NotFoundException(
           `Submitted form ID ${submission.formId} does not match the required intake form for this service.`,
         );
       }
+
+      submission.formId = intakeFormId.toString();
 
       const formTemplate = await this.formsService.findTemplateById(intakeFormId.toString());
       if (!formTemplate) {

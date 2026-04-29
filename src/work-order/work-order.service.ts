@@ -81,12 +81,51 @@ export class WorkOrderService {
       await this._validateStaffRequirement(createWorkOrderDto);
     }
 
+    let serviceId = createWorkOrderDto.serviceId;
+    if (serviceId) {
+        const svcModel = this.workOrderModel.db.model('Service');
+        const svc = await svcModel.findOne({ _id: serviceId, deletedAt: null });
+        if (svc) {
+            const latestSvc = await svcModel.findOne({ serviceKey: svc.serviceKey }).sort({ __v: -1 });
+            if (latestSvc && latestSvc.deletedAt === null && latestSvc.isActive) {
+                serviceId = latestSvc._id;
+            } else if (latestSvc && (latestSvc.deletedAt !== null || !latestSvc.isActive)) {
+                throw new BadRequestException('Layanan ini sudah dihapus atau sedang tidak aktif.');
+            }
+        }
+    }
+    
+    let workOrderFormId = createWorkOrderDto.workOrderFormId;
+    if (workOrderFormId) {
+        try {
+            const f = await this.formsService.findTemplateById(workOrderFormId.toString());
+            if (f) {
+                const latestF = await this.formsService.findLatestTemplateByKey(f.formKey);
+                if (latestF) workOrderFormId = latestF._id;
+            }
+        } catch {}
+    }
+
+    let reportFormId = createWorkOrderDto.reportFormId;
+    if (reportFormId) {
+        try {
+            const f = await this.formsService.findTemplateById(reportFormId.toString());
+            if (f) {
+                const latestF = await this.formsService.findLatestTemplateByKey(f.formKey);
+                if (latestF) reportFormId = latestF._id;
+            }
+        } catch {}
+    }
+
     const newWorkOrder = new this.workOrderModel({
       ...createWorkOrderDto,
+      serviceId,
+      workOrderFormId,
+      reportFormId,
       code: `WO-${generateCode()}`,
       companyId: user.company._id,
       createdBy: user._id,
-      status: WorkReportStatus.DRAFTED,
+      status: WorkOrderStatus.DRAFTED,
       draftedAt: new Date(),
     });
     const saved = await newWorkOrder.save();
@@ -110,8 +149,9 @@ export class WorkOrderService {
       _id: id,
       companyId: user.company._id,
       deletedAt: null,
-    });
+    }).populate('serviceId');
     if (!wo) throw new NotFoundException('Work Order not found');
+    this._checkServiceActive(wo);
 
     if (updateWorkOrderDto.staffPIC || updateWorkOrderDto.assignedStaff) {
       const merged = { ...wo.toObject(), ...updateWorkOrderDto };
@@ -121,6 +161,14 @@ export class WorkOrderService {
     Object.assign(wo, updateWorkOrderDto);
     await wo.save();
     return this.findOneInternal(id, user);
+  }
+
+  private _checkServiceActive(wo: any) {
+    if (!wo.serviceId || typeof wo.serviceId !== 'object') return;
+    const svc = wo.serviceId as any;
+    if (svc.isActive === false && wo.status !== WorkOrderStatus.ON_PROGRESS) {
+      throw new ForbiddenException('Layanan terkait sedang tidak aktif. Aksi pada Perintah Kerja ini tidak diizinkan.');
+    }
   }
 
   private async _validateStaffRequirement(wo: any) {
@@ -393,8 +441,9 @@ export class WorkOrderService {
       _id: id,
       companyId: user.company._id,
       deletedAt: null,
-    });
+    }).populate('serviceId');
     if (!wo) throw new NotFoundException('Work Order not found');
+    this._checkServiceActive(wo);
 
     const now = new Date();
     wo.status = updateStatusDto.status;
@@ -451,8 +500,9 @@ export class WorkOrderService {
       _id: id,
       companyId: user.company._id,
       deletedAt: null,
-    });
+    }).populate('serviceId');
     if (!wo) throw new NotFoundException('Work Order not found');
+    this._checkServiceActive(wo);
 
     const errors: string[] = [];
     const requiredPositionId = wo.positionId?.toString();
@@ -541,8 +591,9 @@ export class WorkOrderService {
   async markAsSent(id: string, user: AuthenticatedUser): Promise<any> {
     if (!user.company?._id) throw new ForbiddenException('User company information is missing');
 
-    const wo = await this.workOrderModel.findOne({ _id: id, companyId: user.company._id, deletedAt: null });
+    const wo = await this.workOrderModel.findOne({ _id: id, companyId: user.company._id, deletedAt: null }).populate('serviceId');
     if (!wo) throw new NotFoundException('Work Order not found');
+    this._checkServiceActive(wo);
 
     // Requirement: User must be creator OR Owner OR Manager (for system-generated or self-created)
     const isOwner = user.role === Role.CompanyOwner;
@@ -622,8 +673,9 @@ export class WorkOrderService {
   }
 
   async approve(id: string, user: AuthenticatedUser): Promise<any> {
-    const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null });
+    const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null }).populate('serviceId');
     if (!wo) throw new NotFoundException('Work Order not found');
+    this._checkServiceActive(wo);
 
     if (wo.status !== WorkOrderStatus.SENT) {
       throw new UnprocessableEntityException('Status tidak memenuhi syarat');
@@ -649,8 +701,9 @@ export class WorkOrderService {
   }
 
   async reject(id: string, user: AuthenticatedUser): Promise<any> {
-    const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null });
+    const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null }).populate('serviceId');
     if (!wo) throw new NotFoundException('Work Order not found');
+    this._checkServiceActive(wo);
 
     if (wo.status !== WorkOrderStatus.SENT) {
       throw new UnprocessableEntityException('Status tidak memenuhi syarat');
@@ -675,8 +728,9 @@ export class WorkOrderService {
   }
 
   async recreate(id: string, user: AuthenticatedUser): Promise<any> {
-    const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null });
+    const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null }).populate('serviceId');
     if (!wo) throw new NotFoundException('Work Order not found');
+    this._checkServiceActive(wo);
 
     this._checkOwnership(wo, user);
     if (wo.status !== WorkOrderStatus.REJECTED) throw new UnprocessableEntityException('Status tidak memenuhi syarat');
@@ -712,8 +766,9 @@ export class WorkOrderService {
   }
 
   async cancel(id: string, user: AuthenticatedUser): Promise<any> {
-    const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null });
+    const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null }).populate('serviceId');
     if (!wo) throw new NotFoundException('Work Order not found');
+    this._checkServiceActive(wo);
 
     this._checkOwnership(wo, user);
 
@@ -759,8 +814,9 @@ export class WorkOrderService {
   }
 
   async start(id: string, user: AuthenticatedUser): Promise<any> {
-    const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null });
+    const wo = await this.workOrderModel.findOne({ _id: id, deletedAt: null }).populate('serviceId');
     if (!wo) throw new NotFoundException('Work Order not found');
+    this._checkServiceActive(wo);
 
     if (wo.status !== WorkOrderStatus.APPROVED) throw new UnprocessableEntityException('Status tidak memenuhi syarat');
 

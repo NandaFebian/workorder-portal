@@ -241,16 +241,13 @@ export class FormsService {
     formKey: string,
   ): Promise<FormTemplateDocument> {
     const latestTemplate = await this.formTemplateModel
-      .findOne({
-        formKey,
-        deletedAt: null,
-      })
+      .findOne({ formKey })
       .sort({ __v: -1 })
-      .exec(); // Urutkan berdasarkan versi (__v) desc
+      .exec();
 
-    if (!latestTemplate) {
+    if (!latestTemplate || latestTemplate.deletedAt !== null) {
       throw new NotFoundException(
-        `Form template with key ${formKey} not found`,
+        `Form template with key ${formKey} not found or has been deleted.`,
       );
     }
     return latestTemplate;

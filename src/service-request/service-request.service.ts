@@ -81,8 +81,9 @@ export class ServiceRequestService {
     if (!src.intakeFormId) return null;
     
     try {
-      const template = await this.formsService.findTemplateById(src.intakeFormId.toString());
-      return template;
+      const specificForm = await this.formsService.findTemplateById(src.intakeFormId.toString());
+      if (!specificForm) return null;
+      return await this.formsService.findLatestTemplateByKey(specificForm.formKey);
     } catch {
       return null;
     }
@@ -102,29 +103,53 @@ export class ServiceRequestService {
     let templateFields: any[] = [];
     
     if (src.intakeFormId) {
-      intakeFormId = src.intakeFormId as Types.ObjectId;
       try {
-        const template = await this.formsService.findTemplateById(intakeFormId.toString());
-        if (template) {
-          templateFields = template.fields || [];
+        const specificForm = await this.formsService.findTemplateById(src.intakeFormId.toString());
+        if (specificForm) {
+            const template = await this.formsService.findLatestTemplateByKey(specificForm.formKey);
+            if (template) {
+                intakeFormId = template._id as Types.ObjectId;
+                templateFields = template.fields || [];
+            }
         }
       } catch {}
     }
     
     if (src.reviewFormId) {
-      reviewFormId = src.reviewFormId as Types.ObjectId;
+      try {
+        const specificReviewForm = await this.formsService.findTemplateById(src.reviewFormId.toString());
+        if (specificReviewForm) {
+            const latestReviewForm = await this.formsService.findLatestTemplateByKey(specificReviewForm.formKey);
+            if (latestReviewForm) {
+                reviewFormId = latestReviewForm._id as Types.ObjectId;
+            }
+        }
+      } catch {}
     }
     
-    const submission = dto.submission || null;
+    const submission = (dto && dto.formId) ? dto : (dto.submission || null);
 
     // Strict Request Payload Validation: Ensure user doesn't submit random form IDs
     if (submission) {
       if (!intakeFormId) {
         throw new BadRequestException('Layanan ini tidak memerlukan pengiriman formulir intake.');
       }
-      if (submission.formId !== intakeFormId.toString()) {
+      
+      let isValidForm = false;
+      try {
+        const submittedForm = await this.formsService.findTemplateById(submission.formId);
+        const expectedForm = await this.formsService.findTemplateById(intakeFormId.toString());
+        if (submittedForm && expectedForm && submittedForm.formKey === expectedForm.formKey) {
+          isValidForm = true;
+        }
+      } catch {}
+
+      if (!isValidForm) {
         throw new BadRequestException(`ID formulir yang dikirimkan (${submission.formId}) tidak cocok dengan formulir intake yang diperlukan untuk layanan ini.`);
       }
+
+      // Ensure we process it as the latest form
+      submission.formId = intakeFormId.toString();
     }
 
     // Use centralized validation helper (which now handles required fields)
@@ -261,7 +286,7 @@ export class ServiceRequestService {
     if (!template) throw new UnprocessableEntityException('Templat formulir ulasan tidak ditemukan.');
     const templateFields = template.fields || [];
 
-    const submission = dto.submission || null;
+    const submission = (dto && dto.formId) ? dto : (dto.submission || null);
 
     if (!submission) {
       throw new UnprocessableEntityException({
@@ -270,9 +295,21 @@ export class ServiceRequestService {
       });
     }
 
-    if (submission.formId !== sr.reviewFormId!.toString()) {
+    let isValidForm = false;
+    try {
+      const submittedForm = await this.formsService.findTemplateById(submission.formId);
+      const expectedForm = await this.formsService.findTemplateById(sr.reviewFormId!.toString());
+      if (submittedForm && expectedForm && submittedForm.formKey === expectedForm.formKey) {
+        isValidForm = true;
+      }
+    } catch {}
+
+    if (!isValidForm) {
       throw new BadRequestException(`ID formulir yang dikirimkan (${submission.formId}) tidak cocok dengan formulir ulasan untuk permintaan layanan ini.`);
     }
+
+    // Override with the correct one attached to SR
+    submission.formId = sr.reviewFormId!.toString();
 
     const submissionData = submission.fieldsData || [];
     validateFormSubmission(templateFields, submissionData);
@@ -737,16 +774,12 @@ export class ServiceRequestService {
     }
 
     const latestVersion = await this.serviceModel
-      .findOne({ serviceKey: requestedService.serviceKey, deletedAt: null })
+      .findOne({ serviceKey: requestedService.serviceKey })
       .sort({ __v: -1 })
       .exec();
 
-    if (!latestVersion || (latestVersion._id as any).toString() !== serviceId) {
-      throw new BadRequestException('Hanya versi terbaru dari layanan yang dapat digunakan untuk membuat permintaan baru.');
-    }
-
-    if (!latestVersion.isActive) {
-      throw new NotFoundException('Layanan ini sedang tidak aktif.');
+    if (!latestVersion || latestVersion.deletedAt !== null || !latestVersion.isActive) {
+      throw new NotFoundException('Layanan ini sudah dihapus atau sedang tidak aktif.');
     }
 
     if (attemptType === 'public') {

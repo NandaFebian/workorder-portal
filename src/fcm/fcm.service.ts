@@ -73,6 +73,10 @@ export class FcmService {
       sanitizedData.title = String(title || '');
       sanitizedData.body = String(body || '');
 
+      // Ensure resource and resourceId are present in data payload
+      sanitizedData.resource = String(data?.resource || '');
+      sanitizedData.resourceId = String(data?.resourceId || '');
+
       const message: admin.messaging.Message = {
         notification: {
           title,
@@ -117,6 +121,10 @@ export class FcmService {
       // Add title and body to data payload
       sanitizedData.title = String(title || '');
       sanitizedData.body = String(body || '');
+
+      // Ensure resource and resourceId are present in data payload
+      sanitizedData.resource = String(data?.resource || '');
+      sanitizedData.resourceId = String(data?.resourceId || '');
 
       const message: admin.messaging.MulticastMessage = {
         notification: {
@@ -211,11 +219,18 @@ export class FcmService {
     data?: Record<string, any>,
   ): Promise<void> {
     try {
+      // Ensure resource and resourceId are present in the data object
+      const notificationData = {
+        ...(data || {}),
+        resource: data?.resource || '',
+        resourceId: data?.resourceId || '',
+      };
+
       await this.notificationModel.create({
         userId,
         title,
         body,
-        data: data || {},
+        data: notificationData,
         isRead: false,
       });
     } catch (error: any) {

@@ -247,30 +247,6 @@ export class FcmService {
       .lean()
       .exec();
 
-    try {
-      const workOrderModel = this.notificationModel.db.model('WorkOrder');
-      for (const notif of notifications) {
-        if (notif.data && notif.data.resource === 'work_order') {
-          const wo = await workOrderModel
-            .findById(notif.data.resourceId)
-            .select('workReportApprovalAccessType')
-            .lean()
-            .exec();
-            
-          if (wo) {
-            const woData = wo as any;
-            if (woData.workReportApprovalAccessType === 'auto') {
-              notif.data.status = 'complete_needed';
-            } else {
-              notif.data.status = 'report_submitted';
-            }
-          }
-        }
-      }
-    } catch (error: any) {
-      this.logger.error(`Error mapping work order status in getInbox: ${error.message}`);
-    }
-
     return notifications;
   }
 

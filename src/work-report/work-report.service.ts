@@ -287,7 +287,7 @@ export class WorkReportService {
               m._id.toString(),
               'Laporan Penugasan Lapangan Masuk',
               `Staf ${user.name} telah mengirimkan laporan untuk Perintah Kerja (${wo.code}).`,
-              { resource: 'work_order', resourceId: wo._id.toString(), status: WorkReportStatus.SUBMITTED }
+              { resource: 'work_order', resourceId: wo._id.toString(), status: 'report_submitted' }
             );
           }
         }
@@ -299,7 +299,7 @@ export class WorkReportService {
             userId,
             'Laporan Penugasan Lapangan Disetujui (Otomatis)',
             `Laporan penugasan lapangan Anda untuk Perintah Kerja (${wo.code}) telah disetujui secara otomatis.`,
-            { resource: 'work_order', resourceId: wo._id.toString(), status: WorkReportStatus.APPROVED }
+            { resource: 'work_order', resourceId: wo._id.toString(), status: 'complete_needed' }
           );
         }
       }

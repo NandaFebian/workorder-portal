@@ -10,18 +10,18 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { StorageService } from './storage.service';
 
-@Controller('storage')
+@Controller('files')
 export class StorageController {
   constructor(private readonly storageService: StorageService) {}
 
-  @Post('upload-image')
+  @Post()
   @UseInterceptors(FileInterceptor('file')) // File di-intercept dan disimpan di Memory/RAM sebagai buffer
   async uploadImage(
     @UploadedFile(
       new ParseFilePipe({
         validators: [
           new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // Batas maksimal 5MB
-          new FileTypeValidator({ fileType: '.(png|jpeg|jpg)' }), // Hanya menerima gambar
+          new FileTypeValidator({ fileType: 'image' }), // Menerima semua tipe file gambar (image/*)
         ],
       }),
     )

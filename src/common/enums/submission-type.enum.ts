@@ -3,4 +3,5 @@ export enum SubmissionType {
   Report = 'report',
   Intake = 'intake',
   Review = 'review',
+  Image = 'image',
 }

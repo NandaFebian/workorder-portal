@@ -3,4 +3,5 @@ export enum FormType {
   Intake = 'intake',
   WorkOrder = 'work_order',
   Report = 'report',
+  Image = 'image',
 }

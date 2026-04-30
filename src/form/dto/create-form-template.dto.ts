@@ -10,6 +10,7 @@ import {
   IsBoolean,
   IsNumber,
 } from 'class-validator';
+import { FormType } from '../../common/enums/form-type.enum';
 
 class OptionDto {
   @IsString()
@@ -57,8 +58,6 @@ class FormFieldDto {
   max?: number;
 }
 
-const allowedFormTypes = ['work_order', 'report', 'intake', 'review'] as const;
-
 export class CreateFormTemplateDto {
   @IsString()
   @IsNotEmpty()
@@ -68,11 +67,11 @@ export class CreateFormTemplateDto {
   @IsOptional()
   description?: string;
 
-  @IsEnum(['work_order', 'report', 'intake', 'review'], {
-    message: `formType must be one of the following values: ${allowedFormTypes.join(', ')}`,
+  @IsEnum(FormType, {
+    message: `formType must be a valid FormType enum value`,
   })
   @IsNotEmpty()
-  formType: string;
+  formType: FormType;
 
   @IsArray()
   @ValidateNested({ each: true })

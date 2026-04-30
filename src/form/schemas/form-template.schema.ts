@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 import { FormField } from './form-field.schema';
+import { FormType } from '../../common/enums/form-type.enum';
 
 export type FormTemplateDocument = FormTemplate & Document;
 
@@ -19,7 +20,7 @@ export class FormTemplate {
   @Prop({ required: false })
   description: string;
 
-  @Prop({ required: true, enum: ['work_order', 'report', 'intake', 'review'] })
+  @Prop({ required: true, enum: Object.values(FormType) })
   formType: string;
 
   // Definisikan __v secara manual sebagai field biasa

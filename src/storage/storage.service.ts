@@ -1,7 +1,9 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import * as path from 'path';
 import { extname } from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import sharp from 'sharp';
 
 @Injectable()
 export class StorageService {
@@ -23,15 +25,21 @@ export class StorageService {
   }
 
   async uploadImage(file: Express.Multer.File): Promise<string> {
-    const fileExtension = extname(file.originalname);
-    const fileName = `${uuidv4()}${fileExtension}`;
+    // Ubah ekstensi menjadi .webp secara seragam untuk efisiensi tinggi
+    const fileName = `${uuidv4()}.webp`;
     
     try {
+      // Proses optimasi gambar: Resize & Konversi ke WebP
+      const optimizedBuffer = await sharp(file.buffer)
+        .resize({ width: 1200, withoutEnlargement: true }) // Lebar maksimal 1200px (tidak diperbesar jika aslinya kecil)
+        .webp({ effort: 6, quality: 80 }) // Format WebP sangat ringan dan tetap tajam (kualitas 80%)
+        .toBuffer();
+
       const command = new PutObjectCommand({
         Bucket: this.bucketName,
         Key: fileName,
-        Body: file.buffer,
-        ContentType: file.mimetype,
+        Body: optimizedBuffer,
+        ContentType: 'image/webp',
       });
 
       await this.s3Client.send(command);

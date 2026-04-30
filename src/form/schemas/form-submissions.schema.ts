@@ -23,7 +23,7 @@ export class FormSubmission {
     enum: Object.values(SubmissionType),
     default: SubmissionType.Intake,
   })
-  submissionType: string; // 'intake', 'work_order', 'report'
+  submissionType: SubmissionType; // 'intake', 'work_order', 'report', 'image', dll
 
   // Owner ID merujuk ke _id dari ServiceRequest
   @Prop({

@@ -9,4 +9,5 @@ export enum FieldType {
   MultiSelect = 'multi_select',
   Checkbox = 'checkbox',
   File = 'file',
+  Image = 'image',
 }

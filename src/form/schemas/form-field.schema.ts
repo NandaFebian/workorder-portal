@@ -1,6 +1,7 @@
 // src/forms/schemas/form-field.schema.ts
 import { Prop, Schema } from '@nestjs/mongoose';
 import { Option } from './option.schema';
+import { FieldType } from '../../common/enums/field-type.enum';
 
 @Schema({ _id: true })
 export class FormField {
@@ -10,8 +11,8 @@ export class FormField {
   @Prop({ required: true })
   label: string;
 
-  @Prop({ required: true })
-  type: string;
+  @Prop({ required: true, enum: Object.values(FieldType) })
+  type: FieldType;
 
   @Prop({ required: true, default: false })
   required: boolean;

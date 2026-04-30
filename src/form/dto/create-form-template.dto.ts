@@ -11,6 +11,7 @@ import {
   IsNumber,
 } from 'class-validator';
 import { FormType } from '../../common/enums/form-type.enum';
+import { FieldType } from '../../common/enums/field-type.enum';
 
 class OptionDto {
   @IsString()
@@ -31,9 +32,11 @@ class FormFieldDto {
   @IsNotEmpty()
   label: string;
 
-  @IsString()
+  @IsEnum(FieldType, {
+    message: 'type must be a valid FieldType enum value',
+  })
   @IsNotEmpty()
-  type: string;
+  type: FieldType;
 
   @IsBoolean()
   @IsNotEmpty()

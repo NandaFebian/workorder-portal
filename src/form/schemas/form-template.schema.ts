@@ -21,7 +21,7 @@ export class FormTemplate {
   description: string;
 
   @Prop({ required: true, enum: Object.values(FormType) })
-  formType: string;
+  formType: FormType;
 
   // Definisikan __v secara manual sebagai field biasa
   @Prop({ required: true, default: 0 })

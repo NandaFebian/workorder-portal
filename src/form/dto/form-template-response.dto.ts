@@ -1,3 +1,5 @@
+import { FormType } from '../../common/enums/form-type.enum';
+
 class OptionResponseDto {
   key: string;
   value: string;
@@ -18,6 +20,6 @@ export class FormTemplateResponseDto {
   _id: string;
   title: string;
   description?: string;
-  formType: string;
+  formType: FormType;
   fields: FormFieldResponseDto[];
 }

@@ -11,6 +11,7 @@ import { MembershipModule } from './membership/membership.module';
 import { FcmModule } from './fcm/fcm.module';
 import { NotificationQueueModule } from './notification-queue/notification-queue.module';
 import { StorageModule } from './storage/storage.module';
+import { TemplateModule } from './template/template.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { StorageModule } from './storage/storage.module';
     FcmModule,
     NotificationQueueModule,
     StorageModule,
+    TemplateModule,
   ],
   controllers: [AppController],
   providers: [AppService],

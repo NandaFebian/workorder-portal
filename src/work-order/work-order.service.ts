@@ -54,8 +54,33 @@ export class WorkOrderService {
 
   async createInternal(data: any): Promise<WorkOrderDocument> {
     const now = new Date();
+
+    let workOrderFormId = data.workOrderFormId;
+    if (workOrderFormId) {
+        try {
+            const f = await this.formsService.findTemplateById(workOrderFormId.toString());
+            if (f) {
+                const latestF = await this.formsService.findLatestTemplateByKey(f.formKey);
+                if (latestF) workOrderFormId = latestF._id;
+            }
+        } catch {}
+    }
+
+    let reportFormId = data.reportFormId;
+    if (reportFormId) {
+        try {
+            const f = await this.formsService.findTemplateById(reportFormId.toString());
+            if (f) {
+                const latestF = await this.formsService.findLatestTemplateByKey(f.formKey);
+                if (latestF) reportFormId = latestF._id;
+            }
+        } catch {}
+    }
+
     const newWorkOrder = new this.workOrderModel({
       ...data,
+      workOrderFormId,
+      reportFormId,
       code: `WO-${generateCode()}`,
       draftedAt: (data.status === WorkOrderStatus.DRAFTED || !data.status) ? now : undefined,
     });
@@ -64,7 +89,7 @@ export class WorkOrderService {
     await this.workReportService.create({
       workOrderId: (saved as any)._id.toString(),
       companyId: (saved as any).companyId.toString(),
-      reportFormId: (saved as any).reportFormId ? (saved as any).reportFormId.toString() : null,
+      reportFormId: saved.reportFormId ? (saved.reportFormId as any).toString() : null,
       status: WorkReportStatus.DRAFTED,
       workReportApprovalAccessType: (saved as any).workReportApprovalAccessType,
     } as any);

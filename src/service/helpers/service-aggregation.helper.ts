@@ -58,8 +58,16 @@ export async function getServicesWithAggregation(
       const resolveForm = async (formId: any) => {
         if (!formId) return null;
         try {
-          const template = await formsService.findTemplateById(formId.toString());
+          let template = await formsService.findTemplateById(formId.toString());
           if (!template) return null;
+          
+          try {
+            const latest = await formsService.findLatestTemplateByKey(template.formKey);
+            if (latest) template = latest;
+          } catch {
+            // fallback to isolated version if latest not found
+          }
+
           const t = template.toObject ? template.toObject() : template;
           return {
             _id: t._id,

@@ -328,6 +328,7 @@ export class WorkOrderService {
         can_cancel: false,
       },
       workOrderSiblings: [],
+      reportNeedReview: false,
     };
 
     const isApproved = wo.status === WorkOrderStatus.APPROVED;
@@ -423,6 +424,12 @@ export class WorkOrderService {
         // can_complete/fail ONLY if current WO is on_progress AND report is approved
         meta.workOrderCapabilities.can_complete = isOnProgress;
         meta.workOrderCapabilities.can_fail = isOnProgress;
+      }
+
+      if ([WorkOrderStatus.ON_PROGRESS, WorkOrderStatus.COMPLETED, WorkOrderStatus.FAILED].includes(wo.status)) {
+        if (report && report.status === WorkReportStatus.SUBMITTED) {
+          meta.reportNeedReview = true;
+        }
       }
     } catch {
       // ignore

@@ -5,7 +5,7 @@ import { AuthGuard } from '../auth/guards/auth.guard';
 @Controller('template')
 @UseGuards(AuthGuard)
 export class TemplateController {
-  constructor(private readonly templateService: TemplateService) {}
+  constructor(private readonly templateService: TemplateService) { }
 
   @Get('company-type')
   async getCompanyTypes() {

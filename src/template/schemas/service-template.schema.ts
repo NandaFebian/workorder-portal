@@ -1,5 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
+import { SubmissionType } from '../../common/enums/submission-type.enum';
+import { ApprovalAccessType } from '../../common/enums/approval-access-type.enum';
 
 export type ServiceTemplateDocument = ServiceTemplate & Document;
 
@@ -11,7 +13,7 @@ export class FormTemplateBlueprint {
   @Prop()
   description: string;
 
-  @Prop({ required: true, enum: ['intake', 'review', 'work_order', 'report'] })
+  @Prop({ required: true, enum: Object.values(SubmissionType) })
   formType: string;
 
   @Prop({ type: [Object], default: [] })
@@ -29,8 +31,8 @@ export class ServiceRequestTemplateConfig {
 
   @Prop({
     type: String,
-    enum: ['auto', 'manager', 'staff_pic', 'staff_any'],
-    default: 'auto',
+    enum: Object.values(ApprovalAccessType),
+    default: ApprovalAccessType.AUTO,
   })
   serviceRequestApprovalAccessType: string;
 
@@ -55,15 +57,15 @@ export class WorkOrderTemplateConfig {
 
   @Prop({
     type: String,
-    enum: ['auto', 'staff_pic', 'staff_any'],
-    default: 'auto',
+    enum: [ApprovalAccessType.AUTO, ApprovalAccessType.STAFF_PIC, ApprovalAccessType.STAFF_ANY],
+    default: ApprovalAccessType.AUTO,
   })
   workOrderApprovalAccessType: string;
 
   @Prop({
     type: String,
-    enum: ['auto', 'manager'],
-    default: 'auto',
+    enum: [ApprovalAccessType.AUTO, ApprovalAccessType.MANAGER],
+    default: ApprovalAccessType.AUTO,
   })
   workReportApprovalAccessType: string;
 

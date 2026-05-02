@@ -7,6 +7,7 @@ import { FormsService } from '../form/form.service';
 import { ServicesInternalService } from '../service/services.internal.service';
 import { PositionsService } from '../positions/positions.service';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { ApprovalAccessType } from '../common/enums/approval-access-type.enum';
 
 @Injectable()
 export class TemplateService {
@@ -51,7 +52,7 @@ export class TemplateService {
       serviceRequestConfig: {
         intakeForm: template.serviceRequestConfig?.intakeForm || null,
         reviewForm: template.serviceRequestConfig?.reviewForm || null,
-        serviceRequestApprovalAccessType: template.serviceRequestConfig?.serviceRequestApprovalAccessType || 'auto',
+        serviceRequestApprovalAccessType: template.serviceRequestConfig?.serviceRequestApprovalAccessType || ApprovalAccessType.AUTO,
         reviewNeed: template.serviceRequestConfig?.reviewNeed || false,
       },
       workOrdersConfig: template.workOrdersConfig?.map(cfg => ({
@@ -59,8 +60,8 @@ export class TemplateService {
         positionsOnDuty: { name: cfg.positionName },
         workOrderForm: cfg.workOrderForm || null,
         workReportForm: cfg.workReportForm || null,
-        workOrderApprovalAccessType: cfg.workOrderApprovalAccessType || 'auto',
-        workReportApprovalAccessType: cfg.workReportApprovalAccessType || 'auto',
+        workOrderApprovalAccessType: cfg.workOrderApprovalAccessType || ApprovalAccessType.AUTO,
+        workReportApprovalAccessType: cfg.workReportApprovalAccessType || ApprovalAccessType.AUTO,
         minStaff: cfg.minStaff,
         maxStaff: cfg.maxStaff,
       })) || [],
@@ -131,7 +132,7 @@ export class TemplateService {
         serviceRequestConfig: {
           intakeFormId,
           reviewFormId,
-          serviceRequestApprovalAccessType: template.serviceRequestConfig?.serviceRequestApprovalAccessType || 'auto',
+          serviceRequestApprovalAccessType: template.serviceRequestConfig?.serviceRequestApprovalAccessType || ApprovalAccessType.AUTO,
           reviewNeed: template.serviceRequestConfig?.reviewNeed || false,
         },
         workOrdersConfig: workOrdersConfigDto,

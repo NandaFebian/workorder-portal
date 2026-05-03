@@ -1,9 +1,18 @@
 // src/users/users.service.ts
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import * as bcrypt from 'bcrypt';
 import { User, UserDocument } from './schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UserResource } from './resources/user.resource';
 
 @Injectable()
 export class UsersService {
@@ -57,5 +66,53 @@ export class UsersService {
       .select('-password')
       .sort({ createdAt: -1 })
       .exec();
+  }
+
+  async getProfile(userId: string): Promise<any> {
+    const user = await this.userModel
+      .findOne({ _id: userId, deletedAt: null })
+      .populate('companyId', 'name address description')
+      .populate('positionId', 'name description')
+      .select('-password')
+      .exec();
+
+    if (!user) throw new NotFoundException('User not found');
+    return UserResource.transformUser(user);
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<any> {
+    const user = await this.userModel
+      .findOne({ _id: userId, deletedAt: null })
+      .select('+password')
+      .exec();
+
+    if (!user) throw new NotFoundException('User not found');
+
+    // Handle password change
+    if (dto.newPassword) {
+      if (!dto.currentPassword) {
+        throw new BadRequestException('currentPassword diperlukan untuk mengganti password.');
+      }
+      const isMatch = await bcrypt.compare(dto.currentPassword, user.password);
+      if (!isMatch) {
+        throw new UnauthorizedException('Password saat ini tidak sesuai.');
+      }
+      user.password = dto.newPassword; // Will be hashed by pre-save hook
+    }
+
+    // Handle email change — check uniqueness
+    if (dto.email && dto.email !== user.email) {
+      const existing = await this.userModel.findOne({ email: dto.email, deletedAt: null }).exec();
+      if (existing && (existing._id as any).toString() !== userId) {
+        throw new ConflictException('Email sudah digunakan oleh pengguna lain.');
+      }
+      user.email = dto.email;
+    }
+
+    if (dto.name) user.name = dto.name;
+
+    await user.save();
+
+    return this.getProfile(userId);
   }
 }

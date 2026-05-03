@@ -108,6 +108,19 @@ Dokumentasi lengkap penerima notifikasi berdasarkan **role**, **ownership item**
 |----------|-------|---------|
 | **Authorized Managers** | Role + Ownership | Selalu dikirim |
 
+### 2.7 Cancel WO
+
+| Penerima | Basis | Kondisi |
+|----------|-------|---------|
+| **Staff PIC** | Keterlibatan — `staffPIC` | Jika `staffPIC` ada |
+| **Assigned Staff** (semua) | Keterlibatan — `assignedStaff[]` | Hanya jika tidak ada `staffPIC` (fallback) |
+
+### 2.8 Recreate WO (dari WO yang ditolak)
+
+| Penerima | Basis | Kondisi |
+|----------|-------|---------|
+| **Authorized Managers** | Role + Ownership | Selalu dikirim |
+
 ### Definisi "Authorized Managers"
 [work-order.service.ts:L1162–L1183](file:///d:/Perkuliahan/Work%20Order/workorder-portal/src/work-order/work-order.service.ts#L1162-L1183)
 
@@ -207,6 +220,8 @@ Matriks ringkasan siapa yang menerima notifikasi pada setiap event:
 | **WO Approve/Reject (by PIC)** | — | ✅¹ | ✅¹ | — | — |
 | **WO Started** | — | ✅¹ | ✅¹ | — | — |
 | **WO Completed/Failed** | — | ✅¹ | ✅¹ | — | — |
+| **WO Cancelled** | — | — | — | ✅ | ✅² |
+| **WO Recreated** | — | ✅¹ | ✅¹ | — | — |
 | **Report Submitted (manual)** | — | ✅¹ | ✅¹ | — | — |
 | **Report Submitted (auto)** | — | — | — | ✅ | ✅² |
 | **Report Approved** | — | — | — | ✅ | ✅² |

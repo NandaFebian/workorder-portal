@@ -794,6 +794,15 @@ export class WorkOrderService {
       status: WorkReportStatus.DRAFTED,
       workReportApprovalAccessType: saved.workReportApprovalAccessType,
     } as any);
+
+    // Notify Authorized Managers that a new WO has been created from a rejected one
+    await this._notifyAuthorizedManagers(
+      saved,
+      'Perintah Kerja Dibuat Ulang',
+      `Perintah Kerja (${wo.code}) yang ditolak telah dibuat ulang menjadi ${saved.code}.`,
+      WorkOrderStatus.DRAFTED,
+    );
+
     return this.findOneInternal((saved._id as any).toString(), user);
   }
 
@@ -840,6 +849,25 @@ export class WorkOrderService {
 
       const srId = wo.serviceRequestId.toString();
       await this._checkAndUpdateSRStatus(srId);
+    }
+
+    // Notify Staff PIC / Assigned Staff about cancellation
+    if (wo.staffPIC) {
+      await this.fcmService.sendToUser(
+        wo.staffPIC.toString(),
+        'Perintah Kerja Dibatalkan',
+        `Perintah Kerja (${wo.code}) telah dibatalkan.`,
+        { resource: 'work_order', resourceId: id, status: WorkOrderStatus.CANCELLED },
+      );
+    } else if (wo.assignedStaff && wo.assignedStaff.length > 0) {
+      for (const staffId of wo.assignedStaff) {
+        await this.fcmService.sendToUser(
+          staffId.toString(),
+          'Perintah Kerja Dibatalkan',
+          `Perintah Kerja (${wo.code}) telah dibatalkan.`,
+          { resource: 'work_order', resourceId: id, status: WorkOrderStatus.CANCELLED },
+        );
+      }
     }
 
     return this.findOneInternal(id, user);

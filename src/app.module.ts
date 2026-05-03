@@ -12,6 +12,7 @@ import { FcmModule } from './fcm/fcm.module';
 import { NotificationQueueModule } from './notification-queue/notification-queue.module';
 import { StorageModule } from './storage/storage.module';
 import { TemplateModule } from './template/template.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { TemplateModule } from './template/template.module';
     NotificationQueueModule,
     StorageModule,
     TemplateModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

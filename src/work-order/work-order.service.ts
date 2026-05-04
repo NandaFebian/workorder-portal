@@ -831,6 +831,9 @@ export class WorkOrderService {
       throw new UnprocessableEntityException('Status tidak memenuhi syarat');
     }
 
+    // Capture status before mutation for notification guard
+    const prevStatus = wo.status;
+
     wo.status = WorkOrderStatus.CANCELLED;
     wo.cancelledAt = new Date();
     await wo.save();
@@ -852,21 +855,25 @@ export class WorkOrderService {
     }
 
     // Notify Staff PIC / Assigned Staff about cancellation
-    if (wo.staffPIC) {
-      await this.fcmService.sendToUser(
-        wo.staffPIC.toString(),
-        'Perintah Kerja Dibatalkan',
-        `Perintah Kerja (${wo.code}) telah dibatalkan.`,
-        { resource: 'work_order', resourceId: id, status: WorkOrderStatus.CANCELLED },
-      );
-    } else if (wo.assignedStaff && wo.assignedStaff.length > 0) {
-      for (const staffId of wo.assignedStaff) {
+    // Only notify if WO was already sent to staff (not still in DRAFTED stage)
+    const wasAlreadySentToStaff = prevStatus !== WorkOrderStatus.DRAFTED;
+    if (wasAlreadySentToStaff) {
+      if (wo.staffPIC) {
         await this.fcmService.sendToUser(
-          staffId.toString(),
+          wo.staffPIC.toString(),
           'Perintah Kerja Dibatalkan',
           `Perintah Kerja (${wo.code}) telah dibatalkan.`,
           { resource: 'work_order', resourceId: id, status: WorkOrderStatus.CANCELLED },
         );
+      } else if (wo.assignedStaff && wo.assignedStaff.length > 0) {
+        for (const staffId of wo.assignedStaff) {
+          await this.fcmService.sendToUser(
+            staffId.toString(),
+            'Perintah Kerja Dibatalkan',
+            `Perintah Kerja (${wo.code}) telah dibatalkan.`,
+            { resource: 'work_order', resourceId: id, status: WorkOrderStatus.CANCELLED },
+          );
+        }
       }
     }
 

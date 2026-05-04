@@ -94,7 +94,41 @@ export class ServiceRequestService {
     user: AuthenticatedUser,
     dto: any,
   ): Promise<any> {
-    const service = await this._getValidatedLatestService(serviceId, user, 'public');
+    // Determine attempt type based on the service's accessType.
+    // We first do a lightweight fetch to read accessType before full validation.
+    let preliminaryAccessType: string | null = null;
+    if (Types.ObjectId.isValid(serviceId)) {
+      const preliminary = await this.serviceModel
+        .findOne({ _id: new Types.ObjectId(serviceId), deletedAt: null })
+        .select('accessType serviceKey companyId')
+        .exec();
+      if (preliminary) {
+        // Resolve latest version's accessType
+        const latestPrelim = await this.serviceModel
+          .findOne({ serviceKey: preliminary.serviceKey })
+          .sort({ __v: -1 })
+          .select('accessType companyId isActive deletedAt')
+          .exec();
+        preliminaryAccessType = latestPrelim?.accessType ?? null;
+      }
+    }
+
+    // Access Control: validate based on service's access type
+    // - internal → must be internal staff of the provider company
+    // - member_only → must be a registered member (handled by 'public' path which checks membership)
+    // - public → any authenticated user (nClient)
+    const attemptType = preliminaryAccessType === 'internal' ? 'internal' : 'public';
+
+    // Additional enforcement for 'internal' services:
+    // External clients (no company association with the provider) are not allowed.
+    if (preliminaryAccessType === 'internal') {
+      // _getValidatedLatestService with 'internal' will enforce company membership
+      if (!user.company?._id) {
+        throw new ForbiddenException('Klien eksternal tidak diizinkan untuk mengakses layanan internal.');
+      }
+    }
+
+    const service = await this._getValidatedLatestService(serviceId, user, attemptType);
 
     const src = (service as any).serviceRequestConfig || {};
     
@@ -215,6 +249,17 @@ export class ServiceRequestService {
       await this._autoApproveServiceRequest(newSR, user, service);
     }
     
+    // Return the appropriate response format based on who submitted:
+    // - Internal staff submitting to their own service → internal format
+    // - Everyone else (clients, members) → public (requester) format
+    const isInternalSubmitter =
+      attemptType === 'internal' &&
+      user.company?._id &&
+      user.company._id.toString() === (service as any).companyId?.toString();
+
+    if (isInternalSubmitter) {
+      return this.findOneInternal((newSR as any)._id.toString(), user);
+    }
     return this.findOneForClient((newSR as any)._id.toString(), user._id.toString());
   }
 

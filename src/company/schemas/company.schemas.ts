@@ -33,6 +33,16 @@ export class Company {
   @Prop({ default: false })
   isActive: boolean;
 
+  // FAQ Feature
+  @Prop({ default: false })
+  isFaqActive: boolean;
+
+  @Prop({ type: String, default: null })
+  faqApiKey: string | null;
+
+  @Prop({ type: Number, default: null })
+  faqExternalCompanyId: number | null;
+
   @Prop({ type: Date, default: null })
   deletedAt: Date;
 }

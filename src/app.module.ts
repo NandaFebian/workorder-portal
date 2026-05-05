@@ -13,6 +13,7 @@ import { NotificationQueueModule } from './notification-queue/notification-queue
 import { StorageModule } from './storage/storage.module';
 import { TemplateModule } from './template/template.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { FaqModule } from './faq/faq.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     StorageModule,
     TemplateModule,
     DashboardModule,
+    FaqModule,
   ],
   controllers: [AppController],
   providers: [AppService],

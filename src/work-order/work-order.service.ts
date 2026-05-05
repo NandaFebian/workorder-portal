@@ -370,8 +370,8 @@ export class WorkOrderService {
     if (siblingsQuery) {
       const siblingsRaw = await this.workOrderModel.find(
         { ...siblingsQuery, deletedAt: null },
-        { _id: 1, code: 1, status: 1, positionId: 1, configId: 1, createdAt: 1 }
-      ).populate('positionId', 'name').sort({ createdAt: -1 }).exec();
+        { _id: 1, code: 1, status: 1, positionId: 1, configId: 1, serviceId: 1, createdAt: 1 }
+      ).populate('positionId', 'name').populate('serviceId', 'title description accessType isActive').sort({ createdAt: -1 }).exec();
 
       const latestSiblingsMap = new Map();
       const siblingsForMeta: any[] = [];
@@ -398,7 +398,16 @@ export class WorkOrderService {
         _id: s._id,
         code: s.code,
         status: s.status,
-        position: s.positionId ? { _id: s.positionId._id, name: s.positionId.name } : null
+        position: s.positionId ? { _id: s.positionId._id, name: s.positionId.name } : null,
+        serviceSummary: s.serviceId
+          ? {
+              _id: s.serviceId._id,
+              title: s.serviceId.title,
+              description: s.serviceId.description,
+              accessType: s.serviceId.accessType,
+              isActive: s.serviceId.isActive,
+            }
+          : null,
       }));
 
       // can_start ONLY if ALL relevant siblings (latest versions) are ready AND current WO is approved

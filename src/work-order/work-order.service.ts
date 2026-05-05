@@ -278,13 +278,13 @@ export class WorkOrderService {
       .populate('approvedBy', 'name email role')
       .populate('staffPIC', 'name email role')
       .populate('assignedStaff', 'name email role')
-      .populate('serviceId', 'companyId title description accessType isActive')
-      .populate('positionId', '-__v')
+      .populate('serviceId', 'title description accessType isActive')
+      .populate('positionId', 'name description isActive companyId createdAt updatedAt deletedAt')
       .sort({ createdAt: -1 })
+      .lean()
       .exec();
 
-    const hydrated = await Promise.all(workOrdersRaw.map(wo => this._hydrateOne(wo)));
-    return hydrated.map(h => ({ ...h.data, meta: h.meta }));
+    return workOrdersRaw.map(wo => WorkOrderResource.transformWorkOrder(wo));
   }
 
   async findOneInternal(id: string, user: AuthenticatedUser, notificationId?: string): Promise<any> {
@@ -320,6 +320,12 @@ export class WorkOrderService {
   }
 
   private async _hydrateOne(wo: any, includeMeta: boolean = true): Promise<any> {
+    // For list view (includeMeta=false), skip all heavy meta computation
+    if (!includeMeta) {
+      const transformed = WorkOrderResource.transformWorkOrder(wo);
+      return transformed;
+    }
+
     // Hydrate the single work order form from its key
     let workOrderForm: any = null;
     if (wo.workOrderFormId) {
@@ -470,8 +476,6 @@ export class WorkOrderService {
     }
 
     const transformed = WorkOrderResource.transformWorkOrderDetail(wo, workOrderForm, submissions);
-    if (!includeMeta) return transformed;
-
     return { data: transformed, meta };
   }
 

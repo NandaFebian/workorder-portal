@@ -284,7 +284,7 @@ export class WorkOrderService {
       .lean()
       .exec();
 
-    return workOrdersRaw.map(wo => WorkOrderResource.transformWorkOrder(wo));
+    return Promise.all(workOrdersRaw.map(wo => this._hydrateOne(wo, false)));
   }
 
   async findOneInternal(id: string, user: AuthenticatedUser, notificationId?: string): Promise<any> {
@@ -320,13 +320,7 @@ export class WorkOrderService {
   }
 
   private async _hydrateOne(wo: any, includeMeta: boolean = true): Promise<any> {
-    // For list view (includeMeta=false), skip all heavy meta computation
-    if (!includeMeta) {
-      const transformed = WorkOrderResource.transformWorkOrder(wo);
-      return transformed;
-    }
-
-    // Hydrate the single work order form from its key
+    // Hydrate workOrderForm and submissions for both list and detail views
     let workOrderForm: any = null;
     if (wo.workOrderFormId) {
       try {
@@ -348,7 +342,13 @@ export class WorkOrderService {
 
     const submissions = await this.submissionModel
       .find({ ownerId: wo._id, submissionType: SubmissionType.WorkOrder })
+      .lean()
       .exec();
+
+    // For list view, return data with form+submissions but skip heavy meta computation
+    if (!includeMeta) {
+      return WorkOrderResource.transformWorkOrderDetail(wo, workOrderForm, submissions);
+    }
 
     let meta: any = {
       workOrderCapabilities: {

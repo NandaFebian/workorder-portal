@@ -403,11 +403,12 @@ export class ServiceRequestService {
     const requests = await this.srModel
       .find({ requestedBy: new Types.ObjectId(userId), deletedAt: null })
       .populate('companyId', 'name address description isActive')
-      .populate('serviceId', 'companyId title description accessType isActive')
+      .populate('serviceId', 'title description accessType isActive')
       .populate('requestedBy', 'name email role')
       .populate('approvedBy', 'name email role')
       .populate('staffPIC', 'name email role')
       .sort({ createdAt: -1 })
+      .lean()
       .exec();
 
     return Promise.all(requests.map((r) => this._enrichAndFormat(r, false)));
@@ -439,11 +440,12 @@ export class ServiceRequestService {
     const requests = await this.srModel
       .find({ companyId: new Types.ObjectId(companyId), deletedAt: null })
       .populate('companyId', 'name address description isActive')
-      .populate('serviceId', 'companyId title description accessType isActive')
+      .populate('serviceId', 'title description accessType isActive')
       .populate('requestedBy', 'name email role')
       .populate('approvedBy', 'name email role')
       .populate('staffPIC', 'name email role')
       .sort({ createdAt: -1 })
+      .lean()
       .exec();
 
     return Promise.all(requests.map((r) => this._enrichAndFormat(r, true)));
@@ -525,18 +527,21 @@ export class ServiceRequestService {
       } catch {}
     }
 
-    // Find intake and review submissions (filter by submissionType to avoid cross-contamination)
-    const intakeSubmission = doc.intakeFormId
-      ? await this.submissionModel
-          .findOne({ ownerId: doc._id, formId: doc.intakeFormId, submissionType: SubmissionType.Intake })
-          .exec()
-      : null;
-
-    const reviewSubmission = doc.reviewFormId
-      ? await this.submissionModel
-          .findOne({ ownerId: doc._id, formId: doc.reviewFormId, submissionType: SubmissionType.Review })
-          .exec()
-      : null;
+    // Find intake and review submissions in parallel
+    const [intakeSubmission, reviewSubmission] = await Promise.all([
+      doc.intakeFormId
+        ? this.submissionModel
+            .findOne({ ownerId: doc._id, formId: doc.intakeFormId, submissionType: SubmissionType.Intake })
+            .lean()
+            .exec()
+        : Promise.resolve(null),
+      doc.reviewFormId
+        ? this.submissionModel
+            .findOne({ ownerId: doc._id, formId: doc.reviewFormId, submissionType: SubmissionType.Review })
+            .lean()
+            .exec()
+        : Promise.resolve(null),
+    ]);
 
     return isInternal
       ? SrResponseUtil.formatInternal(doc, intakeForm, reviewForm, intakeSubmission, reviewSubmission)

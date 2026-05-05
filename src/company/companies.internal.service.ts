@@ -62,12 +62,13 @@ export class CompaniesInternalService {
     return existingCompany.save(); // .save() akan menaikkan __v
   }
 
-  async findAllInternal(): Promise<CompanyDocument[]> {
+  async findAllInternal(): Promise<any[]> {
     // Logika internal, bisa mengambil semua (termasuk yang tidak aktif)
     return this.companyModel
       .find({ deletedAt: null })
       .populate('ownerId', 'name email _id')
       .sort({ createdAt: -1 })
+      .lean()
       .exec();
   }
 

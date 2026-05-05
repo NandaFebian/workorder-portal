@@ -87,29 +87,28 @@ export class WorkReportService {
   private async _hydrateReport(report: WorkReportDocument, user: AuthenticatedUser | null): Promise<any> {
     const base = WorkReportResource.transformWorkReport(report);
 
-    // Hydrate the single report form
-    let reportForm: any = null;
-    if (report.reportFormId) {
-      try {
-        const template = await this.formsService.findTemplateById(report.reportFormId.toString());
-        if (template) {
-          const t = template.toObject ? template.toObject() : template;
-          reportForm = {
-            _id: t._id,
-            title: t.title,
-            description: t.description,
-            formType: t.formType,
-            fields: t.fields,
-          };
-        }
-      } catch {
-        // template not found
-      }
-    }
+    // Parallelize form hydration and submissions fetch
+    const [reportFormResult, submissions] = await Promise.all([
+      report.reportFormId
+        ? this.formsService.findTemplateById(report.reportFormId.toString()).catch(() => null)
+        : Promise.resolve(null),
+      this.formSubmissionModel
+        .find({ ownerId: report._id, submissionType: SubmissionType.Report })
+        .lean()
+        .exec(),
+    ]);
 
-    const submissions = await this.formSubmissionModel
-      .find({ ownerId: report._id, submissionType: SubmissionType.Report })
-      .exec();
+    let reportForm: any = null;
+    if (reportFormResult) {
+      const t = (reportFormResult as any).toObject ? (reportFormResult as any).toObject() : reportFormResult;
+      reportForm = {
+        _id: t._id,
+        title: t.title,
+        description: t.description,
+        formType: t.formType,
+        fields: t.fields,
+      };
+    }
 
     return {
       ...base,
@@ -329,9 +328,9 @@ export class WorkReportService {
     report.approvedBy = user._id as any;
     await report.save();
 
-    // Identify who to notify (PIC of the WO)
-    const reportFull = await this.workReportModel.findById(id).populate('workOrderId').exec();
-    const wo = reportFull?.workOrderId as any;
+    // Populate workOrderId directly without a second DB query
+    await report.populate('workOrderId', 'code staffPIC assignedStaff');
+    const wo = report.workOrderId as any;
     if (wo && (wo.staffPIC || (wo.assignedStaff && wo.assignedStaff.length > 0))) {
       const targets = wo.staffPIC ? [wo.staffPIC.toString()] : wo.assignedStaff.map((s: any) => s.toString());
       for (const userId of targets) {
@@ -367,9 +366,9 @@ export class WorkReportService {
     report.rejectedAt = new Date();
     await report.save();
 
-    // Identify who to notify (PIC of the WO)
-    const reportFull = await this.workReportModel.findById(id).populate('workOrderId').exec();
-    const wo = reportFull?.workOrderId as any;
+    // Populate workOrderId directly without a second DB query
+    await report.populate('workOrderId', 'code staffPIC assignedStaff');
+    const wo = report.workOrderId as any;
     if (wo && (wo.staffPIC || (wo.assignedStaff && wo.assignedStaff.length > 0))) {
       const targets = wo.staffPIC ? [wo.staffPIC.toString()] : wo.assignedStaff.map((s: any) => s.toString());
       for (const userId of targets) {

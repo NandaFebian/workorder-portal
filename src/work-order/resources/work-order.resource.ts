@@ -7,7 +7,6 @@ export class WorkOrderResource {
       code: wo.code,
       serviceRequestId: wo.serviceRequestId,
       configId: wo.configId || null,
-      companyId: wo.companyId,
       service: wo.serviceId
         ? {
             _id: wo.serviceId._id,
@@ -24,14 +23,14 @@ export class WorkOrderResource {
         ? this.transformUser(wo.approvedBy)
         : null,
       workOrderApprovalAccessType: wo.workOrderApprovalAccessType,
+      positionsOnDuty: wo.positionId
+        ? (wo.positionId.name ? this.transformPosition(wo.positionId) : wo.positionId)
+        : null,
       minStaff: wo.minStaff,
       maxStaff: wo.maxStaff,
       assignedStaff: (wo.assignedStaff || []).map((s: any) => this.transformUser(s)),
       staffPIC: wo.staffPIC
         ? this.transformUser(wo.staffPIC)
-        : null,
-      positionsOnDuty: wo.positionId
-        ? (wo.positionId.name ? this.transformPosition(wo.positionId) : wo.positionId)
         : null,
       status: wo.status,
       has_issue: wo.has_issue ?? false,

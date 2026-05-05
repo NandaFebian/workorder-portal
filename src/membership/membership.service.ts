@@ -59,7 +59,7 @@ export class MembershipService {
     }
   }
 
-  async findAll(user: AuthenticatedUser): Promise<MembershipCodeDocument[]> {
+  async findAll(user: AuthenticatedUser): Promise<any[]> {
     if (!user.company?._id) {
       throw new ForbiddenException('User is not associated with any company.');
     }
@@ -67,6 +67,7 @@ export class MembershipService {
       .find({ companyId: user.company._id, deletedAt: null })
       .populate('claimedBy', 'name email role')
       .sort({ createdAt: -1 })
+      .lean()
       .exec();
   }
 
@@ -94,7 +95,7 @@ export class MembershipService {
         claimedBy: userId,
         isClaimed: true,
         $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
-      });
+      }).select('_id').lean();
 
       return !!membership;
     } catch (error) {
@@ -116,6 +117,7 @@ export class MembershipService {
       })
       .populate('claimedBy', 'name email role')
       .sort({ claimedAt: -1 })
+      .lean()
       .exec();
 
     // Extract and format the clients

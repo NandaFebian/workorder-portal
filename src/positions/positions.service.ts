@@ -33,11 +33,13 @@ export class PositionsService {
           ],
         })
         .sort({ createdAt: -1 })
+        .lean()
         .exec();
     }
     return this.positionModel
       .find({ deletedAt: null })
       .sort({ createdAt: -1 })
+      .lean()
       .exec();
   }
 

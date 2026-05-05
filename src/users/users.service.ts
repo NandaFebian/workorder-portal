@@ -42,18 +42,19 @@ export class UsersService {
     return this.userModel.findOne({ _id: id, deletedAt: null });
   }
 
-  async findByPositionId(positionId: string): Promise<UserDocument[]> {
+  async findByPositionId(positionId: string): Promise<any[]> {
     return this.userModel
       .find({ positionId: new Types.ObjectId(positionId), deletedAt: null })
       .select('-password -__v')
       .sort({ createdAt: -1 })
+      .lean()
       .exec();
   }
 
   async findAllByCompanyId(
     companyId: Types.ObjectId,
     rolesToInclude?: string[],
-  ): Promise<UserDocument[]> {
+  ): Promise<any[]> {
     const query: any = { companyId, deletedAt: null };
 
     if (rolesToInclude && rolesToInclude.length > 0) {
@@ -65,6 +66,7 @@ export class UsersService {
       .populate('positionId', 'name')
       .select('-password')
       .sort({ createdAt: -1 })
+      .lean()
       .exec();
   }
 

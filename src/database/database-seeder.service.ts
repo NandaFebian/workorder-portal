@@ -39,7 +39,7 @@ export class DatabaseSeederService {
         for (const data of serviceTemplatesData) {
             // Update jika ada, atau buat baru jika belum ada
             await this.serviceTemplateModel.findOneAndUpdate(
-                { title: data.title },
+                { title: data.title, companyTypeId: data.companyTypeId },
                 { $set: data },
                 { upsert: true, new: true }
             ).exec();

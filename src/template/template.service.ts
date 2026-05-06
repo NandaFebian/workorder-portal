@@ -123,11 +123,19 @@ export class TemplateService {
       })),
     };
 
-    // positionsRequired is no longer needed separately since full objects are in workOrdersConfig
+    // Collect unique position names required by this template
+    const positionsRequired = (template.workOrdersConfig ?? []).map((cfg) => ({
+      _id: new Types.ObjectId().toString(),
+      name: cfg.positionsOnDuty?.name || 'Generated Position',
+      description: 'Posisi yang dibutuhkan untuk mengeksekusi layanan ini (ter-generate otomatis jika belum ada).',
+      isActive: true,
+      companyId: null,
+    }));
 
     return {
       _id: template._id,
       service,
+      positionsRequired,
     };
   }
 

@@ -91,7 +91,12 @@ export const serviceTemplatesData = [
     workOrdersConfig: [
       {
         configId: null,
-        positionName: 'Information Technology (IT)',
+        positionsOnDuty: {
+          _id: "69e9c3b64ed12731e6970808",
+          name: "Information Technology (IT)",
+          description: "Menangani infrastruktur jaringan, perangkat lunak, dan dukungan teknis perusahaan.",
+          companyId: "69e909874ed12731e697072e"
+        },
         workOrderApprovalAccessType: ApprovalAccessType.STAFF_PIC,
         workReportApprovalAccessType: ApprovalAccessType.MANAGER,
         minStaff: 1,
@@ -132,7 +137,7 @@ export const serviceTemplatesData = [
           formType: SubmissionType.Report,
           fields: [
             { order: 1, label: 'Total Pengeluaran Asli (Rp)', type: FieldType.Text, required: true, placeholder: 'Total pengeluaran..' },
-            { order: 2, label: 'Bukti Pembelian', type: FieldType.File, required: true },
+            { order: 2, label: 'Bukti Pembelian', type: FieldType.Image, required: true },
           ],
         },
       },
@@ -172,7 +177,12 @@ export const serviceTemplatesData = [
     workOrdersConfig: [
       {
         configId: null,
-        positionName: 'Information Technology (IT)',
+        positionsOnDuty: {
+          _id: "69e9c3b64ed12731e6970808",
+          name: "Information Technology (IT)",
+          description: "Menangani infrastruktur jaringan, perangkat lunak, dan dukungan teknis perusahaan.",
+          companyId: "69e909874ed12731e697072e"
+        },
         workOrderApprovalAccessType: ApprovalAccessType.STAFF_PIC,
         workReportApprovalAccessType: ApprovalAccessType.AUTO,
         minStaff: 1,
@@ -260,7 +270,12 @@ export const serviceTemplatesData = [
     workOrdersConfig: [
       {
         configId: null,
-        positionName: 'Facilities & Maintenance',
+        positionsOnDuty: {
+          _id: "69e9c3c94ed12731e697080f",
+          name: "Facilities & Maintenance",
+          description: "Menangani pemeliharaan gedung, ruang kerja, dan fasilitas fisik perusahaan.",
+          companyId: "69e909874ed12731e697072e"
+        },
         workOrderApprovalAccessType: ApprovalAccessType.AUTO,
         workReportApprovalAccessType: ApprovalAccessType.MANAGER,
         minStaff: 1,
@@ -302,7 +317,7 @@ export const serviceTemplatesData = [
               ]
             },
             { order: 2, label: 'Kendala Pemasangan', type: FieldType.Textarea, required: false },
-            { order: 3, label: 'Foto Hasil Instalasi', type: FieldType.File, required: true },
+            { order: 3, label: 'Foto Hasil Instalasi', type: FieldType.Image, required: true },
           ],
         },
       },

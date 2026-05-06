@@ -46,8 +46,8 @@ export class WorkOrderTemplateConfig {
   @Prop({ type: String, default: null })
   configId: string | null;
 
-  @Prop({ required: true })
-  positionName: string;
+  @Prop({ type: Object, required: true })
+  positionsOnDuty: any;
 
   @Prop({ type: FormTemplateBlueprintSchema, default: null })
   workOrderForm: FormTemplateBlueprint | null;

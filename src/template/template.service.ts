@@ -99,7 +99,7 @@ export class TemplateService {
         reviewNeed: template.serviceRequestConfig?.reviewNeed ?? false,
       },
       workOrdersConfig: (template.workOrdersConfig ?? []).map((cfg) => ({
-        positionName: cfg.positionName,
+        positionsOnDuty: cfg.positionsOnDuty,
         workOrderForm: cfg.workOrderForm
           ? {
               title: cfg.workOrderForm.title,
@@ -123,19 +123,11 @@ export class TemplateService {
       })),
     };
 
-    // Collect unique position names required by this template
-    const positionsRequired = (template.workOrdersConfig ?? []).map((cfg) => ({
-      _id: new Types.ObjectId().toString(),
-      name: cfg.positionName,
-      description: 'Posisi yang dibutuhkan untuk mengeksekusi layanan ini (ter-generate otomatis jika belum ada).',
-      isActive: true,
-      companyId: null,
-    }));
+    // positionsRequired is no longer needed separately since full objects are in workOrdersConfig
 
     return {
       _id: template._id,
       service,
-      positionsRequired,
     };
   }
 
@@ -198,7 +190,7 @@ export class TemplateService {
       // Materialise WO configs
       const workOrdersConfigDto: any[] = [];
       for (const wConfig of template.workOrdersConfig ?? []) {
-        const positionId = await getOrCreatePosition(wConfig.positionName);
+        const positionId = await getOrCreatePosition(wConfig.positionsOnDuty?.name || 'Generated Position');
         const workOrderFormId = await createFormFromBlueprint(wConfig.workOrderForm);
         const workReportFormId = await createFormFromBlueprint(wConfig.workReportForm);
 

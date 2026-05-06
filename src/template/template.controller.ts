@@ -59,10 +59,16 @@ export class TemplateController {
   @UseGuards(RolesGuard)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
   async generateServices(
-    @Body('serviceTemplateIds') serviceTemplateIds: string[],
+    @Body('serviceTemplateIds') serviceTemplateIds: any[],
     @GetUser() user: AuthenticatedUser,
   ) {
-    const data = await this.templateService.generateServices(user, serviceTemplateIds);
+    // Normalisasi input: dukung baik ["id1"] maupun [{ id: "id1" }] atau [{ serviceTemplateId: "id1" }]
+    const normalizedIds = (serviceTemplateIds || []).map(item => {
+      if (typeof item === 'string') return item;
+      return item.serviceTemplateId || item.id || item._id;
+    }).filter(Boolean);
+
+    const data = await this.templateService.generateServices(user, normalizedIds);
     return ResponseUtil.success('Services generated successfully', data);
   }
 }

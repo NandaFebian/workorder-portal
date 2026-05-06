@@ -125,7 +125,11 @@ export class TemplateService {
 
     // Collect unique position names required by this template
     const positionsRequired = (template.workOrdersConfig ?? []).map((cfg) => ({
-      positionName: cfg.positionName,
+      _id: new Types.ObjectId().toString(),
+      name: cfg.positionName,
+      description: 'Posisi yang dibutuhkan untuk mengeksekusi layanan ini (ter-generate otomatis jika belum ada).',
+      isActive: true,
+      companyId: null,
     }));
 
     return {
@@ -225,7 +229,22 @@ export class TemplateService {
       };
 
       const savedService = await this.servicesService.create(createServiceDto, user);
-      generatedServices.push(savedService);
+      
+      // Extract only summary fields
+      const summary = {
+        _id: savedService._id,
+        companyId: savedService.companyId,
+        title: savedService.title,
+        description: savedService.description,
+        accessType: savedService.accessType,
+        isActive: savedService.isActive,
+        serviceKey: savedService.serviceKey,
+        createdAt: savedService.createdAt,
+        updatedAt: savedService.updatedAt,
+        __v: savedService.__v,
+      };
+
+      generatedServices.push(summary);
     }
 
     return generatedServices;

@@ -18,7 +18,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "seed": "ts-node -r tsconfig-paths/register src/database/seed.ts seed",
+    "seed": "ts-node -r tsconfig-paths/register src/database/seed.ts",
     "seed:clear": "ts-node -r tsconfig-paths/register src/database/seed.ts clear",
     "seed:status": "ts-node -r tsconfig-paths/register src/database/seed.ts status",
     "generate:erd": "ts-node -r tsconfig-paths/register src/generate-erd.ts"

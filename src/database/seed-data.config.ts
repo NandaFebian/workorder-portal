@@ -1,754 +1,311 @@
 import { Types } from 'mongoose';
-import * as bcrypt from 'bcrypt';
+import { SubmissionType } from '../common/enums/submission-type.enum';
+import { ApprovalAccessType } from '../common/enums/approval-access-type.enum';
+import { FieldType } from '../common/enums/field-type.enum';
 
-/**
- * Pre-generated ObjectIds untuk memastikan referensi yang konsisten
- * Semua ID di-generate di sini untuk digunakan across all entities
- */
-export const SEED_IDS = {
-  // Companies
-  companies: {
-    tekMaju: new Types.ObjectId('673a1234567890abcdef0001'),
-    solusiDigital: new Types.ObjectId('673a1234567890abcdef0002'),
-  },
-
-  // Positions
-  positions: {
-    // TekMaju positions
-    projectManager: new Types.ObjectId('673a1234567890abcdef0011'),
-    fieldEngineer: new Types.ObjectId('673a1234567890abcdef0012'),
-    technician: new Types.ObjectId('673a1234567890abcdef0013'),
-    // SolusiDigital positions
-    itConsultant: new Types.ObjectId('673a1234567890abcdef0014'),
-    developer: new Types.ObjectId('673a1234567890abcdef0015'),
-  },
-
-  // Users
-  users: {
-    // Admin
-    admin: new Types.ObjectId('673a1234567890abcdef0021'),
-    // TekMaju users
-    ownerTekMaju: new Types.ObjectId('673a1234567890abcdef0022'),
-    managerTekMaju: new Types.ObjectId('673a1234567890abcdef0023'),
-    staff1TekMaju: new Types.ObjectId('673a1234567890abcdef0024'),
-    staff2TekMaju: new Types.ObjectId('673a1234567890abcdef0025'),
-    // SolusiDigital users
-    ownerSolusi: new Types.ObjectId('673a1234567890abcdef0026'),
-    managerSolusi: new Types.ObjectId('673a1234567890abcdef0027'),
-    staffSolusi: new Types.ObjectId('673a1234567890abcdef0028'),
-    // Unassigned Staff
-    freelancer1: new Types.ObjectId('673a1234567890abcdef0029'),
-    freelancer2: new Types.ObjectId('673a1234567890abcdef002a'),
-  },
-
-  // Form Templates
-  forms: {
-    clientIntakeGeneral: 'form_client_intake_general',
-    siteInspection: 'form_site_inspection',
-    installation: 'form_installation',
-    workReport: 'form_work_report',
-    qualityCheck: 'form_quality_check',
-  },
-
-  // Services
-  services: {
-    networkSetup: new Types.ObjectId('673a1234567890abcdef0031'),
-    maintenance: new Types.ObjectId('673a1234567890abcdef0032'),
-  },
-
-  // Client Service Requests
-  csrs: {
-    csr1: new Types.ObjectId('673a1234567890abcdef0041'),
-    csr2: new Types.ObjectId('673a1234567890abcdef0042'),
-  },
-
-  // Work Orders
-  workOrders: {
-    wo1: new Types.ObjectId('673a1234567890abcdef0051'),
-    wo2: new Types.ObjectId('673a1234567890abcdef0052'),
-  },
-
-  // Form Submissions
-  submissions: {
-    intake1: new Types.ObjectId('673a1234567890abcdef0061'),
-    inspection1: new Types.ObjectId('673a1234567890abcdef0062'),
-  },
-
-  // Work Reports
-  reports: {
-    report1: new Types.ObjectId('673a1234567890abcdef0071'),
-  },
-
-  // Membership Codes
-  memberships: {
-    code1: new Types.ObjectId('673a1234567890abcdef0081'),
-    code2: new Types.ObjectId('673a1234567890abcdef0082'),
-  },
+export const COMPANY_TYPE_IDS = {
+  PT: new Types.ObjectId('665000000000000000000001'),
+  CV: new Types.ObjectId('665000000000000000000002'),
+  PERORANGAN: new Types.ObjectId('665000000000000000000003'),
+  YAYASAN: new Types.ObjectId('665000000000000000000004'),
+  KOPERASI: new Types.ObjectId('665000000000000000000005'),
 };
 
-/**
- * Configuration object untuk semua seed data
- */
-export const SeedDataConfig = {
-  // ============================================
-  // 1. COMPANIES
-  // ============================================
-  companies: [
-    {
-      _id: SEED_IDS.companies.tekMaju,
-      name: 'TekMaju Engineering',
-      address: 'Jl. Teknologi No. 123, Jakarta Selatan',
-      description: 'Perusahaan engineering dan konstruksi terpercaya',
-      ownerId: SEED_IDS.users.ownerTekMaju,
-      managers: [SEED_IDS.users.managerTekMaju],
-      staffs: [SEED_IDS.users.staff1TekMaju, SEED_IDS.users.staff2TekMaju],
-      isActive: true,
-    },
-    {
-      _id: SEED_IDS.companies.solusiDigital,
-      name: 'Solusi Digital Indonesia',
-      address: 'Jl. Digital Hub No. 456, Tangerang',
-      description: 'Solusi IT dan Digital Transformation',
-      ownerId: SEED_IDS.users.ownerSolusi,
-      managers: [SEED_IDS.users.managerSolusi],
-      staffs: [SEED_IDS.users.staffSolusi],
-      isActive: true,
-    },
-  ],
+export const companyTypesData = [
+  {
+    _id: COMPANY_TYPE_IDS.PT,
+    name: 'PT (Perseroan Terbatas)',
+    description: 'Badan usaha berbadan hukum yang modalnya terkumpul dari berbagai saham. Cocok untuk bisnis skala menengah hingga besar.',
+  },
+  {
+    _id: COMPANY_TYPE_IDS.CV,
+    name: 'CV (Commanditaire Vennootschap)',
+    description: 'Persekutuan komanditer, badan usaha yang terdiri dari sekutu aktif dan sekutu pasif. Umum digunakan oleh UMKM.',
+  },
+  {
+    _id: COMPANY_TYPE_IDS.PERORANGAN,
+    name: 'Perorangan / Usaha Mandiri',
+    description: 'Badan usaha yang dimiliki dan dikelola oleh satu orang. Cocok untuk freelancer dan wirausaha perorangan.',
+  },
+  {
+    _id: COMPANY_TYPE_IDS.YAYASAN,
+    name: 'Yayasan',
+    description: 'Badan hukum nirlaba yang dibentuk untuk tujuan sosial, kemanusiaan, atau keagamaan.',
+  },
+  {
+    _id: COMPANY_TYPE_IDS.KOPERASI,
+    name: 'Koperasi',
+    description: 'Badan usaha yang beranggotakan orang atau badan hukum, berlandaskan asas kekeluargaan.',
+  },
+];
 
-  // ============================================
-  // 2. POSITIONS
-  // ============================================
-  positions: [
-    // TekMaju positions
-    {
-      _id: SEED_IDS.positions.projectManager,
-      name: 'Project Manager',
-      description: 'Manages overall project execution',
-      companyId: SEED_IDS.companies.tekMaju,
+export const serviceTemplatesData = [
+  // ── Template 1: Dari JSON User (Pengadaan Perangkat Baru / Auto Approve) ──
+  {
+    title: 'Pengadaan Perangkat Baru',
+    description: 'Template layanan pengadaan perangkat IT baru.',
+    companyTypeId: COMPANY_TYPE_IDS.PT,
+    serviceRequestConfig: {
+      serviceRequestApprovalAccessType: ApprovalAccessType.MANAGER,
+      reviewNeed: true,
+      intakeForm: {
+        title: 'Formulir Permintaan Perangkat Baru',
+        description: 'Formulir awal untuk pengguna meminta pengadaan komputer atau laptop baru.',
+        formType: SubmissionType.Intake,
+        fields: [
+          { order: 1, label: 'Nama Pengguna', type: FieldType.Text, required: true, placeholder: 'nama anda..', options: [] },
+          { order: 2, label: 'Alasan Permintaan', type: FieldType.Textarea, required: true, placeholder: 'alasan anda..', options: [] },
+        ],
+      },
+      reviewForm: {
+        title: 'Formulir Evaluasi Vendor Pengadaan',
+        description: 'Formulir untuk mengevaluasi kinerja vendor setelah barang diterima.',
+        formType: SubmissionType.Review,
+        fields: [
+          { 
+            order: 1, 
+            label: 'Rating Kualitas Barang', 
+            type: FieldType.SingleSelect, 
+            required: true, 
+            options: [
+              { key: '1776928352039', value: '1' },
+              { key: '1776928356338', value: '2' },
+              { key: '1776928357023', value: '3' },
+              { key: '1776928357743', value: '4' },
+              { key: '1776928358516', value: '5' }
+            ] 
+          },
+          { 
+            order: 2, 
+            label: 'Rating Kecepatan Pengiriman', 
+            type: FieldType.SingleSelect, 
+            required: true, 
+            options: [
+              { key: '1776928375393', value: 'Cepat' },
+              { key: '1776928379871', value: 'Lambat' }
+            ] 
+          },
+        ],
+      },
     },
-    {
-      _id: SEED_IDS.positions.fieldEngineer,
-      name: 'Field Engineer',
-      description: 'Handles on-site technical work',
-      companyId: SEED_IDS.companies.tekMaju,
-    },
-    {
-      _id: SEED_IDS.positions.technician,
-      name: 'Technician',
-      description: 'Technical support and maintenance',
-      companyId: SEED_IDS.companies.tekMaju,
-    },
-    // SolusiDigital positions
-    {
-      _id: SEED_IDS.positions.itConsultant,
-      name: 'IT Consultant',
-      description: 'Provides IT consultation services',
-      companyId: SEED_IDS.companies.solusiDigital,
-    },
-    {
-      _id: SEED_IDS.positions.developer,
-      name: 'Software Developer',
-      description: 'Develops software solutions',
-      companyId: SEED_IDS.companies.solusiDigital,
-    },
-  ],
-
-  // ============================================
-  // 3. USERS
-  // ============================================
-  users: [
-    // Admin
-    {
-      _id: SEED_IDS.users.admin,
-      name: 'Admin System',
-      email: 'admin@system.com',
-      password: bcrypt.hashSync('password123', 10),
-      role: 'admin',
-      companyId: null,
-      positionId: null,
-    },
-    // TekMaju users
-    {
-      _id: SEED_IDS.users.ownerTekMaju,
-      name: 'Budi Santoso',
-      email: 'budi@tekmaju.co.id',
-      password: bcrypt.hashSync('password123', 10),
-      role: 'owner_company',
-      companyId: SEED_IDS.companies.tekMaju,
-      positionId: null,
-    },
-    {
-      _id: SEED_IDS.users.managerTekMaju,
-      name: 'Siti Nurhaliza',
-      email: 'siti@tekmaju.co.id',
-      password: bcrypt.hashSync('password123', 10),
-      role: 'manager_company',
-      companyId: SEED_IDS.companies.tekMaju,
-      positionId: null,
-    },
-    {
-      _id: SEED_IDS.users.staff1TekMaju,
-      name: 'Ahmad Rizki',
-      email: 'ahmad@tekmaju.co.id',
-      password: bcrypt.hashSync('password123', 10),
-      role: 'staff_company',
-      companyId: SEED_IDS.companies.tekMaju,
-      positionId: SEED_IDS.positions.fieldEngineer,
-    },
-    {
-      _id: SEED_IDS.users.staff2TekMaju,
-      name: 'Dewi Lestari',
-      email: 'dewi@tekmaju.co.id',
-      password: bcrypt.hashSync('password123', 10),
-      role: 'staff_company',
-      companyId: SEED_IDS.companies.tekMaju,
-      positionId: SEED_IDS.positions.technician,
-    },
-    // SolusiDigital users
-    {
-      _id: SEED_IDS.users.ownerSolusi,
-      name: 'Rudi Hartono',
-      email: 'rudi@solusidigital.id',
-      password: bcrypt.hashSync('password123', 10),
-      role: 'owner_company',
-      companyId: SEED_IDS.companies.solusiDigital,
-      positionId: null,
-    },
-    {
-      _id: SEED_IDS.users.managerSolusi,
-      name: 'Linda Wijaya',
-      email: 'linda@solusidigital.id',
-      password: bcrypt.hashSync('password123', 10),
-      role: 'manager_company',
-      companyId: SEED_IDS.companies.solusiDigital,
-      positionId: null,
-    },
-    {
-      _id: SEED_IDS.users.staffSolusi,
-      name: 'Eko Prasetyo',
-      email: 'eko@solusidigital.id',
-      password: bcrypt.hashSync('password123', 10),
-      role: 'staff_company',
-      companyId: SEED_IDS.companies.solusiDigital,
-      positionId: SEED_IDS.positions.developer,
-    },
-    // Freelancers (staff_unassigned)
-    {
-      _id: SEED_IDS.users.freelancer1,
-      name: 'Andi Freelance',
-      email: 'andi@freelance.com',
-      password: bcrypt.hashSync('password123', 10),
-      role: 'staff_unassigned',
-      companyId: null,
-      positionId: null,
-    },
-    {
-      _id: SEED_IDS.users.freelancer2,
-      name: 'Maya Independent',
-      email: 'maya@freelance.com',
-      password: bcrypt.hashSync('password123', 10),
-      role: 'staff_unassigned',
-      companyId: null,
-      positionId: null,
-    },
-  ],
-
-  // ============================================
-  // 4. FORM TEMPLATES
-  // ============================================
-  formTemplates: [
-    {
-      formKey: SEED_IDS.forms.clientIntakeGeneral,
-      companyId: SEED_IDS.companies.tekMaju,
-      title: 'General Client Intake Form',
-      description: 'Initial client information gathering',
-      formType: 'intake',
-      __v: 0,
-      fields: [
-        {
-          order: 1,
-          label: 'Client Name',
-          type: 'text',
-          required: true,
-          options: [],
-        },
-        {
-          order: 2,
-          label: 'Contact Number',
-          type: 'text',
-          required: true,
-          options: [],
-        },
-        {
-          order: 3,
-          label: 'Email Address',
-          type: 'email',
-          required: true,
-          options: [],
-        },
-        {
-          order: 4,
-          label: 'Company Name',
-          type: 'text',
-          required: false,
-          options: [],
-        },
-        {
-          order: 5,
-          label: 'Type of Service Required',
-          type: 'select',
-          required: true,
-          options: [
-            { key: 'installation', value: 'Installation' },
-            { key: 'maintenance', value: 'Maintenance' },
-            { key: 'consultation', value: 'Consultation' },
+    workOrdersConfig: [
+      {
+        configId: null,
+        positionName: 'Information Technology (IT)',
+        workOrderApprovalAccessType: ApprovalAccessType.STAFF_PIC,
+        workReportApprovalAccessType: ApprovalAccessType.MANAGER,
+        minStaff: 1,
+        maxStaff: 1,
+        workOrderForm: {
+          title: 'Formulir Pembelian Hardware',
+          description: 'Instruksi kerja untuk tim IT Purchasing melakukan pembelian barang.',
+          formType: SubmissionType.WorkOrder,
+          fields: [
+            { order: 1, label: 'Spesifikasi Perangkat', type: FieldType.Textarea, required: true, placeholder: 'spesifikasi yang diperlukan..' },
+            { 
+              order: 2, 
+              label: 'Estimasi Biaya (Rp)', 
+              type: FieldType.SingleSelect, 
+              required: false, 
+              options: [
+                { key: '1776927950039', value: '<= Rp10K' },
+                { key: '1776927965875', value: 'Rp10K <= 20K' },
+                { key: '1776927995774', value: '>= 21K' }
+              ] 
+            },
+            { 
+              order: 3, 
+              label: 'Vendor Terpilih', 
+              type: FieldType.SingleSelect, 
+              required: true, 
+              options: [
+                { key: '1776928016668', value: 'Vendor 1' },
+                { key: '1776928022122', value: 'Vendor 2' },
+                { key: '1776928023125', value: 'Vendor 3' }
+              ] 
+            },
           ],
         },
-        {
-          order: 6,
-          label: 'Urgency Level',
-          type: 'select',
-          required: true,
-          options: [
-            { key: 'low', value: 'Low' },
-            { key: 'medium', value: 'Medium' },
-            { key: 'high', value: 'High' },
-            { key: 'critical', value: 'Critical' },
+        workReportForm: {
+          title: 'Laporan Bukti Pembelian & Serah Terima Gudang',
+          description: 'Formulir untuk mengunggah nota pembelian dan foto bukti barang masuk.',
+          formType: SubmissionType.Report,
+          fields: [
+            { order: 1, label: 'Total Pengeluaran Asli (Rp)', type: FieldType.Text, required: true, placeholder: 'Total pengeluaran..' },
+            { order: 2, label: 'Bukti Pembelian', type: FieldType.File, required: true },
           ],
         },
-        {
-          order: 7,
-          label: 'Additional Notes',
-          type: 'textarea',
-          required: false,
-          options: [],
-        },
-      ],
+      },
+    ],
+  },
+  
+  // ── Template 2: Maintenance Berkala (Menggunakan Multi Select) ──────────────
+  {
+    title: 'Maintenance Berkala Sistem IT',
+    description: 'Template layanan perawatan rutin infrastruktur IT perusahaan.',
+    companyTypeId: COMPANY_TYPE_IDS.PT,
+    serviceRequestConfig: {
+      serviceRequestApprovalAccessType: ApprovalAccessType.AUTO,
+      reviewNeed: false,
+      intakeForm: {
+        title: 'Form Permintaan Maintenance IT',
+        description: 'Data awal kebutuhan maintenance sistem IT',
+        formType: SubmissionType.Intake,
+        fields: [
+          { order: 1, label: 'Nama PIC IT', type: FieldType.Text, required: true },
+          { 
+            order: 2, 
+            label: 'Scope Maintenance', 
+            type: FieldType.MultiSelect, 
+            required: true,
+            options: [
+              { key: 'm1', value: 'Server' },
+              { key: 'm2', value: 'Jaringan' },
+              { key: 'm3', value: 'Perangkat Endpoint' }
+            ]
+          },
+          { order: 3, label: 'Periode Terakhir Maintenance', type: FieldType.Date, required: false },
+        ],
+      },
+      reviewForm: null,
     },
-    {
-      formKey: SEED_IDS.forms.siteInspection,
-      title: 'Site Inspection Report',
-      description: 'On-site inspection documentation',
-      formType: 'work_order',
-      fields: [
-        {
-          order: 1,
-          fieldKey: 'inspection_date',
-          label: 'Inspection Date',
-          fieldType: 'date',
-          required: true,
-          options: [],
+    workOrdersConfig: [
+      {
+        configId: null,
+        positionName: 'Information Technology (IT)',
+        workOrderApprovalAccessType: ApprovalAccessType.STAFF_PIC,
+        workReportApprovalAccessType: ApprovalAccessType.AUTO,
+        minStaff: 1,
+        maxStaff: 3,
+        workOrderForm: {
+          title: 'Form Instruksi Maintenance IT',
+          description: 'Checklist pekerjaan maintenance IT',
+          formType: SubmissionType.WorkOrder,
+          fields: [
+            { 
+              order: 1, 
+              label: 'Tugas yang Harus Dikerjakan', 
+              type: FieldType.MultiSelect, 
+              required: true,
+              options: [
+                { key: 't1', value: 'Update Antivirus' },
+                { key: 't2', value: 'Cek Log Server' },
+                { key: 't3', value: 'Backup Data' }
+              ]
+            },
+          ],
         },
-        {
-          order: 2,
-          fieldKey: 'location',
-          label: 'Location',
-          fieldType: 'text',
-          required: true,
-          options: [],
+        workReportForm: {
+          title: 'Form Laporan Maintenance IT',
+          description: 'Ringkasan hasil maintenance',
+          formType: SubmissionType.Report,
+          fields: [
+            { 
+              order: 1, 
+              label: 'Item yang Diselesaikan', 
+              type: FieldType.MultiSelect, 
+              required: true,
+              options: [
+                { key: 'd1', value: 'Update Antivirus Selesai' },
+                { key: 'd2', value: 'Cek Log Server Selesai' },
+                { key: 'd3', value: 'Backup Data Selesai' }
+              ]
+            },
+            { order: 2, label: 'Temuan Masalah', type: FieldType.Textarea, required: false },
+            { order: 3, label: 'Rekomendasi Lanjutan', type: FieldType.Textarea, required: false },
+          ],
         },
-        {
-          order: 3,
-          fieldKey: 'site_condition',
-          label: 'Site Condition',
-          fieldType: 'select',
-          required: true,
-          options: ['Excellent', 'Good', 'Fair', 'Poor'],
-        },
-        {
-          order: 4,
-          fieldKey: 'access_availability',
-          label: 'Site Access',
-          fieldType: 'select',
-          required: true,
-          options: ['Easy', 'Moderate', 'Difficult'],
-        },
-        {
-          order: 5,
-          fieldKey: 'equipment_needed',
-          label: 'Equipment Needed',
-          fieldType: 'textarea',
-          required: true,
-          options: [],
-        },
-        {
-          order: 6,
-          fieldKey: 'safety_concerns',
-          label: 'Safety Concerns',
-          fieldType: 'textarea',
-          required: false,
-          options: [],
-        },
-        {
-          order: 7,
-          fieldKey: 'photos',
-          label: 'Site Photos',
-          fieldType: 'file',
-          required: false,
-          options: [],
-        },
-        {
-          order: 8,
-          fieldKey: 'inspector_signature',
-          label: 'Inspector Signature',
-          fieldType: 'text',
-          required: true,
-          options: [],
-        },
-      ],
+      },
+    ],
+  },
+  
+  // ── Template 3: Instalasi Jaringan & CCTV (Multi Select & Single Select) ──
+  {
+    title: 'Instalasi Jaringan & CCTV',
+    description: 'Template layanan pemasangan jaringan LAN/WiFi dan sistem kamera pengawas (CCTV).',
+    companyTypeId: COMPANY_TYPE_IDS.CV,
+    serviceRequestConfig: {
+      serviceRequestApprovalAccessType: ApprovalAccessType.AUTO,
+      reviewNeed: true,
+      intakeForm: {
+        title: 'Form Permintaan Instalasi Jaringan & CCTV',
+        description: 'Detail kebutuhan instalasi jaringan dan CCTV',
+        formType: SubmissionType.Intake,
+        fields: [
+          { order: 1, label: 'Luas Area (m²)', type: FieldType.Number, required: true },
+          { order: 2, label: 'Jumlah Titik Access Point', type: FieldType.Number, required: true },
+          { order: 3, label: 'Jumlah Kamera CCTV', type: FieldType.Number, required: false },
+        ],
+      },
+      reviewForm: {
+        title: 'Form Review Instalasi Jaringan & CCTV',
+        description: 'Review kelengkapan instalasi',
+        formType: SubmissionType.Review,
+        fields: [
+          { 
+            order: 1, 
+            label: 'Status Pemasangan', 
+            type: FieldType.SingleSelect, 
+            required: true,
+            options: [
+              { key: 's1', value: 'Semua Berfungsi Baik' },
+              { key: 's2', value: 'Ada Kendala Minor' },
+              { key: 's3', value: 'Banyak Kendala' }
+            ]
+          },
+          { order: 2, label: 'Catatan Tambahan', type: FieldType.Textarea, required: false },
+        ],
+      },
     },
-    {
-      formKey: SEED_IDS.forms.installation,
-      title: 'Installation Work Form',
-      description: 'Installation execution documentation',
-      formType: 'work_order',
-      fields: [
-        {
-          order: 1,
-          fieldKey: 'installation_date',
-          label: 'Installation Date',
-          fieldType: 'date',
-          required: true,
-          options: [],
-        },
-        {
-          order: 2,
-          fieldKey: 'equipment_installed',
-          label: 'Equipment Installed',
-          fieldType: 'textarea',
-          required: true,
-          options: [],
-        },
-        {
-          order: 3,
-          fieldKey: 'serial_numbers',
-          label: 'Serial Numbers',
-          fieldType: 'textarea',
-          required: true,
-          options: [],
-        },
-        {
-          order: 4,
-          fieldKey: 'installation_status',
-          label: 'Installation Status',
-          fieldType: 'select',
-          required: true,
-          options: ['Completed', 'Partial', 'Failed'],
-        },
-        {
-          order: 5,
-          fieldKey: 'testing_results',
-          label: 'Testing Results',
-          fieldType: 'select',
-          required: true,
-          options: ['Pass', 'Fail', 'Pending'],
-        },
-        {
-          order: 6,
-          fieldKey: 'issues_encountered',
-          label: 'Issues Encountered',
-          fieldType: 'textarea',
-          required: false,
-          options: [],
-        },
-        {
-          order: 7,
-          fieldKey: 'technician_notes',
-          label: 'Technician Notes',
-          fieldType: 'textarea',
-          required: false,
-          options: [],
-        },
-      ],
-    },
-    {
-      formKey: SEED_IDS.forms.workReport,
-      title: 'Work Completion Report',
-      description: 'Final work report',
-      formType: 'work_report',
-      fields: [
-        {
-          order: 1,
-          fieldKey: 'completion_date',
-          label: 'Completion Date',
-          fieldType: 'date',
-          required: true,
-          options: [],
-        },
-        {
-          order: 2,
-          fieldKey: 'work_summary',
-          label: 'Work Summary',
-          fieldType: 'textarea',
-          required: true,
-          options: [],
-        },
-        {
-          order: 3,
-          fieldKey: 'hours_worked',
-          label: 'Total Hours Worked',
-          fieldType: 'number',
-          required: true,
-          options: [],
-        },
-        {
-          order: 4,
-          fieldKey: 'materials_used',
-          label: 'Materials Used',
-          fieldType: 'textarea',
-          required: true,
-          options: [],
-        },
-        {
-          order: 5,
-          fieldKey: 'client_feedback',
-          label: 'Client Feedback',
-          fieldType: 'textarea',
-          required: false,
-          options: [],
-        },
-        {
-          order: 6,
-          fieldKey: 'follow_up_required',
-          label: 'Follow-up Required',
-          fieldType: 'select',
-          required: true,
-          options: ['Yes', 'No'],
-        },
-      ],
-    },
-    {
-      formKey: SEED_IDS.forms.qualityCheck,
-      title: 'Quality Assurance Check',
-      description: 'Quality control verification',
-      formType: 'work_order',
-      fields: [
-        {
-          order: 1,
-          fieldKey: 'qa_date',
-          label: 'QA Date',
-          fieldType: 'date',
-          required: true,
-          options: [],
-        },
-        {
-          order: 2,
-          fieldKey: 'checklist_completed',
-          label: 'All Checklist Items Completed',
-          fieldType: 'select',
-          required: true,
-          options: ['Yes', 'No'],
-        },
-        {
-          order: 3,
-          fieldKey: 'quality_rating',
-          label: 'Quality Rating',
-          fieldType: 'select',
-          required: true,
-          options: ['Excellent', 'Good', 'Acceptable', 'Needs Improvement'],
-        },
-        {
-          order: 4,
-          fieldKey: 'defects_found',
-          label: 'Defects Found',
-          fieldType: 'textarea',
-          required: false,
-          options: [],
-        },
-        {
-          order: 5,
-          fieldKey: 'corrective_actions',
-          label: 'Corrective Actions Taken',
-          fieldType: 'textarea',
-          required: false,
-          options: [],
-        },
-        {
-          order: 6,
-          fieldKey: 'approved_by',
-          label: 'Approved By',
-          fieldType: 'text',
-          required: true,
-          options: [],
-        },
-      ],
-    },
-  ],
-
-  // ============================================
-  // 5. SERVICES
-  // ============================================
-  services: [
-    {
-      _id: SEED_IDS.services.networkSetup,
-      serviceKey: 'service_network_setup',
-      companyId: SEED_IDS.companies.tekMaju,
-      title: 'Network Infrastructure Setup',
-      description: 'Complete network installation and configuration services',
-      requiredStaffs: [
-        {
-          positionId: SEED_IDS.positions.fieldEngineer,
-          minimumStaff: 1,
-          maximumStaff: 2,
-        },
-        {
-          positionId: SEED_IDS.positions.technician,
-          minimumStaff: 1,
-          maximumStaff: 3,
-        },
-      ],
-      clientIntake: [
-        {
-          order: 1,
-          formKey: SEED_IDS.forms.clientIntakeGeneral,
-          fillableByRoles: ['owner_company', 'manager_company'],
-          viewableByRoles: [
-            'owner_company',
-            'manager_company',
-            'staff_company',
-          ],
-          fillableByPositionIds: [],
-          viewableByPositionIds: [],
-        },
-      ],
-      workOrderForms: [
-        {
-          order: 1,
-          formKey: SEED_IDS.forms.siteInspection,
-          fillableByRoles: ['staff_company'],
-          viewableByRoles: [
-            'owner_company',
-            'manager_company',
-            'staff_company',
-          ],
-          fillableByPositionIds: [SEED_IDS.positions.fieldEngineer],
-          viewableByPositionIds: [
-            SEED_IDS.positions.fieldEngineer,
-            SEED_IDS.positions.technician,
+    workOrdersConfig: [
+      {
+        configId: null,
+        positionName: 'Facilities & Maintenance',
+        workOrderApprovalAccessType: ApprovalAccessType.AUTO,
+        workReportApprovalAccessType: ApprovalAccessType.MANAGER,
+        minStaff: 1,
+        maxStaff: 3,
+        workOrderForm: {
+          title: 'Form Instruksi Instalasi Jaringan & CCTV',
+          description: 'Detail teknis pemasangan',
+          formType: SubmissionType.WorkOrder,
+          fields: [
+            { order: 1, label: 'Titik Instalasi', type: FieldType.Textarea, required: true },
+            { 
+              order: 2, 
+              label: 'Tipe Kabel yang Digunakan', 
+              type: FieldType.MultiSelect, 
+              required: true,
+              options: [
+                { key: 'k1', value: 'UTP Cat5e' },
+                { key: 'k2', value: 'UTP Cat6' },
+                { key: 'k3', value: 'Fiber Optic' },
+                { key: 'k4', value: 'Coaxial' }
+              ]
+            },
           ],
         },
-        {
-          order: 2,
-          formKey: SEED_IDS.forms.installation,
-          fillableByRoles: ['staff_company'],
-          viewableByRoles: [
-            'owner_company',
-            'manager_company',
-            'staff_company',
-          ],
-          fillableByPositionIds: [
-            SEED_IDS.positions.fieldEngineer,
-            SEED_IDS.positions.technician,
-          ],
-          viewableByPositionIds: [
-            SEED_IDS.positions.fieldEngineer,
-            SEED_IDS.positions.technician,
+        workReportForm: {
+          title: 'Form Laporan Instalasi Jaringan & CCTV',
+          description: 'Laporan hasil pemasangan',
+          formType: SubmissionType.Report,
+          fields: [
+            { 
+              order: 1, 
+              label: 'Kondisi Akhir Titik Instalasi', 
+              type: FieldType.MultiSelect, 
+              required: true,
+              options: [
+                { key: 'c1', value: 'Access Point Terpasang' },
+                { key: 'c2', value: 'CCTV Terpasang' },
+                { key: 'c3', value: 'Kabel Rapih' }
+              ]
+            },
+            { order: 2, label: 'Kendala Pemasangan', type: FieldType.Textarea, required: false },
+            { order: 3, label: 'Foto Hasil Instalasi', type: FieldType.File, required: true },
           ],
         },
-        {
-          order: 3,
-          formKey: SEED_IDS.forms.qualityCheck,
-          fillableByRoles: ['manager_company', 'staff_company'],
-          viewableByRoles: [
-            'owner_company',
-            'manager_company',
-            'staff_company',
-          ],
-          fillableByPositionIds: [SEED_IDS.positions.projectManager],
-          viewableByPositionIds: [],
-        },
-      ],
-      workReportForms: [
-        {
-          order: 1,
-          formKey: SEED_IDS.forms.workReport,
-          fillableByRoles: ['staff_company', 'manager_company'],
-          viewableByRoles: [
-            'owner_company',
-            'manager_company',
-            'staff_company',
-          ],
-          fillableByPositionIds: [],
-          viewableByPositionIds: [],
-        },
-      ],
-    },
-    {
-      _id: SEED_IDS.services.maintenance,
-      serviceKey: 'service_maintenance',
-      companyId: SEED_IDS.companies.tekMaju,
-      title: 'Regular Maintenance Service',
-      description: 'Scheduled maintenance and troubleshooting',
-      requiredStaffs: [
-        {
-          positionId: SEED_IDS.positions.technician,
-          minimumStaff: 1,
-          maximumStaff: 2,
-        },
-      ],
-      clientIntake: [
-        {
-          order: 1,
-          formKey: SEED_IDS.forms.clientIntakeGeneral,
-          fillableByRoles: ['owner_company', 'manager_company'],
-          viewableByRoles: [
-            'owner_company',
-            'manager_company',
-            'staff_company',
-          ],
-          fillableByPositionIds: [],
-          viewableByPositionIds: [],
-        },
-      ],
-      workOrderForms: [
-        {
-          order: 1,
-          formKey: SEED_IDS.forms.installation,
-          fillableByRoles: ['staff_company'],
-          viewableByRoles: [
-            'owner_company',
-            'manager_company',
-            'staff_company',
-          ],
-          fillableByPositionIds: [SEED_IDS.positions.technician],
-          viewableByPositionIds: [SEED_IDS.positions.technician],
-        },
-      ],
-      workReportForms: [
-        {
-          order: 1,
-          formKey: SEED_IDS.forms.workReport,
-          fillableByRoles: ['staff_company'],
-          viewableByRoles: [
-            'owner_company',
-            'manager_company',
-            'staff_company',
-          ],
-          fillableByPositionIds: [],
-          viewableByPositionIds: [],
-        },
-      ],
-    },
-  ],
-
-  // ============================================
-  // 6. MEMBERSHIP CODES
-  // ============================================
-  membershipCodes: [
-    {
-      _id: SEED_IDS.memberships.code1,
-      code: 'TEKMAJU2024',
-      isClaimed: false,
-      claimedBy: null,
-      claimedAt: null,
-    },
-    {
-      _id: SEED_IDS.memberships.code2,
-      code: 'SOLUSI2024',
-      isClaimed: false,
-      claimedBy: null,
-      claimedAt: null,
-    },
-  ],
-};
+      },
+    ],
+  },
+];

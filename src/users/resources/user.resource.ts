@@ -14,8 +14,9 @@ export class UserResource {
 
     const userObj = user.toObject ? user.toObject() : { ...user };
 
-    // Always remove password from response
+    // Always remove sensitive fields from response
     delete userObj.password;
+    delete userObj.fcmTokens;
 
     // Transform positionId to position object if exists
     if (userObj.positionId) {
@@ -35,6 +36,7 @@ export class UserResource {
 
     const userObj = user.toObject ? user.toObject() : { ...user };
     delete userObj.password;
+    delete userObj.fcmTokens;
 
     // If positionId is populated, transform it to position
     if (userObj.positionId) {

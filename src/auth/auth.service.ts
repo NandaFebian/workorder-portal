@@ -41,7 +41,7 @@ export class AuthService {
       );
     }
     const newUser = await this.usersService.create(registerAuthDto);
-    const { password, ...result } = newUser.toObject();
+    const { password, fcmTokens, ...result } = newUser.toObject();
     return result;
   }
 

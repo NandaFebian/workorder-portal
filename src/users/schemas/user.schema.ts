@@ -29,7 +29,7 @@ export class User {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Position', default: null })
   positionId: MongooseSchema.Types.ObjectId;
 
-  @Prop({ type: [String], default: [] })
+  @Prop({ type: [String], default: [], select: false })
   fcmTokens: string[];
 
   @Prop({ type: Date, default: null })

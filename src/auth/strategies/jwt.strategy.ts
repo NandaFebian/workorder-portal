@@ -43,6 +43,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     // Transform user object for request attachment
     const userObject: any = user.toObject();
+    delete userObject.fcmTokens;
 
     // Rename populated fields for consistency
     if (userObject.companyId) {

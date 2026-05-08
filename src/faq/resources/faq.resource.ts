@@ -21,8 +21,8 @@ export class FaqResource {
       title: doc.title,
       content: doc.content ?? overrides?.content ?? null,
       type: doc.type,
-      fileUrl: isText ? null : (doc.file_url ?? null),
-      mimeType: isText ? null : (doc.mime_type ?? 'application/pdf'),
+      file_url: isText ? null : (doc.file_url ?? null),
+      mime_type: isText ? null : (doc.mime_type ?? 'application/pdf'),
       size: isText ? null : (doc.size ?? null),
       created_at: doc.created_at,
       ...overrides,
@@ -44,7 +44,7 @@ export class FaqResource {
       id: item.id,
       question: item.question,
       answer: item.answer,
-      userId: item.user_id,
+      user_id: item.user_id,
       created_at: item.created_at,
     };
   }

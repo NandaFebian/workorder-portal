@@ -6,8 +6,8 @@ export interface FaqDocument {
   title: string;
   content: string | null;
   type: 'TEXT' | 'PDF';
-  fileUrl: string | null;
-  mimeType: string | null;
+  file_url: string | null;
+  mime_type: string | null;
   size: number | null;
   created_at: string;
 }
@@ -17,6 +17,6 @@ export interface FaqHistoryItem {
   id: number;
   question: string;
   answer: string;
-  userId: string;
+  user_id: string;
   created_at: string;
 }

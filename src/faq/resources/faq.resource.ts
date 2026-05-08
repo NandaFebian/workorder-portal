@@ -1,6 +1,6 @@
 // src/faq/resources/faq.resource.ts
-import { ProviderDocument } from '../interfaces/faq-provider.interface';
-import { FaqDocument } from '../interfaces/faq-document.interface';
+import { ProviderDocument, ProviderHistoryItem } from '../interfaces/faq-provider.interface';
+import { FaqDocument, FaqHistoryItem } from '../interfaces/faq-document.interface';
 
 /**
  * FaqResource
@@ -34,5 +34,25 @@ export class FaqResource {
    */
   static transformDocumentList(docs: ProviderDocument[]): FaqDocument[] {
     return docs.map((d) => FaqResource.transformDocument(d));
+  }
+
+  /**
+   * Transform a single provider history item to portal contract.
+   */
+  static transformHistoryItem(item: ProviderHistoryItem): FaqHistoryItem {
+    return {
+      id: item.id,
+      question: item.question,
+      answer: item.answer,
+      userId: item.user_id,
+      created_at: item.created_at,
+    };
+  }
+
+  /**
+   * Transform a list of provider history items to portal contract.
+   */
+  static transformHistoryList(items: ProviderHistoryItem[]): FaqHistoryItem[] {
+    return items.map((i) => FaqResource.transformHistoryItem(i));
   }
 }

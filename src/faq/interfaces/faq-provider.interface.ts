@@ -43,9 +43,31 @@ export interface ProviderUploadPdfResponse {
 /** Response POST /faq/ask */
 export interface ProviderAskResponse {
   message: string;
-  data: string;
+  data: {
+    answer: string;
+  };
   metadata?: {
     engine?: string;
     model?: string;
+    used_tokens?: {
+      inputTokens?: number;
+      outputTokens?: number;
+    };
+    document_count?: number;
   };
+}
+
+/** Satu item history dari provider */
+export interface ProviderHistoryItem {
+  id: number;
+  company_id: number;
+  question: string;
+  answer: string;
+  user_id: string;
+  created_at: string;
+}
+
+/** Response GET /faq/history */
+export interface ProviderGetHistoryResponse {
+  data: ProviderHistoryItem[];
 }

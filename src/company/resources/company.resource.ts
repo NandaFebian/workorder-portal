@@ -25,6 +25,10 @@ export class CompanyResource {
       delete companyObj.ownerId;
     }
 
+    // Ensure sensitive FAQ API keys are never leaked to the client
+    delete companyObj.faqApiKey;
+    delete companyObj.faqExternalCompanyId;
+
     return companyObj;
   }
 

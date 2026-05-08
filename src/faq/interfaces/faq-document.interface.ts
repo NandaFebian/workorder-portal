@@ -11,3 +11,12 @@ export interface FaqDocument {
   size: number | null;
   created_at: string;
 }
+
+/** Shape history item yang dikembalikan ke client (portal contract) */
+export interface FaqHistoryItem {
+  id: number;
+  question: string;
+  answer: string;
+  userId: string;
+  created_at: string;
+}

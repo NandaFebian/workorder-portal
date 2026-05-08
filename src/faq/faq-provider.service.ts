@@ -16,6 +16,8 @@ import {
   ProviderDocument,
   ProviderUploadTextResponse,
   ProviderAskResponse,
+  ProviderHistoryItem,
+  ProviderGetHistoryResponse,
 } from './interfaces/faq-provider.interface';
 
 /**
@@ -32,9 +34,11 @@ export class FaqProviderService {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
   ) {
-    this.baseUrl =
-      this.configService.get<string>('FAQ_SERVICE_URL') ??
-      'http://localhost:8000/api/chatbot';
+    const url = this.configService.get<string>('FAQ_SERVICE_URL');
+    if (!url) {
+      throw new Error('FAQ_SERVICE_URL is not configured in environment variables.');
+    }
+    this.baseUrl = url;
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -204,6 +208,31 @@ export class FaqProviderService {
       return response.data;
     } catch (error) {
       this.handleError(error, 'ask');
+    }
+  }
+
+  /**
+   * Get chat history for a specific user from the company's knowledge base.
+   */
+  async getHistory(
+    apiKey: string,
+    userId: string,
+  ): Promise<ProviderHistoryItem[]> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get<ProviderGetHistoryResponse>(
+          `${this.baseUrl}/faq/history`,
+          {
+            headers: this.getHeaders(apiKey),
+            params: { user_id: userId },
+          },
+        ),
+      );
+      const body = response.data;
+      if (Array.isArray(body)) return body;
+      return (body as any).data ?? [];
+    } catch (error) {
+      this.handleError(error, 'getHistory');
     }
   }
 }

@@ -12,7 +12,7 @@ import { Model } from 'mongoose';
 import { Company, CompanyDocument } from 'src/company/schemas/company.schemas';
 import { FaqProviderService } from './faq-provider.service';
 import { FaqResource } from './resources/faq.resource';
-import { FaqDocument } from './interfaces/faq-document.interface';
+import { FaqDocument, FaqHistoryItem } from './interfaces/faq-document.interface';
 import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 
 @Injectable()
@@ -31,6 +31,7 @@ export class FaqService {
 
   /**
    * Get a company and assert that the authenticated user is its owner.
+   * Verifies both company association AND ownerId to prevent cross-company manipulation.
    */
   private async getCompanyForOwner(
     user: AuthenticatedUser,
@@ -40,10 +41,20 @@ export class FaqService {
     }
     const company = await this.companyModel
       .findOne({ _id: user.company._id, deletedAt: null })
+      .populate('ownerId')
       .exec();
 
     if (!company) {
       throw new NotFoundException('Company not found.');
+    }
+
+    // Ensure the authenticated user is actually the owner of this company
+    const ownerIdStr =
+      (company.ownerId as any)?._id?.toString() || company.ownerId?.toString();
+    if (ownerIdStr !== user._id.toString()) {
+      throw new ForbiddenException(
+        'Only the company owner can manage FAQ configuration.',
+      );
     }
 
     return company;
@@ -242,8 +253,25 @@ export class FaqService {
       userId,
     );
 
-    // Normalize provider response: might be in .data or .answer
-    const answer = result.data ?? (result as any).answer ?? '';
+    // Provider returns { message, data: { answer: "..." } }
+    const answer = result.data?.answer ?? '';
     return { answer };
+  }
+
+  /**
+   * Get chatbot history for a specific user against a company's knowledge base.
+   */
+  async getHistory(
+    companyId: string,
+    userId: string,
+  ): Promise<FaqHistoryItem[]> {
+    const company = await this.getActiveCompanyById(companyId);
+
+    const items = await this.providerService.getHistory(
+      company.faqApiKey!,
+      userId,
+    );
+
+    return FaqResource.transformHistoryList(items);
   }
 }

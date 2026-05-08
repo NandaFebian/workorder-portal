@@ -48,6 +48,9 @@ export class FaqController {
   ) {
     const company = await this.faqService.toggleActive(user, dto.isActive);
     const transformed = CompanyResource.transformCompany(company);
+    // Strip sensitive provider token from response
+    delete transformed.faqApiKey;
+    delete transformed.faqExternalCompanyId;
     return ResponseUtil.success('FAQ feature updated successfully.', transformed);
   }
 

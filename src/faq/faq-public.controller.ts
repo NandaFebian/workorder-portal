@@ -3,6 +3,8 @@
 import {
   Controller,
   Post,
+  Get,
+  Param,
   Body,
   HttpCode,
   HttpStatus,
@@ -37,5 +39,23 @@ export class FaqPublicController {
       user._id.toString(),
     );
     return ResponseUtil.success('Answer retrieved successfully.', result);
+  }
+
+  /**
+   * Get chatbot history for the current user against a company's knowledge base.
+   * GET /faq/:companyId/history
+   */
+  @Get(':companyId/history')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async getHistory(
+    @GetUser() user: AuthenticatedUser,
+    @Param('companyId') companyId: string,
+  ) {
+    const result = await this.faqService.getHistory(
+      companyId,
+      user._id.toString(),
+    );
+    return ResponseUtil.success('History retrieved successfully.', result);
   }
 }

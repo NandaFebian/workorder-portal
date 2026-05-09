@@ -44,13 +44,11 @@ export class CompaniesClientService {
       );
     }
 
-    const { isSubscribed, services } = await this.servicesClientService.findAllByCompanyId(id, user);
-    const companyData = company.toObject();
+    const { isSubscribed } = await this.servicesClientService.findAllByCompanyId(id, user);
 
     return {
-      ...companyData,
+      company: company.toObject(),
       isSubscribed,
-      services,
     };
   }
 

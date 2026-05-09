@@ -10,6 +10,9 @@ import { Role } from '../common/enums/role.enum';
 import { ServiceRequestStatus } from '../common/enums/service-request-status.enum';
 import { WorkOrderStatus } from '../common/enums/work-order-status.enum';
 import { WorkReportStatus } from '../common/enums/work-report-status.enum';
+import { FormTemplate, FormTemplateDocument } from '../form/schemas/form-template.schema';
+import { Service, ServiceDocument } from '../service/schemas/service.schema';
+import { Position, PositionDocument } from '../positions/schemas/position.schema';
 
 @Injectable()
 export class DashboardService {
@@ -19,265 +22,246 @@ export class DashboardService {
     @InjectModel(WorkReport.name) private readonly workReportModel: Model<WorkReportDocument>,
     @InjectModel(Notification.name) private readonly notificationModel: Model<NotificationDocument>,
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+    @InjectModel(FormTemplate.name) private readonly formTemplateModel: Model<FormTemplateDocument>,
+    @InjectModel(Service.name) private readonly serviceModel: Model<ServiceDocument>,
+    @InjectModel(Position.name) private readonly positionModel: Model<PositionDocument>,
   ) { }
 
-  async getDashboardSummary(user: UserDocument) {
-    switch (user.role) {
-      case Role.Client:
-        return this.getClientSummary(user);
-      case Role.CompanyStaff:
-      case Role.UnassignedStaff:
-        return this.getStaffSummary(user);
-      case Role.CompanyManager:
-        return this.getManagerSummary(user);
-      case Role.CompanyOwner:
-        return this.getOwnerSummary(user);
+  private getDateRange(periodType: string): { $gte: Date; $lte: Date } {
+    const now = new Date();
+    let startDate = new Date();
+    startDate.setHours(0, 0, 0, 0);
+
+    const endDate = new Date();
+    endDate.setHours(23, 59, 59, 999);
+
+    switch (periodType) {
+      case 'current_week': {
+        const day = now.getDay();
+        const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+        startDate.setDate(diff);
+        break;
+      }
+      case 'current_month':
+        startDate.setDate(1);
+        break;
+      case 'current_year':
+        startDate.setMonth(0, 1);
+        break;
+      case 'current_day':
       default:
-        throw new ForbiddenException('No dashboard available for this role');
+        break;
     }
+
+    return { $gte: startDate, $lte: endDate };
   }
 
-  private async getClientSummary(user: UserDocument) {
+  async getServiceRequestDashboard(user: UserDocument, periodType: string = 'current_day') {
     const userId = new Types.ObjectId(user._id as unknown as string);
+    const dateRange = this.getDateRange(periodType);
 
-    const [srStats, unreadNotifications] = await Promise.all([
-      this.serviceRequestModel.aggregate([
-        { $match: { requestedBy: userId } },
-        {
-          $group: {
-            _id: '$serviceRequestStatus',
-            count: { $sum: 1 },
-            ids: { $push: '$_id' },
-          },
+    const matchQuery: any = { createdAt: dateRange };
+    
+    if (user.role === Role.Client) {
+      matchQuery.requestedBy = userId;
+    } else if ([Role.CompanyOwner, Role.CompanyManager].includes(user.role as Role)) {
+      const companyId = user.companyId || (user as any).company?._id;
+      if (!companyId) throw new ForbiddenException('No company associated');
+      matchQuery.companyId = new Types.ObjectId(companyId as unknown as string);
+    } else if (user.role === Role.CompanyStaff || user.role === Role.UnassignedStaff) {
+      const companyId = user.companyId || (user as any).company?._id;
+      if (!companyId) throw new ForbiddenException('No company associated');
+      matchQuery.companyId = new Types.ObjectId(companyId as unknown as string);
+    } else {
+      throw new ForbiddenException('No dashboard available for this role');
+    }
+
+    const srStats = await this.serviceRequestModel.aggregate([
+      { $match: matchQuery },
+      {
+        $group: {
+          _id: '$serviceRequestStatus',
+          count: { $sum: 1 },
         },
-      ]),
-      this.notificationModel.countDocuments({ userId, isRead: false }),
+      },
     ]);
 
-    const srSummary = {
-      total: 0,
-      active: 0,
-      activeIds: [] as Types.ObjectId[],
+    const statusCount = {
+      received: 0,
+      cancelled: 0,
+      rejected: 0,
+      approved: 0,
+      on_progress: 0,
       completed: 0,
-      completedIds: [] as Types.ObjectId[],
-      issues: 0,
-      issueIds: [] as Types.ObjectId[],
+      unprocessable: 0,
+      partial_completed: 0,
+      closed: 0,
     };
+
+    let totalCount = 0;
 
     srStats.forEach((stat) => {
-      srSummary.total += stat.count;
+      totalCount += stat.count;
       switch (stat._id) {
-        case ServiceRequestStatus.RECEIVED:
-        case ServiceRequestStatus.ON_PROGRESS:
-        case ServiceRequestStatus.PARTIAL_COMPLETED:
-        case ServiceRequestStatus.APPROVED:
-          srSummary.active += stat.count;
-          srSummary.activeIds.push(...stat.ids);
-          break;
-        case ServiceRequestStatus.COMPLETED:
-        case ServiceRequestStatus.CLOSED:
-          srSummary.completed += stat.count;
-          srSummary.completedIds.push(...stat.ids);
-          break;
-        case ServiceRequestStatus.REJECTED:
-        case ServiceRequestStatus.UNPROCESSABLE:
-        case ServiceRequestStatus.FAILED:
-        case ServiceRequestStatus.CANCELLED:
-          srSummary.issues += stat.count;
-          srSummary.issueIds.push(...stat.ids);
-          break;
+        case ServiceRequestStatus.RECEIVED: statusCount.received = stat.count; break;
+        case ServiceRequestStatus.CANCELLED: statusCount.cancelled = stat.count; break;
+        case ServiceRequestStatus.REJECTED: statusCount.rejected = stat.count; break;
+        case ServiceRequestStatus.APPROVED: statusCount.approved = stat.count; break;
+        case ServiceRequestStatus.ON_PROGRESS: statusCount.on_progress = stat.count; break;
+        case ServiceRequestStatus.COMPLETED: statusCount.completed = stat.count; break;
+        case ServiceRequestStatus.UNPROCESSABLE: statusCount.unprocessable = stat.count; break;
+        case ServiceRequestStatus.PARTIAL_COMPLETED: statusCount.partial_completed = stat.count; break;
+        case ServiceRequestStatus.CLOSED: statusCount.closed = stat.count; break;
       }
     });
 
     return {
-      serviceRequests: srSummary,
-      unreadNotifications,
+      status_count: statusCount,
+      total_count: totalCount,
     };
   }
 
-  private async getStaffSummary(user: UserDocument) {
-    const userCompanyId = user.companyId || (user as any).company?._id;
+  async getWorkOrderDashboard(user: UserDocument, periodType: string = 'current_day') {
     const userId = new Types.ObjectId(user._id as unknown as string);
-    const companyId = userCompanyId ? new Types.ObjectId(userCompanyId as unknown as string) : null;
+    const dateRange = this.getDateRange(periodType);
 
-    const matchQuery: any = { assignedStaff: { $in: [userId] } };
-    if (companyId) matchQuery.companyId = companyId;
+    const matchQuery: any = { createdAt: dateRange };
+    
+    if (user.role === Role.Client) {
+      throw new ForbiddenException('Clients do not have a work order dashboard');
+    } else if ([Role.CompanyOwner, Role.CompanyManager].includes(user.role as Role)) {
+      const companyId = user.companyId || (user as any).company?._id;
+      if (!companyId) throw new ForbiddenException('No company associated');
+      matchQuery.companyId = new Types.ObjectId(companyId as unknown as string);
+    } else if (user.role === Role.CompanyStaff || user.role === Role.UnassignedStaff) {
+      matchQuery.assignedStaff = { $in: [userId] };
+    } else {
+      throw new ForbiddenException('No dashboard available for this role');
+    }
 
-    const [woStats, unreadNotifications] = await Promise.all([
-      this.workOrderModel.aggregate([
-        { $match: matchQuery },
-        {
-          $group: {
-            _id: '$status',
-            count: { $sum: 1 },
-            ids: { $push: '$_id' },
-          },
+    const woStats = await this.workOrderModel.aggregate([
+      { $match: matchQuery },
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 },
         },
-      ]),
-      this.notificationModel.countDocuments({ userId, isRead: false }),
-    ]);
-
-    // We also want to find reports needing action for WOs assigned to this staff
-    // Find all WOs assigned to this user
-    const assignedWOs = await this.workOrderModel.find(matchQuery).select('_id').lean();
-    const woIds = assignedWOs.map(wo => wo._id);
-
-    const pendingReportsList = await this.workReportModel.find({
-      workOrderId: { $in: woIds },
-      status: { $in: [WorkReportStatus.DRAFTED, WorkReportStatus.REJECTED] }
-    }).select('_id').lean();
-
-    const woSummary = {
-      total: 0,
-      ongoing: 0,
-      ongoingIds: [] as Types.ObjectId[],
-      pendingAction: 0,
-      pendingActionIds: [] as Types.ObjectId[],
-      completed: 0,
-      completedIds: [] as Types.ObjectId[],
-    };
-
-    woStats.forEach((stat) => {
-      woSummary.total += stat.count;
-      switch (stat._id) {
-        case WorkOrderStatus.ON_PROGRESS:
-          woSummary.ongoing += stat.count;
-          woSummary.ongoingIds.push(...stat.ids);
-          break;
-        case WorkOrderStatus.DRAFTED:
-        case WorkOrderStatus.SENT:
-          woSummary.pendingAction += stat.count;
-          woSummary.pendingActionIds.push(...stat.ids);
-          break;
-        case WorkOrderStatus.COMPLETED:
-          woSummary.completed += stat.count;
-          woSummary.completedIds.push(...stat.ids);
-          break;
-      }
-    });
-
-    return {
-      role: Role.CompanyStaff,
-      metrics: {
-        workOrders: woSummary,
-        workReports: {
-          pendingAction: pendingReportsList.length,
-          pendingActionIds: pendingReportsList.map(r => r._id),
-        },
-        unreadNotifications,
       },
-    };
-  }
-
-  private async getManagerSummary(user: UserDocument) {
-    const userCompanyId = user.companyId || (user as any).company?._id;
-    if (!userCompanyId) throw new ForbiddenException('User is not associated with a company');
-    const companyId = new Types.ObjectId(userCompanyId as unknown as string);
-
-    const [incomingSRsList, woStats, pendingApprovalsList] = await Promise.all([
-      this.serviceRequestModel.find({ companyId, serviceRequestStatus: ServiceRequestStatus.RECEIVED }).select('_id').lean(),
-      this.workOrderModel.aggregate([
-        { $match: { companyId } },
-        {
-          $group: {
-            _id: '$status',
-            count: { $sum: 1 },
-            ids: { $push: '$_id' },
-          },
-        },
-      ]),
-      this.workReportModel.find({ companyId, status: WorkReportStatus.SUBMITTED }).select('_id').lean(),
     ]);
 
-    const woSummary = {
-      total: 0,
-      onProgress: 0,
-      onProgressIds: [] as Types.ObjectId[],
+    const statusCount = {
+      drafted: 0,
+      sent: 0,
+      approved: 0,
+      rejected: 0,
+      on_progress: 0,
       completed: 0,
-      completedIds: [] as Types.ObjectId[],
+      cancelled: 0,
       failed: 0,
-      failedIds: [] as Types.ObjectId[],
     };
 
+    let totalCount = 0;
+
     woStats.forEach((stat) => {
-      woSummary.total += stat.count;
+      totalCount += stat.count;
       switch (stat._id) {
-        case WorkOrderStatus.ON_PROGRESS:
-          woSummary.onProgress += stat.count;
-          woSummary.onProgressIds.push(...stat.ids);
-          break;
-        case WorkOrderStatus.COMPLETED:
-          woSummary.completed += stat.count;
-          woSummary.completedIds.push(...stat.ids);
-          break;
-        case WorkOrderStatus.FAILED:
-          woSummary.failed += stat.count;
-          woSummary.failedIds.push(...stat.ids);
-          break;
+        case WorkOrderStatus.DRAFTED: statusCount.drafted = stat.count; break;
+        case WorkOrderStatus.SENT: statusCount.sent = stat.count; break;
+        case WorkOrderStatus.APPROVED: statusCount.approved = stat.count; break;
+        case WorkOrderStatus.REJECTED: statusCount.rejected = stat.count; break;
+        case WorkOrderStatus.ON_PROGRESS: statusCount.on_progress = stat.count; break;
+        case WorkOrderStatus.COMPLETED: statusCount.completed = stat.count; break;
+        case WorkOrderStatus.CANCELLED: statusCount.cancelled = stat.count; break;
+        case WorkOrderStatus.FAILED: statusCount.failed = stat.count; break;
       }
     });
 
     return {
-      role: Role.CompanyManager,
-      metrics: {
-        incomingServiceRequests: incomingSRsList.length,
-        incomingServiceRequestIds: incomingSRsList.map(sr => sr._id),
-        workOrders: woSummary,
-        pendingApprovals: pendingApprovalsList.length,
-        pendingApprovalIds: pendingApprovalsList.map(r => r._id),
-      },
+      status_count: statusCount,
+      total_count: totalCount,
     };
   }
 
-  private async getOwnerSummary(user: UserDocument) {
-    const userCompanyId = user.companyId || (user as any).company?._id;
-    if (!userCompanyId) throw new ForbiddenException('User is not associated with a company');
-    const companyId = new Types.ObjectId(userCompanyId as unknown as string);
+  async getCompanyDashboard(user: UserDocument) {
+    if (user.role !== Role.CompanyOwner) {
+      throw new ForbiddenException('Only owner can access company dashboard');
+    }
+    
+    const companyId = user.companyId || (user as any).company?._id;
+    if (!companyId) throw new ForbiddenException('No company associated');
+    const compIdObj = new Types.ObjectId(companyId as unknown as string);
 
-    const [totalSRs, totalWOs, totalWRs, staffStats, completedWOs] = await Promise.all([
-      this.serviceRequestModel.countDocuments({ companyId }),
-      this.workOrderModel.countDocuments({ companyId }),
-      this.workReportModel.countDocuments({ companyId }),
-      this.userModel.aggregate([
-        { $match: { companyId } },
-        {
-          $group: {
-            _id: '$role',
-            count: { $sum: 1 },
-          },
-        },
-      ]),
-      this.workOrderModel.countDocuments({ companyId, status: WorkOrderStatus.COMPLETED })
+    // forms_stat
+    const forms = await this.formTemplateModel.aggregate([
+      { $match: { companyId: compIdObj } },
+      { $group: { _id: { $eq: ['$deletedAt', null] }, count: { $sum: 1 } } }
     ]);
+    let activeForms = 0;
+    let inActiveForms = 0;
+    forms.forEach(f => { if (f._id) activeForms = f.count; else inActiveForms = f.count; });
 
-    const staffSummary = {
-      total: 0,
-      managers: 0,
-      staff: 0,
-    };
+    // services_stat
+    const services = await this.serviceModel.aggregate([
+      { $match: { companyId: compIdObj } },
+      { $group: { _id: '$isActive', count: { $sum: 1 } } }
+    ]);
+    let activeServices = 0;
+    let inActiveServices = 0;
+    services.forEach(s => { if (s._id) activeServices = s.count; else inActiveServices = s.count; });
 
-    staffStats.forEach((stat) => {
-      staffSummary.total += stat.count;
-      if (stat._id === Role.CompanyManager) {
-        staffSummary.managers += stat.count;
-      } else if (stat._id === Role.CompanyStaff || stat._id === Role.UnassignedStaff) {
-        staffSummary.staff += stat.count;
+    // positions_stat
+    const positions = await this.positionModel.aggregate([
+      { $match: { companyId: compIdObj } },
+      { $group: { _id: '$isActive', count: { $sum: 1 } } }
+    ]);
+    let activePositions = 0;
+    let inActivePositions = 0;
+    positions.forEach(p => { if (p._id) activePositions = p.count; else inActivePositions = p.count; });
+
+    // employees_stat
+    const employees = await this.userModel.aggregate([
+      { $match: { companyId: compIdObj } },
+      { $group: { _id: { active: { $eq: ['$deletedAt', null] }, role: '$role' }, count: { $sum: 1 } } }
+    ]);
+    let activeEmployees = 0;
+    let inActiveEmployees = 0;
+    let managersCount = 0;
+    let staffsCount = 0;
+
+    employees.forEach(e => {
+      const { active, role } = e._id;
+      if (active) activeEmployees += e.count;
+      else inActiveEmployees += e.count;
+
+      if (active) {
+        if (role === Role.CompanyManager) managersCount += e.count;
+        else if (role === Role.CompanyStaff || role === Role.UnassignedStaff) staffsCount += e.count;
       }
     });
 
-    const completionRate = totalWOs > 0 ? (completedWOs / totalWOs) * 100 : 0;
-
     return {
-      role: Role.CompanyOwner,
-      metrics: {
-        volume: {
-          totalServiceRequests: totalSRs,
-          totalWorkOrders: totalWOs,
-          totalWorkReports: totalWRs,
-        },
-        staffing: staffSummary,
-        completionRate: parseFloat(completionRate.toFixed(2)),
+      forms_stat: {
+        active: activeForms,
+        inActive: inActiveForms,
+        total: activeForms + inActiveForms,
       },
+      services_stat: {
+        active: activeServices,
+        inActive: inActiveServices,
+        total: activeServices + inActiveServices,
+      },
+      positions_stat: {
+        active: activePositions,
+        inActive: inActivePositions,
+        total: activePositions + inActivePositions,
+      },
+      employees_stat: {
+        active: activeEmployees,
+        inActive: inActiveEmployees,
+        total: activeEmployees + inActiveEmployees,
+        managers_count: managersCount,
+        staffs_count: staffsCount,
+      }
     };
   }
 }

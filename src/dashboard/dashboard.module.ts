@@ -9,6 +9,9 @@ import { Notification, NotificationSchema } from '../fcm/schemas/notification.sc
 import { User, UserSchema } from '../users/schemas/user.schema';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
+import { FormTemplate, FormTemplateSchema } from '../form/schemas/form-template.schema';
+import { Service, ServiceSchema } from '../service/schemas/service.schema';
+import { Position, PositionSchema } from '../positions/schemas/position.schema';
 
 @Module({
   imports: [
@@ -18,6 +21,9 @@ import { UsersModule } from '../users/users.module';
       { name: WorkReport.name, schema: WorkReportSchema },
       { name: Notification.name, schema: NotificationSchema },
       { name: User.name, schema: UserSchema },
+      { name: FormTemplate.name, schema: FormTemplateSchema },
+      { name: Service.name, schema: ServiceSchema },
+      { name: Position.name, schema: PositionSchema },
     ]),
     AuthModule,
     UsersModule,

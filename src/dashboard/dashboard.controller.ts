@@ -1,4 +1,4 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Req, UseGuards, Query } from '@nestjs/common';
 import { DashboardService } from './dashboard.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
 
@@ -7,9 +7,24 @@ import { AuthGuard } from '../auth/guards/auth.guard';
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
-  @Get()
-  async getDashboardSummary(@Req() req: any) {
-    // req.user comes from AuthGuard (decoded JWT + fetched user)
-    return this.dashboardService.getDashboardSummary(req.user);
+  @Get('service-request')
+  async getServiceRequestDashboard(
+    @Req() req: any,
+    @Query('period_type') periodType?: string,
+  ) {
+    return this.dashboardService.getServiceRequestDashboard(req.user, periodType);
+  }
+
+  @Get('work-order')
+  async getWorkOrderDashboard(
+    @Req() req: any,
+    @Query('period_type') periodType?: string,
+  ) {
+    return this.dashboardService.getWorkOrderDashboard(req.user, periodType);
+  }
+
+  @Get('company')
+  async getCompanyDashboard(@Req() req: any) {
+    return this.dashboardService.getCompanyDashboard(req.user);
   }
 }

@@ -256,8 +256,6 @@ export class DashboardService {
         total: activePositions + inActivePositions,
       },
       employees_stat: {
-        active: activeEmployees,
-        inActive: inActiveEmployees,
         total: activeEmployees + inActiveEmployees,
         managers_count: managersCount,
         staffs_count: staffsCount,

@@ -62,6 +62,9 @@ class WorkOrderConfig {
 
   @Prop({ required: true, min: 1 })
   maxStaff: number;
+
+  @Prop({ type: Boolean, default: false })
+  showReportToRequester: boolean;
 }
 const WorkOrderConfigSchema = SchemaFactory.createForClass(WorkOrderConfig);
 
@@ -84,6 +87,13 @@ export class Service {
 
   @Prop({ default: true })
   isActive: boolean;
+
+  @Prop({
+    type: String,
+    enum: ['auto', 'manual'],
+    default: 'manual',
+  })
+  draftingWorkOrderType: string;
 
   @Prop({ type: ServiceRequestConfigSchema, default: () => ({}) })
   serviceRequestConfig: ServiceRequestConfig;

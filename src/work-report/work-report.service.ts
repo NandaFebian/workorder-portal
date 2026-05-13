@@ -38,6 +38,7 @@ export class WorkReportService {
       reportFormId: createDto.reportFormId ?? null,
       status: createDto.status ?? WorkReportStatus.DRAFTED,
       workReportApprovalAccessType: createDto.workReportApprovalAccessType ?? ApprovalAccessType.AUTO,
+      showReportToRequester: createDto.showReportToRequester ?? false,
     });
     return newReport.save();
   }

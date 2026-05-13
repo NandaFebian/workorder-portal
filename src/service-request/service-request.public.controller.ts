@@ -74,4 +74,13 @@ export class ServiceRequestPublicController {
     const data = await this.csrService.updateStatus(id, ServiceRequestStatus.CANCELLED, user);
     return ResponseUtil.success('Cancel SR success', data);
   }
+
+  // ─── Report for Requester ─────────────────────────────────────────────────────
+
+  @Get('service-requests/:id/report')
+  @HttpCode(HttpStatus.OK)
+  async getReport(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+    const data = await this.csrService.getReportForRequester(id, user);
+    return ResponseUtil.success('Report retrieved successfully', data);
+  }
 }

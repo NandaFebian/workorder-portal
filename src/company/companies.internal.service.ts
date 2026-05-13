@@ -24,6 +24,7 @@ import { Role } from 'src/common/enums/role.enum';
 import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { InvitationResource } from '../invitations/resources/invitation.resource';
 import { FcmService } from 'src/fcm/fcm.service';
+import { DepartmentAuthHelper } from 'src/common/helpers/department-auth.helper';
 
 @Injectable()
 export class CompaniesInternalService {
@@ -89,6 +90,7 @@ export class CompaniesInternalService {
   async inviteEmployees(
     companyId: string,
     inviteEmployeesDto: InviteEmployeesDto,
+    invitingUser?: AuthenticatedUser,
   ): Promise<InviteEmployeesResponse> {
     await this.findInternalById(companyId);
     const errors: Record<string, string>[] = [];
@@ -125,7 +127,7 @@ export class CompaniesInternalService {
           }
         }
       } else {
-        // company_staff — positionId wajib
+        // company_staff — positionId required
         if (!invite.positionId) {
           errors.push({ [`invites[${i}].positionId`]: 'Position ID is required for staff role' });
           continue;
@@ -139,6 +141,18 @@ export class CompaniesInternalService {
         } catch {
           errors.push({ [`invites[${i}].positionId`]: `Position with ID ${invite.positionId} not found` });
           continue;
+        }
+
+        // Department Manager: can only invite staff for their own position
+        if (invitingUser && DepartmentAuthHelper.isDepartmentManager(invitingUser)) {
+          const managerPositionId = invitingUser.position!._id.toString();
+          if (invite.positionId !== managerPositionId) {
+            errors.push({
+              [`invites[${i}].positionId`]:
+                'Department managers can only invite staff for positions in their department.',
+            });
+            continue;
+          }
         }
       }
 

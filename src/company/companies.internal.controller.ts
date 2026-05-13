@@ -66,7 +66,7 @@ export class CompaniesInternalController {
 
   @Post('invite')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.CompanyOwner)
+  @Roles(Role.CompanyOwner, Role.CompanyManager)
   async inviteEmployees(
     @GetUser() invitingUser: AuthenticatedUser,
     @Body() inviteEmployeesDto: InviteEmployeesDto,
@@ -79,6 +79,7 @@ export class CompaniesInternalController {
     return this.companiesInternalService.inviteEmployees(
       invitingUser.company._id.toString(),
       inviteEmployeesDto,
+      invitingUser,
     );
   }
 

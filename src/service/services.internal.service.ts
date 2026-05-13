@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
   UnprocessableEntityException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -14,6 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { FormsService } from 'src/form/form.service';
 import { getServicesWithAggregation } from './helpers/service-aggregation.helper';
 import { Role } from 'src/common/enums/role.enum';
+import { DepartmentAuthHelper } from 'src/common/helpers/department-auth.helper';
 
 @Injectable()
 export class ServicesInternalService {
@@ -22,7 +24,14 @@ export class ServicesInternalService {
     private readonly formsService: FormsService,
   ) { }
 
-  private async buildServiceRequestConfig(configDto: any): Promise<any> {
+  /**
+   * Build serviceRequestConfig.
+   * When draftingWorkOrderType === 'auto', force serviceRequestApprovalAccessType to 'auto'.
+   */
+  private async buildServiceRequestConfig(
+    configDto: any,
+    draftingWorkOrderType?: string,
+  ): Promise<any> {
     if (!configDto) return {};
 
     if (configDto.intakeFormId) {
@@ -32,16 +41,33 @@ export class ServicesInternalService {
       await this.formsService.findTemplateById(configDto.reviewFormId);
     }
 
+    const isAuto = draftingWorkOrderType === 'auto';
+
     return {
       intakeFormId: configDto.intakeFormId ? new Types.ObjectId(configDto.intakeFormId) : null,
       reviewFormId: configDto.reviewFormId ? new Types.ObjectId(configDto.reviewFormId) : null,
-      serviceRequestApprovalAccessType: configDto.serviceRequestApprovalAccessType ?? 'auto',
+      // Auto drafting locks SR approval to auto
+      serviceRequestApprovalAccessType: isAuto
+        ? 'auto'
+        : (configDto.serviceRequestApprovalAccessType ?? 'auto'),
       reviewNeed: configDto.reviewNeed ?? false,
     };
   }
 
-  private async buildWorkOrdersConfig(configsDto: any[]): Promise<any[]> {
+  /**
+   * Build workOrdersConfig array.
+   * When draftingWorkOrderType === 'auto':
+   *   - Reject any non-null workOrderFormId
+   *   - Force all approval access types to 'auto'
+   */
+  private async buildWorkOrdersConfig(
+    configsDto: any[],
+    draftingWorkOrderType?: string,
+  ): Promise<any[]> {
     if (!configsDto || configsDto.length === 0) return [];
+
+    const isAuto = draftingWorkOrderType === 'auto';
+
     return Promise.all(
       configsDto.map(async (dto) => {
         const pos = await this.serviceModel.db
@@ -50,6 +76,13 @@ export class ServicesInternalService {
 
         if (!pos) {
           throw new NotFoundException(`Position with ID ${dto.positionId} not found`);
+        }
+
+        // Auto draft: workOrderFormId must be null
+        if (isAuto && dto.workOrderFormId) {
+          throw new BadRequestException(
+            'workOrderFormId must be null when draftingWorkOrderType is auto',
+          );
         }
 
         if (dto.workOrderFormId) {
@@ -63,12 +96,14 @@ export class ServicesInternalService {
           _id: dto._id ? new Types.ObjectId(dto._id) : new Types.ObjectId(),
           configId: dto.configId || uuidv4(),
           positionId: new Types.ObjectId(dto.positionId),
-          workOrderFormId: dto.workOrderFormId ? new Types.ObjectId(dto.workOrderFormId) : null,
+          workOrderFormId: isAuto ? null : (dto.workOrderFormId ? new Types.ObjectId(dto.workOrderFormId) : null),
           workReportFormId: dto.workReportFormId ? new Types.ObjectId(dto.workReportFormId) : null,
-          workOrderApprovalAccessType: dto.workOrderApprovalAccessType ?? 'auto',
-          workReportApprovalAccessType: dto.workReportApprovalAccessType ?? 'auto',
+          // Auto drafting locks all approvals to auto
+          workOrderApprovalAccessType: isAuto ? 'auto' : (dto.workOrderApprovalAccessType ?? 'auto'),
+          workReportApprovalAccessType: isAuto ? 'auto' : (dto.workReportApprovalAccessType ?? 'auto'),
           minStaff: dto.minStaff,
           maxStaff: dto.maxStaff,
+          showReportToRequester: dto.showReportToRequester ?? false,
         };
       }),
     );
@@ -79,11 +114,24 @@ export class ServicesInternalService {
       throw new ForbiddenException('User is not associated with any company.');
     }
 
+    // Department Manager: can only create services where all WO configs match their position
+    if (DepartmentAuthHelper.isDepartmentManager(user)) {
+      if (!DepartmentAuthHelper.canCreateServiceWithConfigs(user, createServiceDto.workOrdersConfig ?? [])) {
+        throw new ForbiddenException(
+          'Department managers can only create services for positions in their department.',
+        );
+      }
+    }
+
+    const draftingWorkOrderType = createServiceDto.draftingWorkOrderType ?? 'manual';
+
     const serviceRequestConfig = await this.buildServiceRequestConfig(
       createServiceDto.serviceRequestConfig,
+      draftingWorkOrderType,
     );
     const workOrdersConfig = await this.buildWorkOrdersConfig(
       createServiceDto.workOrdersConfig,
+      draftingWorkOrderType,
     );
 
     const serviceToSave = new this.serviceModel({
@@ -91,6 +139,7 @@ export class ServicesInternalService {
       description: createServiceDto.description,
       accessType: createServiceDto.accessType,
       isActive: createServiceDto.isActive ?? true,
+      draftingWorkOrderType,
       serviceRequestConfig,
       workOrdersConfig,
       serviceKey: uuidv4(),
@@ -130,12 +179,24 @@ export class ServicesInternalService {
       throw new NotFoundException(`Service with key ${serviceKey} not found`);
     }
 
+    // Department Manager: can only update if all WO configs match their position
+    if (DepartmentAuthHelper.isDepartmentManager(user)) {
+      if (!DepartmentAuthHelper.canManageService(user, latestVersion.workOrdersConfig ?? [])) {
+        throw new ForbiddenException(
+          'Department managers can only update services where all departments match their position.',
+        );
+      }
+    }
+
+    // Determine the effective draftingWorkOrderType for this update
+    const draftingWorkOrderType = dto.draftingWorkOrderType ?? (latestVersion as any).draftingWorkOrderType ?? 'manual';
+
     const serviceRequestConfig = dto.serviceRequestConfig
-      ? await this.buildServiceRequestConfig(dto.serviceRequestConfig)
+      ? await this.buildServiceRequestConfig(dto.serviceRequestConfig, draftingWorkOrderType)
       : latestVersion.serviceRequestConfig;
 
     const workOrdersConfig = dto.workOrdersConfig
-      ? await this.buildWorkOrdersConfig(dto.workOrdersConfig)
+      ? await this.buildWorkOrdersConfig(dto.workOrdersConfig, draftingWorkOrderType)
       : latestVersion.workOrdersConfig;
 
     const { isActive: _, ...updateData } = dto as any;
@@ -143,6 +204,7 @@ export class ServicesInternalService {
     const newVersionData = {
       ...latestVersion.toObject(),
       ...updateData,
+      draftingWorkOrderType,
       serviceRequestConfig,
       workOrdersConfig,
       isActive: latestVersion.isActive,
@@ -186,6 +248,15 @@ export class ServicesInternalService {
       throw new NotFoundException(`Service with ID ${id} not found`);
     }
 
+    // Department Manager: verify access before proceeding
+    if (DepartmentAuthHelper.isDepartmentManager(user)) {
+      if (!DepartmentAuthHelper.canManageService(user, service.workOrdersConfig ?? [])) {
+        throw new ForbiddenException(
+          'Department managers can only update services where all departments match their position.',
+        );
+      }
+    }
+
     const latestVersion = (await this.serviceModel
       .findOne({ serviceKey: service.serviceKey, companyId: user.company._id })
       .sort({ __v: -1 })
@@ -218,8 +289,6 @@ export class ServicesInternalService {
     }
 
     // Update all versions of this service key to match the active state
-    // (or just the latest version depending on preference, but usually business logic 
-    // dictates that if a service is deactivated, all its versions are deactivated/hidden)
     await this.serviceModel.updateMany(
       { serviceKey: service.serviceKey, companyId: user.company._id },
       { $set: { isActive } }
@@ -251,12 +320,15 @@ export class ServicesInternalService {
       query.isActive = true;
     }
 
-    return getServicesWithAggregation(
+    const services = await getServicesWithAggregation(
       this.serviceModel,
       this.formsService,
       query,
       true,
     );
+
+    // Department Manager: filter to only services matching their position
+    return DepartmentAuthHelper.filterServicesForUser(user, services);
   }
 
   async findByVersionId(id: string, user: AuthenticatedUser): Promise<any> {
@@ -278,7 +350,18 @@ export class ServicesInternalService {
       throw new NotFoundException(`Service with ID ${id} not found`);
     }
 
-    return services[0];
+    const service = services[0];
+
+    // Department Manager: verify access
+    if (DepartmentAuthHelper.isDepartmentManager(user)) {
+      if (!DepartmentAuthHelper.canManageService(user, service.workOrdersConfig ?? [])) {
+        throw new ForbiddenException(
+          'Department managers can only view services where all departments match their position.',
+        );
+      }
+    }
+
+    return service;
   }
 
   async removeById(id: string, user: AuthenticatedUser): Promise<any> {
@@ -303,6 +386,15 @@ export class ServicesInternalService {
     }
 
     const serviceDetails = services[0];
+
+    // Department Manager: verify access before deleting
+    if (DepartmentAuthHelper.isDepartmentManager(user)) {
+      if (!DepartmentAuthHelper.canManageService(user, serviceDetails.workOrdersConfig ?? [])) {
+        throw new ForbiddenException(
+          'Department managers can only delete services where all departments match their position.',
+        );
+      }
+    }
 
     const service = await this.serviceModel
       .findOne({ _id: new Types.ObjectId(id), companyId: user.company._id, deletedAt: null })

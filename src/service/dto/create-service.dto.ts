@@ -37,6 +37,7 @@ class WorkOrderConfigDto {
   @IsMongoId()
   @IsOptional()
   _id?: string;
+
   @IsMongoId({ message: 'positionId must be a valid MongoDB ObjectId' })
   @IsNotEmpty()
   positionId: string;
@@ -46,8 +47,8 @@ class WorkOrderConfigDto {
   configId?: string;
 
   @IsMongoId({ message: 'workOrderFormId must be a valid MongoDB ObjectId' })
-  @IsNotEmpty({ message: 'workOrderFormId is required' })
-  workOrderFormId?: string;
+  @IsOptional()
+  workOrderFormId?: string | null;
 
   @IsMongoId({ message: 'workReportFormId must be a valid MongoDB ObjectId' })
   @IsNotEmpty({ message: 'workReportFormId is required' })
@@ -70,6 +71,10 @@ class WorkOrderConfigDto {
   @Min(1)
   @IsNotEmpty()
   maxStaff: number;
+
+  @IsBoolean()
+  @IsOptional()
+  showReportToRequester?: boolean;
 }
 
 const allowedAccessTypes = ['public', 'member_only', 'internal'];
@@ -92,6 +97,12 @@ export class CreateServiceDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @IsEnum(['auto', 'manual'], {
+    message: 'draftingWorkOrderType must be either auto or manual',
+  })
+  @IsNotEmpty({ message: 'draftingWorkOrderType is required' })
+  draftingWorkOrderType: string;
 
   @ValidateNested()
   @Type(() => ServiceRequestConfigDto)

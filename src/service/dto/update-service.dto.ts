@@ -47,7 +47,7 @@ class UpdateWorkOrderConfigDto {
 
   @IsMongoId()
   @IsOptional()
-  workOrderFormId?: string;
+  workOrderFormId?: string | null;
 
   @IsMongoId()
   @IsOptional()
@@ -70,6 +70,10 @@ class UpdateWorkOrderConfigDto {
   @Min(1)
   @IsOptional()
   maxStaff?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  showReportToRequester?: boolean;
 }
 
 export class UpdateServiceDto {
@@ -84,6 +88,10 @@ export class UpdateServiceDto {
   @IsEnum(['public', 'member_only', 'internal'])
   @IsOptional()
   accessType?: string;
+
+  @IsEnum(['auto', 'manual'])
+  @IsOptional()
+  draftingWorkOrderType?: string;
 
   @ValidateNested()
   @Type(() => UpdateServiceRequestConfigDto)

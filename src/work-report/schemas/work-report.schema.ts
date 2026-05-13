@@ -50,6 +50,9 @@ export class WorkReport {
   @Prop({ type: Date, default: null })
   rejectedAt: Date | null;
 
+  @Prop({ type: Boolean, default: false })
+  showReportToRequester: boolean;
+
   @Prop({ type: Date, default: null })
   deletedAt: Date | null;
 }

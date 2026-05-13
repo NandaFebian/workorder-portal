@@ -3,7 +3,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsEnum,
-  IsString,
+  IsBoolean,
 } from 'class-validator';
 
 export class CreateWorkReportDto {
@@ -26,4 +26,8 @@ export class CreateWorkReportDto {
   @IsEnum(['auto', 'manager'])
   @IsOptional()
   workReportApprovalAccessType?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  showReportToRequester?: boolean;
 }

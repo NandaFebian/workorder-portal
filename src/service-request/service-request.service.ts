@@ -293,7 +293,8 @@ export class ServiceRequestService {
             minStaff: config.minStaff ?? 0,
             maxStaff: config.maxStaff ?? 1,
             createdBy: null,
-            status: WorkOrderStatus.DRAFTED,
+            draftingWorkOrderType: service.draftingWorkOrderType ?? 'manual',
+            showReportToRequester: config.showReportToRequester ?? false,
           });
         })
       );
@@ -720,7 +721,8 @@ export class ServiceRequestService {
             minStaff: config.minStaff ?? 0,
             maxStaff: config.maxStaff ?? 1,
             createdBy: user._id,
-            status: WorkOrderStatus.DRAFTED,
+            draftingWorkOrderType: serviceData.draftingWorkOrderType ?? 'manual',
+            showReportToRequester: config.showReportToRequester ?? false,
           });
         })
       );
@@ -855,5 +857,63 @@ export class ServiceRequestService {
     }
 
     return latestVersion;
+  }
+
+  /**
+   * GET /service-request/:id/report
+   * Returns workReportForms and submissions for the requester.
+   * Only returns data if showReportToRequester === true on the associated WorkReport.
+   */
+  async getReportForRequester(srId: string, user: AuthenticatedUser): Promise<any> {
+    if (!Types.ObjectId.isValid(srId)) throw new BadRequestException('Invalid SR ID');
+
+    const sr = await this.srModel.findOne({ _id: srId, deletedAt: null }).exec();
+    if (!sr) throw new NotFoundException('Service Request not found');
+
+    // Only the original requester can access the report
+    const requestedById = sr.requestedBy?._id
+      ? sr.requestedBy._id.toString()
+      : sr.requestedBy?.toString();
+    if (requestedById !== user._id.toString()) {
+      throw new ForbiddenException('Only the requester can access this report');
+    }
+
+    // Find all Work Orders under this SR
+    const workOrders = await this.workOrderService.findRawByServiceRequestId(srId);
+
+    const workReportForms: any[] = [];
+    const submissions: any[] = [];
+
+    for (const wo of workOrders) {
+      const report = await this.workReportService.findOneQuietlyByWorkOrderId(
+        (wo as any)._id.toString(),
+      );
+
+      // Only include data if the flag is set
+      if (!report || !report.showReportToRequester) continue;
+
+      // Hydrate the report form template
+      if (report.reportFormId) {
+        try {
+          const form = await this.formsService.findTemplateById(
+            report.reportFormId.toString(),
+          );
+          if (form) workReportForms.push(form);
+        } catch {}
+      }
+
+      // Fetch all report submissions for this work report
+      const subs = await this.submissionModel
+        .find({
+          ownerId: (report as any)._id,
+          submissionType: SubmissionType.Report,
+          deletedAt: null,
+        })
+        .lean()
+        .exec();
+      submissions.push(...subs);
+    }
+
+    return { workReportForms, submissions };
   }
 }

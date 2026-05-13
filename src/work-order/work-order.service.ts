@@ -52,8 +52,42 @@ export class WorkOrderService {
     private readonly notificationProducer: NotificationProducer,
   ) { }
 
+  /**
+   * Auto-assign staff for a work order using DSS (Decision Support System).
+   * Initial strategy: first N available staff with matching position in the company.
+   * Returns staffPIC (first selected) and assignedStaff list.
+   * Throws if not enough staff are available.
+   */
+  private async _autoAssignStaff(
+    positionId: string,
+    companyId: string,
+    minStaff: number,
+    maxStaff: number,
+  ): Promise<{ staffPIC: Types.ObjectId | null; assignedStaff: Types.ObjectId[] }> {
+    const candidates = await this.usersService.findByPositionId(positionId);
+    const eligible = candidates.filter(
+      (s: any) =>
+        s.companyId?.toString() === companyId &&
+        s.role === Role.CompanyStaff &&
+        !s.deletedAt,
+    );
+
+    if (eligible.length < minStaff) {
+      throw new UnprocessableEntityException(
+        `Not enough staff available for this position. Required: ${minStaff}, Available: ${eligible.length}`,
+      );
+    }
+
+    const selected = eligible.slice(0, maxStaff);
+    return {
+      staffPIC: selected.length > 0 ? (selected[0]._id as Types.ObjectId) : null,
+      assignedStaff: selected.map((s: any) => s._id as Types.ObjectId),
+    };
+  }
+
   async createInternal(data: any): Promise<WorkOrderDocument> {
     const now = new Date();
+    const isAutoDraft = data.draftingWorkOrderType === 'auto';
 
     let workOrderFormId = data.workOrderFormId;
     if (workOrderFormId) {
@@ -77,12 +111,31 @@ export class WorkOrderService {
         } catch {}
     }
 
+    // Auto-draft: staff must be assigned before creating the WO
+    let autoStaff: { staffPIC: Types.ObjectId | null; assignedStaff: Types.ObjectId[] } | null = null;
+    if (isAutoDraft && data.positionId) {
+      autoStaff = await this._autoAssignStaff(
+        data.positionId.toString(),
+        data.companyId.toString(),
+        data.minStaff ?? 0,
+        data.maxStaff ?? 1,
+      );
+    }
+
+    // Auto-draft: skip drafted status → set directly to approved (ready_to_start)
+    const status = isAutoDraft ? WorkOrderStatus.APPROVED : (data.status ?? WorkOrderStatus.DRAFTED);
+
     const newWorkOrder = new this.workOrderModel({
       ...data,
-      workOrderFormId,
+      workOrderFormId: isAutoDraft ? null : workOrderFormId,
       reportFormId,
       code: `WO-${generateCode()}`,
-      draftedAt: (data.status === WorkOrderStatus.DRAFTED || !data.status) ? now : undefined,
+      status,
+      draftedAt: !isAutoDraft ? now : undefined,
+      approvedAt: isAutoDraft ? now : undefined,
+      sentAt: isAutoDraft ? now : undefined,
+      staffPIC: autoStaff?.staffPIC ?? data.staffPIC ?? null,
+      assignedStaff: autoStaff?.assignedStaff ?? data.assignedStaff ?? [],
     });
     const saved = await newWorkOrder.save();
 
@@ -92,9 +145,20 @@ export class WorkOrderService {
       reportFormId: saved.reportFormId ? (saved.reportFormId as any).toString() : null,
       status: WorkReportStatus.DRAFTED,
       workReportApprovalAccessType: (saved as any).workReportApprovalAccessType,
+      showReportToRequester: data.showReportToRequester ?? false,
     } as any);
 
     return saved;
+  }
+
+  /**
+   * Returns raw (unpopulated) work order documents for a given service request.
+   * Used by the report-for-requester endpoint.
+   */
+  async findRawByServiceRequestId(serviceRequestId: string): Promise<WorkOrderDocument[]> {
+    return this.workOrderModel
+      .find({ serviceRequestId: new Types.ObjectId(serviceRequestId), deletedAt: null })
+      .exec();
   }
 
   async create(createWorkOrderDto: any, user: AuthenticatedUser): Promise<any> {

@@ -118,7 +118,8 @@ export class ServicesController {
           minStaff: config.minStaff ?? 0,
           maxStaff: config.maxStaff ?? 1,
           createdBy: user._id,
-          status: 'drafted',
+          draftingWorkOrderType: serviceData.draftingWorkOrderType ?? 'manual',
+          showReportToRequester: config.showReportToRequester ?? false,
           ...createWorkOrderDto,
         });
       })

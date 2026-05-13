@@ -39,9 +39,12 @@ export class DepartmentAuthHelper {
 
     const managerPositionId = user.position!._id.toString();
     return workOrdersConfig.every((config) => {
+      // After aggregation, positionId is hydrated into positionsOnDuty._id
+      // Support both raw (positionId) and hydrated (positionsOnDuty) shapes
       const posId =
-        config.positionId?._id?.toString() ??
-        config.positionId?.toString() ??
+        config.positionsOnDuty?._id?.toString() ??  // hydrated (from aggregation)
+        config.positionId?._id?.toString() ??        // raw ObjectId-ref populated
+        config.positionId?.toString() ??             // raw ObjectId string
         null;
       return posId === managerPositionId;
     });

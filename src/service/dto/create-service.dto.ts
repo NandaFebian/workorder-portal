@@ -25,7 +25,7 @@ class ServiceRequestConfigDto {
   reviewFormId?: string | null;
 
   @IsEnum(['auto', 'manager', 'staff_pic', 'staff_any'])
-  @IsNotEmpty({ message: 'serviceRequestApprovalAccessType is required' })
+  @IsOptional()
   serviceRequestApprovalAccessType?: string;
 
   @IsBoolean()
@@ -55,11 +55,11 @@ class WorkOrderConfigDto {
   workReportFormId?: string;
 
   @IsEnum(['auto', 'staff_pic', 'staff_any'])
-  @IsNotEmpty({ message: 'workOrderApprovalAccessType is required' })
+  @IsOptional()
   workOrderApprovalAccessType?: string;
 
   @IsEnum(['auto', 'manager'])
-  @IsNotEmpty({ message: 'workReportApprovalAccessType is required' })
+  @IsOptional()
   workReportApprovalAccessType?: string;
 
   @IsNumber()

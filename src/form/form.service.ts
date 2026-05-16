@@ -6,6 +6,8 @@ import {
   UnprocessableEntityException,
   BadRequestException,
 } from '@nestjs/common';
+import { Role } from 'src/common/enums/role.enum';
+import { DepartmentAuthHelper } from 'src/common/helpers/department-auth.helper';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
@@ -100,6 +102,13 @@ export class FormsService {
     dto: UpdateFormTemplateDto,
     user: AuthenticatedUser,
   ): Promise<FormTemplateDocument> {
+    // Department Manager can only create forms, not update
+    if (DepartmentAuthHelper.isDepartmentManager(user)) {
+      throw new ForbiddenException(
+        'Department managers are not allowed to update form templates.',
+      );
+    }
+
     if (Object.keys(dto).length === 0) {
       throw new BadRequestException('Payload for update cannot be empty');
     }
@@ -289,6 +298,13 @@ export class FormsService {
     id: string,
     user: AuthenticatedUser,
   ): Promise<any> {
+    // Department Manager can only create forms, not delete
+    if (DepartmentAuthHelper.isDepartmentManager(user)) {
+      throw new ForbiddenException(
+        'Department managers are not allowed to delete form templates.',
+      );
+    }
+
     if (!user.company?._id) {
       throw new ForbiddenException('User is not associated with any company.');
     }

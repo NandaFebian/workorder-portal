@@ -19,7 +19,7 @@ class ServiceRequestConfigDto {
   @IsNotEmpty({ message: 'intakeFormId is required' })
   intakeFormId?: string;
 
-  @ValidateIf((o) => o.reviewNeed === true)
+  @ValidateIf((o) => o.reviewNeed === true && o.reviewFormId !== "" && o.reviewFormId !== null)
   @IsNotEmpty({ message: 'reviewFormId is required when reviewNeed is true' })
   @IsMongoId({ message: 'reviewFormId must be a valid MongoDB ObjectId' })
   reviewFormId?: string | null;
@@ -46,8 +46,9 @@ class WorkOrderConfigDto {
   @IsOptional()
   configId?: string;
 
-  @IsMongoId({ message: 'workOrderFormId must be a valid MongoDB ObjectId' })
   @IsOptional()
+  @ValidateIf((o, v) => v !== "" && v !== null)
+  @IsMongoId({ message: 'workOrderFormId must be a valid MongoDB ObjectId' })
   workOrderFormId?: string | null;
 
   @IsMongoId({ message: 'workReportFormId must be a valid MongoDB ObjectId' })

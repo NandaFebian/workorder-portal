@@ -53,6 +53,39 @@ export class WorkOrderService {
   ) { }
 
   /**
+   * Pre-validates that all auto-draft WO configs have sufficient staff available.
+   * Call this BEFORE creating a Service Request to ensure atomic failure
+   * (so no orphaned SRs are left if staff assignment would fail).
+   *
+   * @param configs - Array of workOrdersConfig entries from the Service document
+   * @param companyId - The provider company ID
+   */
+  async validateAutoAssignForConfigs(
+    configs: Array<{ positionId: any; minStaff?: number; maxStaff?: number }>,
+    companyId: string,
+  ): Promise<void> {
+    for (const config of configs) {
+      if (!config.positionId) continue;
+      const positionId = config.positionId?.toString?.() ?? config.positionId;
+      const minStaff = config.minStaff ?? 0;
+
+      const candidates = await this.usersService.findByPositionId(positionId);
+      const eligible = candidates.filter(
+        (s: any) =>
+          s.companyId?.toString() === companyId &&
+          s.role === Role.CompanyStaff &&
+          !s.deletedAt,
+      );
+
+      if (eligible.length < minStaff) {
+        throw new UnprocessableEntityException(
+          `Tidak cukup staf tersedia untuk posisi yang dibutuhkan. Dibutuhkan: ${minStaff}, Tersedia: ${eligible.length}. Pembuatan permintaan layanan dibatalkan.`,
+        );
+      }
+    }
+  }
+
+  /**
    * Auto-assign staff for a work order using DSS (Decision Support System).
    * Initial strategy: first N available staff with matching position in the company.
    * Returns staffPIC (first selected) and assignedStaff list.
@@ -219,12 +252,28 @@ export class WorkOrderService {
     });
     const saved = await newWorkOrder.save();
 
+    // Look up showReportToRequester from the service's WO config
+    let showReportToRequester = false;
+    if (serviceId && createWorkOrderDto.configId) {
+      try {
+        const svcModel = this.workOrderModel.db.model('Service');
+        const svc = await svcModel.findOne({ _id: serviceId, deletedAt: null });
+        if (svc) {
+          const matchedConfig = (svc as any).workOrdersConfig?.find(
+            (c: any) => c.configId === createWorkOrderDto.configId,
+          );
+          if (matchedConfig) showReportToRequester = matchedConfig.showReportToRequester ?? false;
+        }
+      } catch {}
+    }
+
     await this.workReportService.create({
       workOrderId: (saved._id as any).toString(),
       companyId: (saved.companyId as any).toString(),
       reportFormId: saved.reportFormId ? (saved.reportFormId as any).toString() : null,
       status: WorkReportStatus.DRAFTED,
       workReportApprovalAccessType: saved.workReportApprovalAccessType,
+      showReportToRequester,
     } as any);
 
     return this.findOneInternal((saved._id as any).toString(), user);
@@ -353,9 +402,14 @@ export class WorkOrderService {
 
   async findOneInternal(id: string, user: AuthenticatedUser, notificationId?: string): Promise<any> {
     if (!user.company?._id) throw new ForbiddenException('User company information is missing');
-    if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid Work Order ID');
 
-    const query: any = { _id: id, companyId: user.company._id, deletedAt: null };
+    // Support lookup by both ObjectId and WO code (e.g. "WO-XXXXX")
+    const isObjectId = Types.ObjectId.isValid(id);
+    const query: any = {
+      ...(isObjectId ? { _id: id } : { code: id }),
+      companyId: user.company._id,
+      deletedAt: null,
+    };
     if (user.role === Role.CompanyStaff) {
       query.assignedStaff = user._id;
     }
@@ -372,12 +426,14 @@ export class WorkOrderService {
 
     if (!wo) throw new NotFoundException('Work Order not found');
 
+    const woId = (wo as any)._id.toString();
+
     // Mark notifications as read using background job if notificationId is provided
     if (notificationId) {
       this.notificationProducer.enqueueMarkAsRead(notificationId);
     } else {
       // Fallback for async fire-and-forget without BullMQ, using resource-based update if no ID
-      this.fcmService.markAsReadByResource(user._id.toString(), 'work_order', id).catch(console.error);
+      this.fcmService.markAsReadByResource(user._id.toString(), 'work_order', woId).catch(console.error);
     }
 
     return this._hydrateOne(wo);
@@ -502,12 +558,13 @@ export class WorkOrderService {
     const taskId = wo.configId || (wo.positionId?.['_id'] ? wo.positionId['_id'].toString() : wo.positionId?.toString());
 
     if (taskId && parentQuery) {
+      const orConditions: any[] = [{ configId: taskId }];
+      if (Types.ObjectId.isValid(taskId)) {
+        orConditions.push({ positionId: new Types.ObjectId(taskId) });
+      }
       const history = await this.workOrderModel.find({
         ...parentQuery,
-        $or: [
-          { configId: taskId },
-          { positionId: Types.ObjectId.isValid(taskId) ? new Types.ObjectId(taskId) : taskId }
-        ],
+        $or: orConditions,
         deletedAt: null,
       }).sort({ createdAt: -1 }).exec();
 
@@ -864,12 +921,16 @@ export class WorkOrderService {
     });
     const saved = await newWo.save();
 
+    // Copy showReportToRequester from the old WO's work report
+    const oldReport = await this.workReportService.findOneQuietlyByWorkOrderId(id);
+
     await this.workReportService.create({
       workOrderId: (saved._id as any).toString(),
       companyId: (saved.companyId as any).toString(),
       reportFormId: saved.reportFormId ? (saved.reportFormId as any).toString() : null,
       status: WorkReportStatus.DRAFTED,
       workReportApprovalAccessType: saved.workReportApprovalAccessType,
+      showReportToRequester: (oldReport as any)?.showReportToRequester ?? false,
     } as any);
 
     // Notify Authorized Managers that a new WO has been created from a rejected one

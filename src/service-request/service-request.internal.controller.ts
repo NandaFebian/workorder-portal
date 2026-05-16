@@ -37,6 +37,7 @@ export class ServiceRequestInternalController {
     
     const data = await this.csrService.findAllByCompanyId(
       user.company._id.toString(),
+      user,
     );
     return ResponseUtil.success('Load inbox success', data);
   }

@@ -14,11 +14,12 @@ import {
 import { Type } from 'class-transformer';
 
 class UpdateServiceRequestConfigDto {
-  @IsMongoId()
   @IsOptional()
+  @ValidateIf((o, v) => v !== "" && v !== null)
+  @IsMongoId()
   intakeFormId?: string;
 
-  @ValidateIf((o) => o.reviewNeed === true)
+  @ValidateIf((o) => o.reviewNeed === true && o.reviewFormId !== "" && o.reviewFormId !== null)
   @IsNotEmpty({ message: 'reviewFormId is required when reviewNeed is true' })
   @IsMongoId({ message: 'reviewFormId must be a valid MongoDB ObjectId' })
   reviewFormId?: string | null;
@@ -45,12 +46,14 @@ class UpdateWorkOrderConfigDto {
   @IsOptional()
   configId?: string;
 
-  @IsMongoId()
   @IsOptional()
+  @ValidateIf((o, v) => v !== "" && v !== null)
+  @IsMongoId()
   workOrderFormId?: string | null;
 
-  @IsMongoId()
   @IsOptional()
+  @ValidateIf((o, v) => v !== "" && v !== null)
+  @IsMongoId()
   workReportFormId?: string;
 
   @IsEnum(['auto', 'staff_pic'])

@@ -10,6 +10,7 @@ export class WorkReportResource {
       companyId: report.companyId,
       reportForm: report.reportFormId,
       workReportApprovalAccessType: report.workReportApprovalAccessType,
+      show_report_to_requester: report.showReportToRequester ?? false,
       status: report.status,
       approvedBy: (report.workReportApprovalAccessType === 'manager' && report.approvedBy)
         ? {

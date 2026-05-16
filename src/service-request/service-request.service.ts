@@ -39,6 +39,7 @@ import { ApprovalAccessType } from 'src/common/enums/approval-access-type.enum';
 import { WorkOrderStatus } from 'src/common/enums/work-order-status.enum';
 import { WorkReportStatus } from 'src/common/enums/work-report-status.enum';
 import { StatusTranslator } from 'src/common/utils/status-translator.util';
+import { DepartmentAuthHelper } from 'src/common/helpers/department-auth.helper';
 
 @Injectable()
 export class ServiceRequestService {
@@ -191,6 +192,26 @@ export class ServiceRequestService {
       const submissionData = submission?.fieldsData || [];
       validateFormSubmission(templateFields, submissionData);
     }
+
+    // Pre-validate DSS auto-assign staff BEFORE persisting the SR.
+    // If this is an auto-draft service and there is not enough staff available
+    // for any of the WO configs, we must fail NOW (before the SR is created)
+    // so no orphaned Service Request is left in the database.
+    const isAutoService = (src.serviceRequestApprovalAccessType ?? ApprovalAccessType.AUTO) === ApprovalAccessType.AUTO
+      && (service as any).draftingWorkOrderType === 'auto';
+    if (isAutoService) {
+      const woConfigs = (service as any).workOrdersConfig || [];
+      if (woConfigs.length > 0) {
+        await this.workOrderService.validateAutoAssignForConfigs(
+          woConfigs.map((c: any) => ({
+            positionId: c.positionsOnDuty?._id ?? c.positionId,
+            minStaff: c.minStaff ?? 0,
+            maxStaff: c.maxStaff ?? 1,
+          })),
+          (service as any).companyId?.toString(),
+        );
+      }
+    }
     
     const newSR = await this.srModel.create({
       code: `SR-${generateCode()}`,
@@ -285,7 +306,7 @@ export class ServiceRequestService {
             serviceRequestId: sr._id,
             batchId,
             positionId,
-            configId: config._id || null,
+            configId: config.configId ?? config._id?.toString() ?? null,
             workOrderFormId,
             reportFormId,
             workOrderApprovalAccessType: config.workOrderApprovalAccessType ?? 'auto',
@@ -437,7 +458,7 @@ export class ServiceRequestService {
     return this._enrichAndFormat(sr, false);
   }
 
-  async findAllByCompanyId(companyId: string): Promise<any[]> {
+  async findAllByCompanyId(companyId: string, user?: AuthenticatedUser): Promise<any[]> {
     const requests = await this.srModel
       .find({ companyId: new Types.ObjectId(companyId), deletedAt: null })
       .populate('companyId', 'name address description isActive')
@@ -449,7 +470,26 @@ export class ServiceRequestService {
       .lean()
       .exec();
 
-    return Promise.all(requests.map((r) => this._enrichAndFormat(r, true)));
+    // Department Manager: only see SRs whose service configs all match their position
+    let filtered = requests;
+    if (user && DepartmentAuthHelper.isDepartmentManager(user)) {
+      const serviceCache = new Map<string, any>();
+      filtered = [];
+      for (const r of requests) {
+        const svcId = r.serviceId?._id?.toString() ?? r.serviceId?.toString();
+        if (!svcId) continue;
+        if (!serviceCache.has(svcId)) {
+          const svc = await this.serviceModel.findOne({ _id: svcId, deletedAt: null }).exec();
+          serviceCache.set(svcId, svc);
+        }
+        const svc = serviceCache.get(svcId);
+        if (svc && DepartmentAuthHelper.canManageService(user, svc.workOrdersConfig ?? [])) {
+          filtered.push(r);
+        }
+      }
+    }
+
+    return Promise.all(filtered.map((r) => this._enrichAndFormat(r, true)));
   }
 
   async findOneInternal(id: string, user?: AuthenticatedUser): Promise<any> {
@@ -623,6 +663,16 @@ export class ServiceRequestService {
         throw new ForbiddenException('Only the provider company staff can perform this action.');
       }
 
+      // Department Manager: can only approve/reject SRs whose service configs match their position
+      if (DepartmentAuthHelper.isDepartmentManager(user)) {
+        const svc = await this.serviceModel.findOne({ _id: sr.serviceId, deletedAt: null }).exec();
+        if (!svc || !DepartmentAuthHelper.canManageService(user, svc.workOrdersConfig ?? [])) {
+          throw new ForbiddenException(
+            'Department managers can only handle service requests where all departments match their position.',
+          );
+        }
+      }
+
       if (sr.serviceRequestApprovalAccessType === ApprovalAccessType.MANAGER) {
         if (user.role !== Role.CompanyOwner && user.role !== Role.CompanyManager) {
           throw new ForbiddenException('Hanya Manager atau Owner yang dapat melakukan aksi ini');
@@ -713,7 +763,7 @@ export class ServiceRequestService {
             serviceRequestId: sr._id,
             batchId,
             positionId,
-            configId: config._id || null,
+            configId: config.configId ?? config._id?.toString() ?? null,
             workOrderFormId,
             reportFormId,
             workOrderApprovalAccessType: config.workOrderApprovalAccessType ?? 'auto',
@@ -889,16 +939,28 @@ export class ServiceRequestService {
         (wo as any)._id.toString(),
       );
 
-      // Only include data if the flag is set
+      // Only include data if the flag is set on this work report
       if (!report || !report.showReportToRequester) continue;
 
-      // Hydrate the report form template
+      // Hydrate the report form template into a FULL object
       if (report.reportFormId) {
         try {
           const form = await this.formsService.findTemplateById(
             report.reportFormId.toString(),
           );
-          if (form) workReportForms.push(form);
+          if (form) {
+            const t = (form as any).toObject ? (form as any).toObject() : form;
+            workReportForms.push({
+              _id: t._id,
+              title: t.title,
+              description: t.description,
+              formType: t.formType,
+              formKey: t.formKey,
+              fields: t.fields,
+              createdAt: t.createdAt,
+              updatedAt: t.updatedAt,
+            });
+          }
         } catch {}
       }
 
@@ -907,13 +969,12 @@ export class ServiceRequestService {
         .find({
           ownerId: (report as any)._id,
           submissionType: SubmissionType.Report,
-          deletedAt: null,
         })
         .lean()
         .exec();
       submissions.push(...subs);
     }
 
-    return { workReportForms, submissions };
+    return { workReportForms, workOrderSubmissions: submissions };
   }
 }

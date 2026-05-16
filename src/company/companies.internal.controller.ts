@@ -15,6 +15,7 @@ import {
 import { CompaniesInternalService } from './companies.internal.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { UpdateCompanyDto } from './dto/update-company.dto';
+import { UpdateIntegrationConfigDto } from './dto/update-integration-config.dto';
 import { InviteEmployeesDto } from './dto/invite-employees.dto';
 import { InviteEmployeesResponse } from './interfaces/invitation.interface';
 import { GetUser } from '../common/decorators/get-user.decorator';
@@ -183,5 +184,37 @@ export class CompaniesInternalController {
     const id = user.company._id.toString();
     const data = await this.companiesInternalService.remove(id, user);
     return ResponseUtil.success('Company deleted successfully', data);
+  }
+
+  @Get('integration-config')
+  @UseGuards(AuthGuard, RolesGuard)
+  @HttpCode(HttpStatus.OK)
+  @Roles(Role.CompanyOwner)
+  async getIntegrationConfig(@GetUser() user: AuthenticatedUser) {
+    if (!user.company?._id) {
+      throw new ForbiddenException('You are not associated with any company.');
+    }
+    const data = await this.companiesInternalService.getIntegrationConfig(
+      user.company._id.toString(),
+    );
+    return ResponseUtil.success('Integration config retrieved successfully', data);
+  }
+
+  @Put('integration-config')
+  @UseGuards(AuthGuard, RolesGuard)
+  @HttpCode(HttpStatus.OK)
+  @Roles(Role.CompanyOwner)
+  async updateIntegrationConfig(
+    @GetUser() user: AuthenticatedUser,
+    @Body() dto: UpdateIntegrationConfigDto,
+  ) {
+    if (!user.company?._id) {
+      throw new ForbiddenException('You are not associated with any company.');
+    }
+    const data = await this.companiesInternalService.updateIntegrationConfig(
+      user.company._id.toString(),
+      dto,
+    );
+    return ResponseUtil.success('Integration config updated successfully', data);
   }
 }

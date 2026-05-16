@@ -43,6 +43,25 @@ export class Company {
   @Prop({ type: Number, default: null })
   faqExternalCompanyId: number | null;
 
+  @Prop({
+    type: {
+      externalLoginUrl: { type: String, default: null },
+      externalVerifyUrl: { type: String, default: null },
+      externalCheckMembershipsUrl: { type: String, default: null },
+      secretKey: { type: String, default: null },
+      isIntegrationActive: { type: Boolean, default: false },
+    },
+    default: {},
+    _id: false,
+  })
+  integrationConfig: {
+    externalLoginUrl: string | null;
+    externalVerifyUrl: string | null;
+    externalCheckMembershipsUrl: string | null;
+    secretKey: string | null;
+    isIntegrationActive: boolean;
+  };
+
   @Prop({ type: Date, default: null })
   deletedAt: Date;
 }

@@ -13,6 +13,7 @@ import { UpdateCompanyDto } from './dto/update-company.dto';
 import { Invitation, InvitationDocument } from './schemas/invitation.schemas';
 import { UsersService } from '../users/users.service';
 import { InviteEmployeesDto } from './dto/invite-employees.dto';
+import { UpdateIntegrationConfigDto } from './dto/update-integration-config.dto';
 import {
   SuccessfulInvite,
   InviteError,
@@ -289,5 +290,39 @@ export class CompaniesInternalService {
     await existingCompany.save();
 
     return { deletedAt };
+  }
+
+  async getIntegrationConfig(companyId: string): Promise<any> {
+    const company = await this.findInternalById(companyId);
+    const cfg = (company as any).integrationConfig ?? {};
+    return {
+      external_login_url: cfg.externalLoginUrl ?? null,
+      external_verify_url: cfg.externalVerifyUrl ?? null,
+      external_check_memberships_url: cfg.externalCheckMembershipsUrl ?? null,
+      is_integration_active: cfg.isIntegrationActive ?? false,
+    };
+  }
+
+  async updateIntegrationConfig(
+    companyId: string,
+    dto: UpdateIntegrationConfigDto,
+  ): Promise<any> {
+    const company = await this.findInternalById(companyId);
+    const update: Record<string, any> = {};
+
+    if (dto.external_login_url !== undefined)
+      update['integrationConfig.externalLoginUrl'] = dto.external_login_url;
+    if (dto.external_verify_url !== undefined)
+      update['integrationConfig.externalVerifyUrl'] = dto.external_verify_url;
+    if (dto.external_check_memberships_url !== undefined)
+      update['integrationConfig.externalCheckMembershipsUrl'] = dto.external_check_memberships_url;
+    if (dto.secret_key !== undefined)
+      update['integrationConfig.secretKey'] = dto.secret_key;
+    if (dto.is_integration_active !== undefined)
+      update['integrationConfig.isIntegrationActive'] = dto.is_integration_active;
+
+    await this.companyModel.updateOne({ _id: company._id }, { $set: update });
+
+    return this.getIntegrationConfig(companyId);
   }
 }

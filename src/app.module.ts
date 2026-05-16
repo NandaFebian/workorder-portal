@@ -14,6 +14,7 @@ import { StorageModule } from './storage/storage.module';
 import { TemplateModule } from './template/template.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { FaqModule } from './faq/faq.module';
+import { CustomerPairingModule } from './customer-pairing/customer-pairing.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { FaqModule } from './faq/faq.module';
     TemplateModule,
     DashboardModule,
     FaqModule,
+    CustomerPairingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

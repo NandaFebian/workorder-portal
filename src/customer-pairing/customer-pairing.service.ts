@@ -59,9 +59,10 @@ export class CustomerPairingService {
       companyId: new Types.ObjectId(dto.company_id),
     });
 
-    const redirectUrl = `${cfg.externalLoginUrl}?state=${state}`;
+    const redirectUri = `${dto.redirect_base_url}?company_id=${dto.company_id}`;
+    const redirectUrl = `${cfg.externalLoginUrl}?redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
 
-    return { redirect_url: redirectUrl, state };
+    return { redirect_url: redirectUrl };
   }
 
   async completePairing(dto: CompletePairingDto, user: AuthenticatedUser): Promise<any> {
@@ -127,22 +128,46 @@ export class CustomerPairingService {
       pairedAt: new Date(),
     });
 
-    return ExternalAccountResource.transform(created);
+    const populated = await this.externalAccountModel
+      .findById(created._id)
+      .populate('companyId')
+      .lean()
+      .exec();
+
+    return ExternalAccountResource.transform(populated);
   }
 
-  async findAllByCompany(companyId: string, user: AuthenticatedUser): Promise<any[]> {
-    if (!Types.ObjectId.isValid(companyId)) {
-      throw new NotFoundException('Invalid company ID');
-    }
-
+  async findAllForUser(user: AuthenticatedUser): Promise<any[]> {
     const accounts = await this.externalAccountModel
-      .find({ companyId: new Types.ObjectId(companyId), deletedAt: null })
-      .populate('userId', 'name email')
+      .find({ userId: user._id, deletedAt: null })
+      .populate('companyId')
       .sort({ pairedAt: -1 })
       .lean()
       .exec();
 
     return ExternalAccountResource.transformList(accounts);
+  }
+
+  async findForUserInCompany(companyId: string, user: AuthenticatedUser): Promise<any> {
+    if (!Types.ObjectId.isValid(companyId)) {
+      throw new NotFoundException('Invalid company ID');
+    }
+
+    const account = await this.externalAccountModel
+      .findOne({
+        companyId: new Types.ObjectId(companyId),
+        userId: user._id,
+        deletedAt: null,
+      })
+      .populate('companyId')
+      .lean()
+      .exec();
+
+    if (!account) {
+      throw new NotFoundException('No external account found for this company');
+    }
+
+    return ExternalAccountResource.transform(account);
   }
 
   async unpair(id: string, user: AuthenticatedUser): Promise<any> {
@@ -158,31 +183,29 @@ export class CustomerPairingService {
       throw new NotFoundException('External account not found');
     }
 
-    const isOwnerOrManager =
-      user.role === 'owner_company' || user.role === 'manager_company';
     const isOwnAccount = account.userId.toString() === user._id.toString();
-
-    if (!isOwnerOrManager && !isOwnAccount) {
+    if (!isOwnAccount) {
       throw new ForbiddenException('You do not have permission to unpair this account');
-    }
-
-    if (isOwnerOrManager && user.company?._id) {
-      if (account.companyId.toString() !== user.company._id.toString()) {
-        throw new ForbiddenException('This account does not belong to your company');
-      }
     }
 
     account.deletedAt = new Date();
     await account.save();
 
-    return { unpaired_at: account.deletedAt };
+    const populated = await this.externalAccountModel
+      .findById(account._id)
+      .populate('companyId')
+      .lean()
+      .exec();
+
+    return ExternalAccountResource.transform(populated);
   }
 
-  async checkExternalMemberships(companyId: string, user: AuthenticatedUser): Promise<any> {
-    if (!Types.ObjectId.isValid(companyId)) {
-      throw new NotFoundException('Invalid company ID');
+  async getExternalMemberships(user: AuthenticatedUser): Promise<any[]> {
+    if (!user.company?._id) {
+      throw new ForbiddenException('User is not associated with any company.');
     }
 
+    const companyId = user.company._id.toString();
     const company = await this.companyModel
       .findOne({ _id: companyId, deletedAt: null })
       .exec();
@@ -201,11 +224,14 @@ export class CustomerPairingService {
 
     const accounts = await this.externalAccountModel
       .find({ companyId: new Types.ObjectId(companyId), deletedAt: null })
+      .populate('userId', 'name email role')
+      .populate('companyId')
       .lean()
       .exec();
 
     const emails = accounts.map((a: any) => a.externalCustomerEmail);
 
+    let externalData: any[] = [];
     try {
       const response = await firstValueFrom(
         this.httpService.post(cfg.externalCheckMembershipsUrl, {
@@ -213,9 +239,14 @@ export class CustomerPairingService {
           secret_key: cfg.secretKey,
         }),
       );
-      return response.data;
+      externalData = response.data;
     } catch {
       throw new BadRequestException('Failed to check memberships from external system');
     }
+
+    return accounts.map((account: any) => ({
+      user: account.userId,
+      external_account: ExternalAccountResource.transform(account),
+    }));
   }
 }

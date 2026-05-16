@@ -299,6 +299,7 @@ export class CompaniesInternalService {
       external_login_url: cfg.externalLoginUrl ?? null,
       external_verify_url: cfg.externalVerifyUrl ?? null,
       external_check_memberships_url: cfg.externalCheckMembershipsUrl ?? null,
+      secret_key: cfg.secretKey ?? null,
       is_integration_active: cfg.isIntegrationActive ?? false,
     };
   }

@@ -49,37 +49,36 @@ export class CustomerPairingController {
     return ResponseUtil.success('Account paired successfully', data);
   }
 
-  @Get('companies/:id/external-accounts')
+  @Get()
   @UseGuards(RolesGuard)
-  @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @Roles(Role.Client)
   @HttpCode(HttpStatus.OK)
-  async findAllByCompany(
-    @Param('id') companyId: string,
-    @GetUser() user: AuthenticatedUser,
-  ) {
-    const data = await this.customerPairingService.findAllByCompany(companyId, user);
-    return ResponseUtil.success('External accounts retrieved successfully', data);
+  async findAllPairedAccounts(@GetUser() user: AuthenticatedUser) {
+    const data = await this.customerPairingService.findAllForUser(user);
+    return ResponseUtil.success('Paired accounts retrieved successfully', data);
   }
 
-  @Delete('external-accounts/:id')
+  @Get('company/:companyId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.Client)
+  @HttpCode(HttpStatus.OK)
+  async findPairedInCompany(
+    @Param('companyId') companyId: string,
+    @GetUser() user: AuthenticatedUser,
+  ) {
+    const data = await this.customerPairingService.findForUserInCompany(companyId, user);
+    return ResponseUtil.success('Paired account retrieved successfully', data);
+  }
+
+  @Delete(':external_account_id')
+  @UseGuards(RolesGuard)
+  @Roles(Role.Client)
   @HttpCode(HttpStatus.OK)
   async unpair(
-    @Param('id') id: string,
+    @Param('external_account_id') id: string,
     @GetUser() user: AuthenticatedUser,
   ) {
     const data = await this.customerPairingService.unpair(id, user);
     return ResponseUtil.success('External account unpaired successfully', data);
-  }
-
-  @Get('companies/:id/memberships')
-  @UseGuards(RolesGuard)
-  @Roles(Role.CompanyOwner, Role.CompanyManager)
-  @HttpCode(HttpStatus.OK)
-  async checkMemberships(
-    @Param('id') companyId: string,
-    @GetUser() user: AuthenticatedUser,
-  ) {
-    const data = await this.customerPairingService.checkExternalMemberships(companyId, user);
-    return ResponseUtil.success('Memberships retrieved successfully', data);
   }
 }

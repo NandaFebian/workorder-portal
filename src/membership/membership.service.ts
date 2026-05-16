@@ -15,6 +15,11 @@ import { GenerateMemberCodesDto } from './dto/generate-code.dto';
 import { ClaimMemberCodeDto } from './dto/claim-code.dto';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { Company, CompanyDocument } from 'src/company/schemas/company.schemas';
+import {
+  ExternalAccount,
+  ExternalAccountDocument,
+} from 'src/customer-pairing/schemas/external-account.schema';
+import { ExternalAccountResource } from 'src/customer-pairing/resources/external-account.resource';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -24,6 +29,8 @@ export class MembershipService {
     private membershipCodeModel: Model<MembershipCodeDocument>,
     @InjectModel(Company.name)
     private companyModel: Model<CompanyDocument>,
+    @InjectModel(ExternalAccount.name)
+    private externalAccountModel: Model<ExternalAccountDocument>,
   ) { }
 
   async generateCodes(
@@ -108,10 +115,11 @@ export class MembershipService {
       throw new ForbiddenException('User is not associated with any company.');
     }
 
-    // Find all claimed codes for this company, populate the client data
+    const companyId = user.company._id;
+
     const memberships = await this.membershipCodeModel
       .find({
-        companyId: user.company._id,
+        companyId,
         isClaimed: true,
         deletedAt: null,
       })
@@ -120,12 +128,35 @@ export class MembershipService {
       .lean()
       .exec();
 
-    // Extract and format the clients
-    return memberships.map((membership) => ({
-      membershipCode: membership.code,
-      claimedAt: membership.claimedAt,
-      client: membership.claimedBy,
-    }));
+    const userIds = memberships
+      .map((m: any) => m.claimedBy?._id)
+      .filter(Boolean);
+
+    const externalAccounts = await this.externalAccountModel
+      .find({
+        userId: { $in: userIds },
+        companyId,
+        deletedAt: null,
+      })
+      .populate('companyId')
+      .lean()
+      .exec();
+
+    const externalMap = new Map<string, any>();
+    for (const ea of externalAccounts) {
+      externalMap.set(ea.userId.toString(), ea);
+    }
+
+    return memberships.map((membership: any) => {
+      const clientId = membership.claimedBy?._id?.toString();
+      const externalAccount = clientId ? externalMap.get(clientId) : null;
+      return {
+        user: membership.claimedBy,
+        external_account: externalAccount
+          ? ExternalAccountResource.transform(externalAccount)
+          : null,
+      };
+    });
   }
 
   async claimCode(

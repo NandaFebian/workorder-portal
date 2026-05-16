@@ -2,15 +2,15 @@ import { IsBoolean, IsOptional, IsString, IsUrl } from 'class-validator';
 
 export class UpdateIntegrationConfigDto {
   @IsOptional()
-  @IsUrl()
+  @IsUrl({ require_tld: false })
   external_login_url?: string;
 
   @IsOptional()
-  @IsUrl()
+  @IsUrl({ require_tld: false })
   external_verify_url?: string;
 
   @IsOptional()
-  @IsUrl()
+  @IsUrl({ require_tld: false })
   external_check_memberships_url?: string;
 
   @IsOptional()

@@ -6,6 +6,10 @@ import {
   MembershipCode,
   MembershipCodeSchema,
 } from './schemas/membership.schema';
+import {
+  ExternalAccount,
+  ExternalAccountSchema,
+} from 'src/customer-pairing/schemas/external-account.schema';
 import { AuthModule } from 'src/auth/auth.module';
 import { UsersModule } from 'src/users/users.module';
 import { Company, CompanySchema } from 'src/company/schemas/company.schemas';
@@ -15,6 +19,7 @@ import { Company, CompanySchema } from 'src/company/schemas/company.schemas';
     MongooseModule.forFeature([
       { name: MembershipCode.name, schema: MembershipCodeSchema },
       { name: Company.name, schema: CompanySchema },
+      { name: ExternalAccount.name, schema: ExternalAccountSchema },
     ]),
 
     forwardRef(() => AuthModule),

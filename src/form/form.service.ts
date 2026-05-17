@@ -7,7 +7,6 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { Role } from 'src/common/enums/role.enum';
-import { DepartmentAuthHelper } from 'src/common/helpers/department-auth.helper';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
@@ -43,13 +42,17 @@ export class FormsService {
       throw new ForbiddenException('User is not associated with any company.');
     }
 
+    const position = user.position?._id ?? null;
+
     const newTemplate = new this.formTemplateModel({
       ...dto,
       formKey: uuidv4(),
       companyId: user.company._id,
+      position,
       __v: 0,
     });
-    return newTemplate.save();
+    const saved = await newTemplate.save();
+    return saved.populate({ path: 'position', select: '-createdAt -updatedAt -deletedAt -__v' });
   }
 
   async findAllTemplates(
@@ -58,6 +61,17 @@ export class FormsService {
     if (!user.company?._id) {
       throw new ForbiddenException('User is not associated with any company.');
     }
+
+    const hasPosition = !!user.position?._id;
+
+    const positionFilter = hasPosition
+      ? {
+          $or: [
+            { position: null },
+            { position: user.position!._id },
+          ],
+        }
+      : {};
 
     return this.formTemplateModel.aggregate([
       { $match: { companyId: user.company._id } },
@@ -69,8 +83,36 @@ export class FormsService {
         },
       },
       { $replaceRoot: { newRoot: '$latest_doc' } },
-      { $match: { deletedAt: null } },
+      { $match: { deletedAt: null, ...positionFilter } },
       { $sort: { createdAt: -1 } },
+      {
+        $lookup: {
+          from: 'positions',
+          localField: 'position',
+          foreignField: '_id',
+          as: 'positionObj',
+        },
+      },
+      {
+        $addFields: {
+          position: {
+            $cond: {
+              if: { $gt: [{ $size: '$positionObj' }, 0] },
+              then: {
+                _id: { $arrayElemAt: ['$positionObj._id', 0] },
+                name: { $arrayElemAt: ['$positionObj.name', 0] },
+                description: { $arrayElemAt: ['$positionObj.description', 0] },
+                isActive: { $arrayElemAt: ['$positionObj.isActive', 0] },
+                companyId: { $arrayElemAt: ['$positionObj.companyId', 0] },
+              },
+              else: null,
+            },
+          },
+        },
+      },
+      {
+        $project: { positionObj: 0 },
+      },
     ]);
   }
 
@@ -80,6 +122,7 @@ export class FormsService {
   ): Promise<FormTemplateDocument> {
     const template = await this.formTemplateModel
       .findOne({ _id: id, deletedAt: null })
+      .populate({ path: 'position', select: '-createdAt -updatedAt -deletedAt -__v' })
       .exec();
     if (!template) {
       throw new NotFoundException(`Form template with ID ${id} not found`);
@@ -102,13 +145,6 @@ export class FormsService {
     dto: UpdateFormTemplateDto,
     user: AuthenticatedUser,
   ): Promise<FormTemplateDocument> {
-    // Department Manager can only create forms, not update
-    if (DepartmentAuthHelper.isDepartmentManager(user)) {
-      throw new ForbiddenException(
-        'Department managers are not allowed to update form templates.',
-      );
-    }
-
     if (Object.keys(dto).length === 0) {
       throw new BadRequestException('Payload for update cannot be empty');
     }
@@ -133,6 +169,15 @@ export class FormsService {
       throw new NotFoundException(`Form template with ID ${formId} not found`);
     }
 
+    if (user.position?._id) {
+      const formPositionId = existingForm.position?.toString() ?? null;
+      if (formPositionId !== user.position._id.toString()) {
+        throw new ForbiddenException(
+          'You can only edit form templates assigned to your position.',
+        );
+      }
+    }
+
     const latestVersion = (await this.formTemplateModel
       .findOne({ formKey: existingForm.formKey, companyId: user.company._id })
       .sort({ __v: -1 })
@@ -152,7 +197,8 @@ export class FormsService {
     };
 
     const newVersion = new this.formTemplateModel(newVersionData);
-    return newVersion.save();
+    const saved = await newVersion.save();
+    return saved.populate({ path: 'position', select: '-createdAt -updatedAt -deletedAt -__v' });
   }
 
   async submitForm(
@@ -298,13 +344,6 @@ export class FormsService {
     id: string,
     user: AuthenticatedUser,
   ): Promise<any> {
-    // Department Manager can only create forms, not delete
-    if (DepartmentAuthHelper.isDepartmentManager(user)) {
-      throw new ForbiddenException(
-        'Department managers are not allowed to delete form templates.',
-      );
-    }
-
     if (!user.company?._id) {
       throw new ForbiddenException('User is not associated with any company.');
     }
@@ -324,6 +363,15 @@ export class FormsService {
 
     if (!template) {
       throw new NotFoundException(`Form template with ID ${id} not found`);
+    }
+
+    if (user.position?._id) {
+      const formPositionId = template.position?.toString() ?? null;
+      if (formPositionId !== user.position._id.toString()) {
+        throw new ForbiddenException(
+          'You can only delete form templates assigned to your position.',
+        );
+      }
     }
 
     // Check if it is the latest version

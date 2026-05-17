@@ -35,7 +35,7 @@ export class CompaniesClientService {
         isActive: true,
         deletedAt: null,
       })
-      .select('_id name address description ownerId')
+      .select('_id name address description ownerId integrationConfig')
       .exec();
 
     if (!company) {
@@ -45,28 +45,40 @@ export class CompaniesClientService {
     }
 
     const { isSubscribed } = await this.servicesClientService.findAllByCompanyId(id, user);
+    const isIntegrationActive = company.integrationConfig?.isIntegrationActive ?? false;
+
+    const { integrationConfig, ...companyObj } = company.toObject();
 
     return {
-      company: company.toObject(),
+      company: companyObj,
       isSubscribed,
+      isIntegrationActive,
     };
   }
 
-  async findPublicServicesByCompanyId(id: string, user?: AuthenticatedUser | null): Promise<{ isSubscribed: boolean; services: any[] }> {
+  async findPublicServicesByCompanyId(id: string, user?: AuthenticatedUser | null): Promise<{ isSubscribed: boolean; isIntegrationActive: boolean; services: any[] }> {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException(`Invalid company ID: ${id}`);
     }
-    const companyExists = await this.companyModel.countDocuments({
+    const company = await this.companyModel.findOne({
       _id: id,
       isActive: true,
       deletedAt: null,
-    });
-    if (companyExists === 0) {
+    }).select('integrationConfig').exec();
+
+    if (!company) {
       throw new NotFoundException(
         `Company with ID ${id} not found or is not active`,
       );
     }
 
-    return this.servicesClientService.findAllByCompanyId(id, user);
+    const { isSubscribed, services } = await this.servicesClientService.findAllByCompanyId(id, user);
+    const isIntegrationActive = company.integrationConfig?.isIntegrationActive ?? false;
+
+    return {
+      isSubscribed,
+      isIntegrationActive,
+      services,
+    };
   }
 }

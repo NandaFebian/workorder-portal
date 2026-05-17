@@ -27,12 +27,13 @@ export class CompaniesClientController {
     @Param('id') id: string,
     @GetUser() user: AuthenticatedUser | null,
   ) {
-    const { company, isSubscribed } = await this.clientService.findPublicById(id, user);
+    const { company, isSubscribed, isIntegrationActive } = await this.clientService.findPublicById(id, user);
     return {
       message: 'Company retrieved successfully',
       data: company,
       meta: {
         isSubscribed,
+        isIntegrationActive,
       },
     };
   }
@@ -45,10 +46,13 @@ export class CompaniesClientController {
     @Param('id') id: string,
     @GetUser() user: AuthenticatedUser | null,
   ) {
-    const services = await this.clientService.findPublicServicesByCompanyId(id, user);
+    const { services, isSubscribed } = await this.clientService.findPublicServicesByCompanyId(id, user);
     return {
       message: 'Services retrieved successfully',
       data: services,
+      meta: {
+        isSubscribed,
+      },
     };
   }
 }

@@ -164,7 +164,7 @@ export class AuthService {
       role: user.role,
     };
 
-    if (user.role === Role.CompanyStaff && user.positionId) {
+    if (user.positionId) {
       try {
         const position = await this.positionsService.findById(
           (user.positionId as any).toString(),

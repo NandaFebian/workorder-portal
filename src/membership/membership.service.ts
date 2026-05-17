@@ -96,6 +96,20 @@ export class MembershipService {
     }
 
     try {
+      const company = await this.companyModel.findOne({
+        _id: companyId,
+        deletedAt: null,
+      }).select('integrationConfig').lean();
+
+      if (company?.integrationConfig?.isIntegrationActive) {
+        const externalAccount = await this.externalAccountModel.findOne({
+          companyId: companyId,
+          userId: userId,
+          deletedAt: null,
+        }).select('_id').lean();
+        return !!externalAccount;
+      }
+
       // Menggunakan query object polos, Mongoose akan mengurus cast ObjectId otomatis
       const membership = await this.membershipCodeModel.findOne({
         companyId: companyId,

@@ -3,6 +3,7 @@ import { Document, Schema as MongooseSchema } from 'mongoose';
 import { FormField } from './form-field.schema';
 import { FormType } from '../../common/enums/form-type.enum';
 
+
 export type FormTemplateDocument = FormTemplate & Document;
 
 // Nonaktifkan versionKey otomatis dari Mongoose
@@ -13,6 +14,9 @@ export class FormTemplate {
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Company', required: true })
   companyId: MongooseSchema.Types.ObjectId;
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Position', default: null })
+  position: MongooseSchema.Types.ObjectId | null;
 
   @Prop({ required: true })
   title: string;

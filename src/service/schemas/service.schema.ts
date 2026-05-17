@@ -68,7 +68,16 @@ class WorkOrderConfig {
 }
 const WorkOrderConfigSchema = SchemaFactory.createForClass(WorkOrderConfig);
 
-@Schema({ timestamps: true, versionKey: false })
+@Schema({
+  timestamps: true,
+  versionKey: false,
+  toJSON: {
+    transform: (doc, ret: any) => {
+      delete ret.serviceKey;
+      return ret;
+    },
+  },
+})
 export class Service {
   @Prop({ required: true, index: true })
   serviceKey: string;

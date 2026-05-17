@@ -7,7 +7,16 @@ import { FormType } from '../../common/enums/form-type.enum';
 export type FormTemplateDocument = FormTemplate & Document;
 
 // Nonaktifkan versionKey otomatis dari Mongoose
-@Schema({ timestamps: true, versionKey: false })
+@Schema({
+  timestamps: true,
+  versionKey: false,
+  toJSON: {
+    transform: (doc, ret: any) => {
+      delete ret.formKey;
+      return ret;
+    },
+  },
+})
 export class FormTemplate {
   @Prop({ required: true, index: true })
   formKey: string;

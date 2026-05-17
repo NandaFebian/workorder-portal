@@ -15,7 +15,6 @@ export async function getServicesWithAggregation(
     description: 1,
     accessType: 1,
     isActive: 1,
-    serviceKey: 1,
     draftingWorkOrderType: 1,
     createdAt: 1,
     updatedAt: 1,

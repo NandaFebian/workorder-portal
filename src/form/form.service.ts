@@ -111,7 +111,7 @@ export class FormsService {
         },
       },
       {
-        $project: { positionObj: 0 },
+        $project: { positionObj: 0, formKey: 0 },
       },
     ]);
   }

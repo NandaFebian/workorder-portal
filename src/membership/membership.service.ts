@@ -7,6 +7,8 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 import {
   MembershipCode,
   MembershipCodeDocument,
@@ -31,6 +33,7 @@ export class MembershipService {
     private companyModel: Model<CompanyDocument>,
     @InjectModel(ExternalAccount.name)
     private externalAccountModel: Model<ExternalAccountDocument>,
+    private readonly httpService: HttpService,
   ) { }
 
   async generateCodes(
@@ -102,15 +105,9 @@ export class MembershipService {
       }).select('integrationConfig').lean();
 
       if (company?.integrationConfig?.isIntegrationActive) {
-        const externalAccount = await this.externalAccountModel.findOne({
-          companyId: companyId,
-          userId: userId,
-          deletedAt: null,
-        }).select('_id').lean();
-        return !!externalAccount;
+        return this.checkExternalSubscription(userId, companyId, company.integrationConfig as any);
       }
 
-      // Menggunakan query object polos, Mongoose akan mengurus cast ObjectId otomatis
       const membership = await this.membershipCodeModel.findOne({
         companyId: companyId,
         claimedBy: userId,
@@ -121,6 +118,65 @@ export class MembershipService {
       return !!membership;
     } catch (error) {
       return false;
+    }
+  }
+
+  private async checkExternalSubscription(
+    userId: string,
+    companyId: string,
+    integrationConfig: any,
+  ): Promise<boolean> {
+    const account = await this.externalAccountModel.findOne({
+      companyId: companyId,
+      userId: userId,
+      deletedAt: null,
+    });
+
+    if (!account) return false;
+
+    const now = new Date();
+    if (account.expiresAt && account.expiresAt > now) {
+      return true;
+    }
+
+    // Expired — sync ke external
+    const cfg = integrationConfig;
+    if (!cfg?.externalCheckMembershipsUrl || !cfg?.secretKey) {
+      return true; // tidak bisa sync, anggap masih valid
+    }
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(cfg.externalCheckMembershipsUrl, {
+          emails: [account.externalCustomerEmail],
+          secret_key: cfg.secretKey,
+        }),
+      );
+
+      const data: any[] = Array.isArray(response.data) ? response.data : [];
+      const match = data.find(
+        (m: any) => m.email === account.externalCustomerEmail,
+      );
+      const isActive = match?.is_active === true;
+
+      if (isActive) {
+        const newExpiry = new Date();
+        newExpiry.setDate(newExpiry.getDate() + 7);
+        await this.externalAccountModel.updateOne(
+          { _id: account._id },
+          { $set: { expiresAt: newExpiry } },
+        );
+        return true;
+      } else {
+        // Detach — hapus ExternalAccount
+        await this.externalAccountModel.updateOne(
+          { _id: account._id },
+          { $set: { deletedAt: new Date() } },
+        );
+        return false;
+      }
+    } catch {
+      return true; // external tidak bisa dihubungi, anggap masih valid
     }
   }
 

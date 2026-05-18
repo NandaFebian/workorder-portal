@@ -931,50 +931,58 @@ export class ServiceRequestService {
     // Find all Work Orders under this SR
     const workOrders = await this.workOrderService.findRawByServiceRequestId(srId);
 
-    const workReportForms: any[] = [];
-    const submissions: any[] = [];
+    const workReports: any[] = [];
 
     for (const wo of workOrders) {
       const report = await this.workReportService.findOneQuietlyByWorkOrderId(
         (wo as any)._id.toString(),
       );
 
-      // Only include data if the flag is set on this work report
-      if (!report || !report.showReportToRequester) continue;
+      if (!report) continue;
 
-      // Hydrate the report form template into a FULL object
-      if (report.reportFormId) {
-        try {
-          const form = await this.formsService.findTemplateById(
-            report.reportFormId.toString(),
-          );
-          if (form) {
-            const t = (form as any).toObject ? (form as any).toObject() : form;
-            workReportForms.push({
-              _id: t._id,
-              title: t.title,
-              description: t.description,
-              formType: t.formType,
-              formKey: t.formKey,
-              fields: t.fields,
-              createdAt: t.createdAt,
-              updatedAt: t.updatedAt,
-            });
-          }
-        } catch {}
+      const reportEntry: any = {
+        workOrderId: (wo as any)._id,
+        showReportToRequester: report.showReportToRequester ?? false,
+        reportForm: null,
+        submissions: [],
+      };
+
+      // Only include form & submissions if the flag is set
+      if (report.showReportToRequester) {
+        if (report.reportFormId) {
+          try {
+            const form = await this.formsService.findTemplateById(
+              report.reportFormId.toString(),
+            );
+            if (form) {
+              const t = (form as any).toObject ? (form as any).toObject() : form;
+              reportEntry.reportForm = {
+                _id: t._id,
+                title: t.title,
+                description: t.description,
+                formType: t.formType,
+                formKey: t.formKey,
+                fields: t.fields,
+                createdAt: t.createdAt,
+                updatedAt: t.updatedAt,
+              };
+            }
+          } catch {}
+        }
+
+        const subs = await this.submissionModel
+          .find({
+            ownerId: (report as any)._id,
+            submissionType: SubmissionType.Report,
+          })
+          .lean()
+          .exec();
+        reportEntry.submissions = subs;
       }
 
-      // Fetch all report submissions for this work report
-      const subs = await this.submissionModel
-        .find({
-          ownerId: (report as any)._id,
-          submissionType: SubmissionType.Report,
-        })
-        .lean()
-        .exec();
-      submissions.push(...subs);
+      workReports.push(reportEntry);
     }
 
-    return { workReportForms, workOrderSubmissions: submissions };
+    return { workReports };
   }
 }

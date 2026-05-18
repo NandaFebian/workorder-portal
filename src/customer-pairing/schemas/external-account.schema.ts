@@ -21,6 +21,9 @@ export class ExternalAccount {
   pairedAt: Date;
 
   @Prop({ type: Date, default: null })
+  expiresAt: Date;
+
+  @Prop({ type: Date, default: null })
   deletedAt: Date;
 }
 

@@ -298,6 +298,7 @@ export class FormsService {
     const latestTemplate = await this.formTemplateModel
       .findOne({ formKey })
       .sort({ __v: -1 })
+      .populate({ path: 'position', select: '-createdAt -updatedAt -deletedAt -__v' })
       .exec();
 
     if (!latestTemplate || latestTemplate.deletedAt !== null) {

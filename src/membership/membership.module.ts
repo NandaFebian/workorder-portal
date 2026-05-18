@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { HttpModule } from '@nestjs/axios';
 import { MembershipController, MembershipCodeController } from './membership.controller';
 import { MembershipService } from './membership.service';
 import {
@@ -21,7 +22,7 @@ import { Company, CompanySchema } from 'src/company/schemas/company.schemas';
       { name: Company.name, schema: CompanySchema },
       { name: ExternalAccount.name, schema: ExternalAccountSchema },
     ]),
-
+    HttpModule,
     forwardRef(() => AuthModule),
     forwardRef(() => UsersModule),
   ],

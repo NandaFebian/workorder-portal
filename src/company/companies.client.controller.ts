@@ -7,7 +7,7 @@ import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interf
 
 @Controller('public/companies')
 export class CompaniesClientController {
-  constructor(private readonly clientService: CompaniesClientService) {}
+  constructor(private readonly clientService: CompaniesClientService) { }
 
   @Get()
   @HttpCode(HttpStatus.OK)
@@ -49,10 +49,7 @@ export class CompaniesClientController {
     const { services, isSubscribed } = await this.clientService.findPublicServicesByCompanyId(id, user);
     return {
       message: 'Services retrieved successfully',
-      data: services,
-      meta: {
-        isSubscribed,
-      },
+      data: services
     };
   }
 }

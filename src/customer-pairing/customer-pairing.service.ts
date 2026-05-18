@@ -120,12 +120,16 @@ export class CustomerPairingService {
       );
     }
 
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
     const created = await this.externalAccountModel.create({
       externalCustomerEmail: externalProfile.email,
       externalCustomerName: externalProfile.name ?? '',
       companyId: new Types.ObjectId(dto.company_id),
       userId: user._id,
       pairedAt: new Date(),
+      expiresAt,
     });
 
     const populated = await this.externalAccountModel

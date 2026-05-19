@@ -134,38 +134,35 @@ export class MembershipService {
 
     if (!account) return false;
 
-    const now = new Date();
-    if (account.expiresAt && account.expiresAt > now) {
-      return true;
-    }
-
-    // Expired — sync ke external
     const cfg = integrationConfig;
-    if (!cfg?.externalCheckStatusUrl || !cfg?.secretKey) {
-      return true; // tidak bisa sync, anggap masih valid
+    if (!cfg?.externalCheckMembershipsUrl || !cfg?.secretKey) {
+      return !!account;
     }
 
     try {
       const response = await firstValueFrom(
-        this.httpService.post(cfg.externalCheckStatusUrl, {
-          external_customer_id: account.externalCustomerEmail,
+        this.httpService.post(cfg.externalCheckMembershipsUrl, {
+          emails: [account.externalCustomerEmail],
           client_secret: cfg.secretKey,
         }),
       );
 
-      const data = response.data;
-      const isActive = data?.subscription_status === 'ACTIVE';
+      const data: any[] = Array.isArray(response.data) ? response.data : [];
+      const match = data.find(
+        (m: any) => m.email === account.externalCustomerEmail,
+      );
+      const isActive = match?.status === 'ACTIVE';
 
       if (isActive) {
-        const newExpiry = new Date();
-        newExpiry.setDate(newExpiry.getDate() + 7);
+        const newExpiry = match?.expires_at
+          ? new Date(match.expires_at)
+          : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
         await this.externalAccountModel.updateOne(
           { _id: account._id },
           { $set: { expiresAt: newExpiry } },
         );
         return true;
       } else {
-        // Detach — hapus ExternalAccount
         await this.externalAccountModel.updateOne(
           { _id: account._id },
           { $set: { deletedAt: new Date() } },
@@ -173,7 +170,7 @@ export class MembershipService {
         return false;
       }
     } catch {
-      return true; // external tidak bisa dihubungi, anggap masih valid
+      return !!account;
     }
   }
 

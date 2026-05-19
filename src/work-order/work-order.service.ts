@@ -35,6 +35,7 @@ import { ServiceRequestStatus } from 'src/common/enums/service-request-status.en
 import { WorkReportStatus } from 'src/common/enums/work-report-status.enum';
 import { FormSubmissionStatus } from 'src/common/enums/form-submission-status.enum';
 import { StatusTranslator } from 'src/common/utils/status-translator.util';
+import { DepartmentAuthHelper } from 'src/common/helpers/department-auth.helper';
 
 @Injectable()
 export class WorkOrderService {
@@ -180,6 +181,30 @@ export class WorkOrderService {
       workReportApprovalAccessType: (saved as any).workReportApprovalAccessType,
       showReportToRequester: data.showReportToRequester ?? false,
     } as any);
+
+    // Auto-draft: WO bypasses markAsSent, so notify assigned staff directly
+    if (isAutoDraft && autoStaff) {
+      const woId = (saved as any)._id.toString();
+
+      if (autoStaff.staffPIC) {
+        await this.fcmService.sendToUser(
+          autoStaff.staffPIC.toString(),
+          'Perintah Kerja Baru Ditugaskan',
+          `Anda telah ditunjuk sebagai PIC untuk Perintah Kerja (${saved.code}) yang telah disetujui otomatis.`,
+          { resource: 'work_order', resourceId: woId, status: WorkOrderStatus.APPROVED },
+        );
+      }
+
+      for (const staffId of autoStaff.assignedStaff) {
+        if (autoStaff.staffPIC && staffId.toString() === autoStaff.staffPIC.toString()) continue;
+        await this.fcmService.sendToUser(
+          staffId.toString(),
+          'Perintah Kerja Baru Ditugaskan',
+          `Anda memiliki tugas baru untuk Perintah Kerja (${saved.code}) yang telah disetujui otomatis.`,
+          { resource: 'work_order', resourceId: woId, status: WorkOrderStatus.APPROVED },
+        );
+      }
+    }
 
     return saved;
   }
@@ -1342,9 +1367,14 @@ export class WorkOrderService {
       const m = manager as any;
       const isOwner = m.role === Role.CompanyOwner;
       const isCreator = wo.createdBy && wo.createdBy.toString() === m._id.toString();
-      const isSystemGenerated = !wo.createdBy;
 
-      if (isOwner || isCreator || isSystemGenerated) {
+      const woPosId = wo.positionId?._id?.toString() ?? wo.positionId?.toString();
+      const mPosId = m.positionId?._id?.toString() ?? m.positionId?.toString() ?? null;
+      const isMatchingDepartment = !!woPosId && woPosId === mPosId;
+
+      let isAuthorizedManager = isOwner || DepartmentAuthHelper.isGeneralManager(m) || isMatchingDepartment;
+
+      if (isAuthorizedManager || isCreator) {
         await this.fcmService.sendToUser(
           m._id.toString(),
           title,

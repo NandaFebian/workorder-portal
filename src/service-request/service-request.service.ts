@@ -258,6 +258,10 @@ export class ServiceRequestService {
     );
 
     for (const manager of providerManagers) {
+      if (!DepartmentAuthHelper.canManageService(manager as any, (service as any).workOrdersConfig ?? [])) {
+        continue;
+      }
+
       await this.fcmService.sendToUser(
         (manager as any)._id.toString(),
         'Permintaan Layanan Baru',
@@ -405,7 +409,13 @@ export class ServiceRequestService {
       [Role.CompanyOwner, Role.CompanyManager],
     );
 
+    const svc = await this.serviceModel.findOne({ _id: sr.serviceId, deletedAt: null }).exec();
+
     for (const manager of providerManagers) {
+      if (svc && !DepartmentAuthHelper.canManageService(manager as any, (svc as any).workOrdersConfig ?? [])) {
+        continue;
+      }
+
       await this.fcmService.sendToUser(
         (manager as any)._id.toString(),
         'Ulasan Permintaan Layanan Masuk',
@@ -931,58 +941,47 @@ export class ServiceRequestService {
     // Find all Work Orders under this SR
     const workOrders = await this.workOrderService.findRawByServiceRequestId(srId);
 
-    const workReports: any[] = [];
+    const workReportForms: any[] = [];
+    const submissions: any[] = [];
 
     for (const wo of workOrders) {
       const report = await this.workReportService.findOneQuietlyByWorkOrderId(
         (wo as any)._id.toString(),
       );
 
-      if (!report) continue;
+      if (!report || !report.showReportToRequester) continue;
 
-      const reportEntry: any = {
-        workOrderId: (wo as any)._id,
-        showReportToRequester: report.showReportToRequester ?? false,
-        reportForm: null,
-        submissions: [],
-      };
-
-      // Only include form & submissions if the flag is set
-      if (report.showReportToRequester) {
-        if (report.reportFormId) {
-          try {
-            const form = await this.formsService.findTemplateById(
-              report.reportFormId.toString(),
-            );
-            if (form) {
-              const t = (form as any).toObject ? (form as any).toObject() : form;
-              reportEntry.reportForm = {
-                _id: t._id,
-                title: t.title,
-                description: t.description,
-                formType: t.formType,
-                formKey: t.formKey,
-                fields: t.fields,
-                createdAt: t.createdAt,
-                updatedAt: t.updatedAt,
-              };
-            }
-          } catch {}
-        }
-
-        const subs = await this.submissionModel
-          .find({
-            ownerId: (report as any)._id,
-            submissionType: SubmissionType.Report,
-          })
-          .lean()
-          .exec();
-        reportEntry.submissions = subs;
+      if (report.reportFormId) {
+        try {
+          const form = await this.formsService.findTemplateById(
+            report.reportFormId.toString(),
+          );
+          if (form) {
+            const t = (form as any).toObject ? (form as any).toObject() : form;
+            workReportForms.push({
+              _id: t._id,
+              title: t.title,
+              description: t.description,
+              formType: t.formType,
+              formKey: t.formKey,
+              fields: t.fields,
+              createdAt: t.createdAt,
+              updatedAt: t.updatedAt,
+            });
+          }
+        } catch {}
       }
 
-      workReports.push(reportEntry);
+      const subs = await this.submissionModel
+        .find({
+          ownerId: (report as any)._id,
+          submissionType: SubmissionType.Report,
+        })
+        .lean()
+        .exec();
+      submissions.push(...subs);
     }
 
-    return { workReports };
+    return { workReportForms, submissions };
   }
 }

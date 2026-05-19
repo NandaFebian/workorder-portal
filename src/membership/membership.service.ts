@@ -192,35 +192,42 @@ export class MembershipService {
       .lean()
       .exec();
 
-    const userIds = memberships
-      .map((m: any) => m.claimedBy?._id)
-      .filter(Boolean);
-
     const externalAccounts = await this.externalAccountModel
       .find({
-        userId: { $in: userIds },
         companyId,
         deletedAt: null,
       })
       .populate('companyId')
+      .populate('userId', 'name email role')
       .lean()
       .exec();
 
-    const externalMap = new Map<string, any>();
-    for (const ea of externalAccounts) {
-      externalMap.set(ea.userId.toString(), ea);
+    const result = new Map<string, any>();
+
+    for (const membership of memberships) {
+      if (!membership.claimedBy) continue;
+      const clientId = (membership.claimedBy as any)._id.toString();
+      result.set(clientId, {
+        user: membership.claimedBy,
+        external_account: null,
+      });
     }
 
-    return memberships.map((membership: any) => {
-      const clientId = membership.claimedBy?._id?.toString();
-      const externalAccount = clientId ? externalMap.get(clientId) : null;
-      return {
-        user: membership.claimedBy,
-        external_account: externalAccount
-          ? ExternalAccountResource.transform(externalAccount)
-          : null,
-      };
-    });
+    for (const ea of externalAccounts) {
+      if (!ea.userId) continue;
+      const clientId = (ea.userId as any)._id.toString();
+      if (result.has(clientId)) {
+        const existing = result.get(clientId);
+        existing.external_account = ExternalAccountResource.transform(ea);
+      } else {
+        result.set(clientId, {
+          user: ea.userId,
+          external_account: ExternalAccountResource.transform(ea),
+        });
+      }
+    }
+
+    return Array.from(result.values());
   }
 
   async claimCode(

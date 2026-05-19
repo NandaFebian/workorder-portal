@@ -108,6 +108,10 @@ export class CustomerPairingService {
       throw new BadRequestException('External system did not return a valid profile');
     }
 
+    if (externalProfile.subscription_status !== 'ACTIVE') {
+      throw new BadRequestException('Your subscription on the external system is not active');
+    }
+
     const existing = await this.externalAccountModel.findOne({
       externalCustomerEmail: externalProfile.external_customer_id,
       companyId: new Types.ObjectId(dto.company_id),

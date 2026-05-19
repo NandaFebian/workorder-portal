@@ -299,6 +299,7 @@ export class CompaniesInternalService {
       external_login_url: cfg.externalLoginUrl ?? null,
       external_verify_url: cfg.externalVerifyUrl ?? null,
       external_check_memberships_url: cfg.externalCheckMembershipsUrl ?? null,
+      external_check_status_url: cfg.externalCheckStatusUrl ?? null,
       secret_key: cfg.secretKey ?? null,
       is_integration_active: cfg.isIntegrationActive ?? false,
     };
@@ -317,6 +318,8 @@ export class CompaniesInternalService {
       update['integrationConfig.externalVerifyUrl'] = dto.external_verify_url;
     if (dto.external_check_memberships_url !== undefined)
       update['integrationConfig.externalCheckMembershipsUrl'] = dto.external_check_memberships_url;
+    if (dto.external_check_status_url !== undefined)
+      update['integrationConfig.externalCheckStatusUrl'] = dto.external_check_status_url;
     if (dto.secret_key !== undefined)
       update['integrationConfig.secretKey'] = dto.secret_key;
     if (dto.is_integration_active !== undefined)

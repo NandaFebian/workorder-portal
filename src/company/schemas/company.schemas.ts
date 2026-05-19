@@ -48,6 +48,7 @@ export class Company {
       externalLoginUrl: { type: String, default: null },
       externalVerifyUrl: { type: String, default: null },
       externalCheckMembershipsUrl: { type: String, default: null },
+      externalCheckStatusUrl: { type: String, default: null },
       secretKey: { type: String, default: null },
       isIntegrationActive: { type: Boolean, default: false },
     },
@@ -58,6 +59,7 @@ export class Company {
     externalLoginUrl: string | null;
     externalVerifyUrl: string | null;
     externalCheckMembershipsUrl: string | null;
+    externalCheckStatusUrl: string | null;
     secretKey: string | null;
     isIntegrationActive: boolean;
   };

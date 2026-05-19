@@ -141,23 +141,20 @@ export class MembershipService {
 
     // Expired — sync ke external
     const cfg = integrationConfig;
-    if (!cfg?.externalCheckMembershipsUrl || !cfg?.secretKey) {
+    if (!cfg?.externalCheckStatusUrl || !cfg?.secretKey) {
       return true; // tidak bisa sync, anggap masih valid
     }
 
     try {
       const response = await firstValueFrom(
-        this.httpService.post(cfg.externalCheckMembershipsUrl, {
-          emails: [account.externalCustomerEmail],
-          secret_key: cfg.secretKey,
+        this.httpService.post(cfg.externalCheckStatusUrl, {
+          external_customer_id: account.externalCustomerEmail,
+          client_secret: cfg.secretKey,
         }),
       );
 
-      const data: any[] = Array.isArray(response.data) ? response.data : [];
-      const match = data.find(
-        (m: any) => m.email === account.externalCustomerEmail,
-      );
-      const isActive = match?.is_active === true;
+      const data = response.data;
+      const isActive = data?.subscription_status === 'ACTIVE';
 
       if (isActive) {
         const newExpiry = new Date();

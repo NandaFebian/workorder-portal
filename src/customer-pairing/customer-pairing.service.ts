@@ -91,12 +91,12 @@ export class CustomerPairingService {
       throw new BadRequestException('External verify URL or secret key is not configured');
     }
 
-    let externalProfile: { email: string; name: string };
+    let externalProfile: { external_customer_id: string; name: string; subscription_status: string };
     try {
       const response = await firstValueFrom(
         this.httpService.post(cfg.externalVerifyUrl, {
           code: dto.code,
-          secret_key: cfg.secretKey,
+          client_secret: cfg.secretKey,
         }),
       );
       externalProfile = response.data;
@@ -104,19 +104,19 @@ export class CustomerPairingService {
       throw new BadRequestException('Failed to verify code with external system');
     }
 
-    if (!externalProfile?.email) {
+    if (!externalProfile?.external_customer_id) {
       throw new BadRequestException('External system did not return a valid profile');
     }
 
     const existing = await this.externalAccountModel.findOne({
-      externalCustomerEmail: externalProfile.email,
+      externalCustomerEmail: externalProfile.external_customer_id,
       companyId: new Types.ObjectId(dto.company_id),
       deletedAt: null,
     });
 
     if (existing) {
       throw new ConflictException(
-        'An external account with this email is already paired to this company',
+        'This external account is already paired to this company',
       );
     }
 
@@ -124,7 +124,7 @@ export class CustomerPairingService {
     expiresAt.setDate(expiresAt.getDate() + 7);
 
     const created = await this.externalAccountModel.create({
-      externalCustomerEmail: externalProfile.email,
+      externalCustomerEmail: externalProfile.external_customer_id,
       externalCustomerName: externalProfile.name ?? '',
       companyId: new Types.ObjectId(dto.company_id),
       userId: user._id,
@@ -240,7 +240,7 @@ export class CustomerPairingService {
       const response = await firstValueFrom(
         this.httpService.post(cfg.externalCheckMembershipsUrl, {
           emails,
-          secret_key: cfg.secretKey,
+          client_secret: cfg.secretKey,
         }),
       );
       externalData = response.data;

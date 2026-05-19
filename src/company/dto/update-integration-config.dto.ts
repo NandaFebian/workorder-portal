@@ -14,6 +14,10 @@ export class UpdateIntegrationConfigDto {
   external_check_memberships_url?: string;
 
   @IsOptional()
+  @IsUrl({ require_tld: false })
+  external_check_status_url?: string;
+
+  @IsOptional()
   @IsString()
   secret_key?: string;
 

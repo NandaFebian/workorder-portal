@@ -35,7 +35,7 @@ export class CompaniesClientService {
         isActive: true,
         deletedAt: null,
       })
-      .select('_id name address description ownerId integrationConfig')
+      .select('_id name address description ownerId integrationConfig isFaqActive')
       .exec();
 
     if (!company) {

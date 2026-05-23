@@ -60,7 +60,7 @@ export async function getServicesWithAggregation(
         price: { $ifNull: [{ $arrayElemAt: ['$_priceDoc.price', 0] }, null] },
       },
     },
-    { $project: { ...projectStage, price: 1, _priceDoc: 0 } },
+    { $project: { ...projectStage, price: 1 } },
     { $sort: { createdAt: -1 } },
   ];
 

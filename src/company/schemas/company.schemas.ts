@@ -51,6 +51,7 @@ export class Company {
       externalCheckStatusUrl: { type: String, default: null },
       secretKey: { type: String, default: null },
       isIntegrationActive: { type: Boolean, default: false },
+      integrationType: { type: String, enum: ['external_system', 'claim_token'], default: 'external_system' },
     },
     default: {},
     _id: false,
@@ -62,6 +63,7 @@ export class Company {
     externalCheckStatusUrl: string | null;
     secretKey: string | null;
     isIntegrationActive: boolean;
+    integrationType: 'external_system' | 'claim_token';
   };
 
   @Prop({ type: Date, default: null })

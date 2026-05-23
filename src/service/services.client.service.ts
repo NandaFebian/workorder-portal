@@ -121,6 +121,7 @@ export class ServicesClientService {
       description: svc.description,
       accessType: svc.accessType,
       isActive: svc.isActive,
+      price: svc.price ?? null,
     }));
 
     return {
@@ -136,6 +137,11 @@ export class ServicesClientService {
     const service = await this.findAndValidatePublicService(id, user);
     const configCount = (service as any).workOrdersConfig?.length || 0;
 
+    const priceDoc = await this.serviceModel.db
+      .collection('serviceprices')
+      .findOne({ serviceKey: service.serviceKey, deletedAt: null });
+    const price = priceDoc ? priceDoc.price : null;
+
     return {
       service: {
         _id: service._id,
@@ -144,6 +150,7 @@ export class ServicesClientService {
         description: service.description,
         accessType: service.accessType,
         isActive: service.isActive,
+        price,
       },
       workOrderConfigCount: configCount,
     };

@@ -24,4 +24,8 @@ export class UpdateIntegrationConfigDto {
   @IsOptional()
   @IsBoolean()
   is_integration_active?: boolean;
+
+  @IsOptional()
+  @IsString()
+  integration_type?: 'external_system' | 'claim_token';
 }

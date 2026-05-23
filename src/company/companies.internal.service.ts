@@ -302,6 +302,7 @@ export class CompaniesInternalService {
       external_check_status_url: cfg.externalCheckStatusUrl ?? null,
       secret_key: cfg.secretKey ?? null,
       is_integration_active: cfg.isIntegrationActive ?? false,
+      integration_type: cfg.integrationType ?? 'external_system',
     };
   }
 
@@ -324,6 +325,8 @@ export class CompaniesInternalService {
       update['integrationConfig.secretKey'] = dto.secret_key;
     if (dto.is_integration_active !== undefined)
       update['integrationConfig.isIntegrationActive'] = dto.is_integration_active;
+    if (dto.integration_type !== undefined)
+      update['integrationConfig.integrationType'] = dto.integration_type;
 
     await this.companyModel.updateOne({ _id: company._id }, { $set: update });
 

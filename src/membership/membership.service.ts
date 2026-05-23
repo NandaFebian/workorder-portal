@@ -13,8 +13,6 @@ import {
   MembershipCode,
   MembershipCodeDocument,
 } from './schemas/membership.schema';
-import { GenerateMemberCodesDto } from './dto/generate-code.dto';
-import { ClaimMemberCodeDto } from './dto/claim-code.dto';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { Company, CompanyDocument } from 'src/company/schemas/company.schemas';
 import {
@@ -22,6 +20,7 @@ import {
   ExternalAccountDocument,
 } from 'src/customer-pairing/schemas/external-account.schema';
 import { ExternalAccountResource } from 'src/customer-pairing/resources/external-account.resource';
+import { parse } from 'csv-parse/sync';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -34,38 +33,62 @@ export class MembershipService {
     @InjectModel(ExternalAccount.name)
     private externalAccountModel: Model<ExternalAccountDocument>,
     private readonly httpService: HttpService,
-  ) { }
+  ) {}
 
-  async generateCodes(
-    dto: GenerateMemberCodesDto,
+  async importFromCsv(
+    file: Express.Multer.File,
     user: AuthenticatedUser,
   ): Promise<MembershipCodeDocument[]> {
     if (!user.company?._id) {
       throw new ForbiddenException('User is not associated with any company.');
     }
 
-    const codes: any[] = [];
-    const prefix = dto.prefix ? dto.prefix.toUpperCase() : 'MEM';
+    if (!file || !file.buffer) {
+      throw new BadRequestException('CSV file is required.');
+    }
 
-    for (let i = 0; i < dto.amount; i++) {
-      // Secure unique code generation: PREFIX-8HEXCHARS
-      const randomPart = crypto.randomBytes(4).toString('hex').toUpperCase();
-      const uniqueCode = `${prefix}-${randomPart}`;
+    let records: any[];
+    try {
+      records = parse(file.buffer.toString('utf-8'), {
+        columns: true,
+        skip_empty_lines: true,
+        trim: true,
+      });
+    } catch {
+      throw new BadRequestException('Invalid CSV format.');
+    }
 
-      codes.push({
-        code: uniqueCode,
-        isClaimed: false,
+    if (records.length === 0) {
+      throw new BadRequestException('CSV file is empty.');
+    }
+
+    const docs: any[] = [];
+    for (const row of records) {
+      const email = row.external_customer_email || row.email;
+      const name = row.external_customer_name || row.name;
+      const token = row.token || `TKN-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+
+      if (!email || !name) {
+        throw new BadRequestException(
+          'Each row must have external_customer_email and external_customer_name columns.',
+        );
+      }
+
+      docs.push({
         companyId: user.company._id,
+        externalCustomerEmail: email,
+        externalCustomerName: name,
+        token,
       });
     }
 
-    // Insert many (skipping duplicates if any, though unlikely with random)
     try {
-      return (await this.membershipCodeModel.insertMany(codes)) as any;
-    } catch (error) {
-      throw new BadRequestException(
-        'Failed to generate codes. Possible duplicate detected.',
-      );
+      return (await this.membershipCodeModel.insertMany(docs)) as any;
+    } catch (error: any) {
+      if (error?.code === 11000) {
+        throw new ConflictException('Duplicate token detected in CSV.');
+      }
+      throw new BadRequestException('Failed to import CSV data.');
     }
   }
 
@@ -81,10 +104,6 @@ export class MembershipService {
       .exec();
   }
 
-  /**
-   * Helper: cek apakah user sudah berlangganan (claimed membership) pada company tertentu.
-   * Dapat dipanggil dari modul lain (mis. ServicesClientService).
-   */
   async isUserSubscribed(
     userId: string,
     companyId: string,
@@ -104,6 +123,17 @@ export class MembershipService {
         deletedAt: null,
       }).select('integrationConfig').lean();
 
+      const integrationType = company?.integrationConfig?.integrationType ?? 'external_system';
+
+      if (integrationType === 'claim_token') {
+        const membership = await this.membershipCodeModel.findOne({
+          companyId: companyId,
+          claimedBy: userId,
+          $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
+        }).select('_id').lean();
+        return !!membership;
+      }
+
       if (company?.integrationConfig?.isIntegrationActive) {
         return this.checkExternalSubscription(userId, companyId, company.integrationConfig as any);
       }
@@ -111,12 +141,11 @@ export class MembershipService {
       const membership = await this.membershipCodeModel.findOne({
         companyId: companyId,
         claimedBy: userId,
-        isClaimed: true,
         $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
       }).select('_id').lean();
 
       return !!membership;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -184,7 +213,7 @@ export class MembershipService {
     const memberships = await this.membershipCodeModel
       .find({
         companyId,
-        isClaimed: true,
+        claimedBy: { $ne: null },
         deletedAt: null,
       })
       .populate('claimedBy', 'name email role')
@@ -231,11 +260,11 @@ export class MembershipService {
   }
 
   async claimCode(
-    dto: ClaimMemberCodeDto,
+    dto: { code: string },
     user: AuthenticatedUser,
-  ): Promise<MembershipCodeDocument> {
+  ): Promise<any> {
     const codeDoc = await this.membershipCodeModel.findOne({
-      code: dto.code,
+      token: dto.code,
       deletedAt: null,
     });
 
@@ -243,7 +272,7 @@ export class MembershipService {
       throw new NotFoundException('Invalid membership code');
     }
 
-    if (codeDoc.isClaimed) {
+    if (codeDoc.claimedBy) {
       throw new ConflictException('Membership code already claimed');
     }
 
@@ -259,10 +288,9 @@ export class MembershipService {
     }
 
     const updatedDoc = await this.membershipCodeModel.findOneAndUpdate(
-      { _id: codeDoc._id, isClaimed: false },
+      { _id: codeDoc._id, claimedBy: null },
       {
         $set: {
-          isClaimed: true,
           claimedBy: user._id,
           claimedAt: new Date(),
         },
@@ -274,7 +302,6 @@ export class MembershipService {
       throw new ConflictException('Membership code already claimed by another concurrent request');
     }
 
-    // Re-fetch with full company object populated
     const populated = await this.membershipCodeModel
       .findById(codeDoc._id)
       .populate('claimedBy', 'name email role')
@@ -289,7 +316,7 @@ export class MembershipService {
     } as any;
   }
 
-  async remove(id: string): Promise<any> {
+  async remove(id: string, user: AuthenticatedUser): Promise<any> {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException('Invalid membership code ID');
     }
@@ -301,10 +328,20 @@ export class MembershipService {
       throw new NotFoundException('Membership code not found');
     }
 
-    // Soft delete
     const deletedAt = new Date();
     code.deletedAt = deletedAt;
     await code.save();
+
+    if (code.claimedBy) {
+      await this.externalAccountModel.updateMany(
+        {
+          companyId: code.companyId,
+          userId: code.claimedBy,
+          deletedAt: null,
+        },
+        { $set: { deletedAt } },
+      );
+    }
 
     return code.toObject ? code.toObject() : { ...code };
   }

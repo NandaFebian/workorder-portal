@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { WorkReport, WorkReportDocument } from './schemas/work-report.schema';
@@ -18,6 +18,7 @@ import { FormSubmissionStatus } from 'src/common/enums/form-submission-status.en
 import { Role } from 'src/common/enums/role.enum';
 import { WorkReportStatus } from 'src/common/enums/work-report-status.enum';
 import { ApprovalAccessType } from 'src/common/enums/approval-access-type.enum';
+import { WorkOrderService } from 'src/work-order/work-order.service';
 
 @Injectable()
 export class WorkReportService {
@@ -29,6 +30,8 @@ export class WorkReportService {
     private readonly formsService: FormsService,
     private readonly fcmService: FcmService,
     private readonly usersService: UsersService,
+    @Inject(forwardRef(() => WorkOrderService))
+    private readonly workOrderService: WorkOrderService,
   ) {}
 
   async create(createDto: CreateWorkReportDto): Promise<WorkReportDocument> {
@@ -266,6 +269,11 @@ export class WorkReportService {
       report.status = WorkReportStatus.SUBMITTED;
     }
     await report.save();
+
+    // Auto-complete the parent WO when report is auto-approved
+    if (report.status === WorkReportStatus.APPROVED && wo && typeof wo === 'object' && wo._id) {
+      await this.workOrderService.autoCompleteByWorkReport(wo._id.toString());
+    }
 
     // Notify about status change
     if (wo && typeof wo === 'object' && wo._id) {

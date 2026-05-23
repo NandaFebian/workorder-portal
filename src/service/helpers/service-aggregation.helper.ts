@@ -10,6 +10,7 @@ export async function getServicesWithAggregation(
 ): Promise<any[]> {
   const projectStage: any = {
     _id: 1,
+    serviceKey: 1,
     companyId: 1,
     title: 1,
     description: 1,
@@ -42,9 +43,25 @@ export async function getServicesWithAggregation(
       },
     },
     { $replaceRoot: { newRoot: '$latest_doc' } },
-    { $match: otherFilters }, // Apply isActive, accessType, etc. on the latest version only
+    { $match: otherFilters },
+    {
+      $lookup: {
+        from: 'serviceprices',
+        let: { svcKey: '$serviceKey' },
+        pipeline: [
+          { $match: { $expr: { $eq: ['$serviceKey', '$$svcKey'] }, deletedAt: null } },
+          { $limit: 1 },
+        ],
+        as: '_priceDoc',
+      },
+    },
+    {
+      $addFields: {
+        price: { $ifNull: [{ $arrayElemAt: ['$_priceDoc.price', 0] }, null] },
+      },
+    },
+    { $project: { ...projectStage, price: 1, _priceDoc: 0 } },
     { $sort: { createdAt: -1 } },
-    { $project: projectStage },
   ];
 
   const services = await serviceModel.aggregate(pipeline);

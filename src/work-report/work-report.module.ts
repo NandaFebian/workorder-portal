@@ -10,6 +10,7 @@ import { WorkReportController } from './work-report.controller';
 import { AuthModule } from 'src/auth/auth.module';
 import { UsersModule } from 'src/users/users.module';
 import { FormModule } from 'src/form/form.module';
+import { WorkOrderModule } from 'src/work-order/work-order.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { FormModule } from 'src/form/form.module';
     forwardRef(() => AuthModule),
     UsersModule,
     FormModule,
+    forwardRef(() => WorkOrderModule),
   ],
   controllers: [WorkReportController],
   providers: [WorkReportService],

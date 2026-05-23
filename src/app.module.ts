@@ -15,6 +15,7 @@ import { TemplateModule } from './template/template.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { FaqModule } from './faq/faq.module';
 import { CustomerPairingModule } from './customer-pairing/customer-pairing.module';
+import { ServicePriceModule } from './service-price/service-price.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { CustomerPairingModule } from './customer-pairing/customer-pairing.modul
     DashboardModule,
     FaqModule,
     CustomerPairingModule,
+    ServicePriceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

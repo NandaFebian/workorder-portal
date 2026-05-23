@@ -99,7 +99,7 @@ export class ServicesInternalService {
           workOrderFormId: isAuto ? null : (dto.workOrderFormId ? new Types.ObjectId(dto.workOrderFormId) : null),
           workReportFormId: dto.workReportFormId ? new Types.ObjectId(dto.workReportFormId) : null,
           // Auto drafting locks all approvals to auto
-          workOrderApprovalAccessType: isAuto ? 'auto' : (dto.workOrderApprovalAccessType ?? 'auto'),
+          workOrderApprovalAccessType: 'auto',
           workReportApprovalAccessType: isAuto ? 'auto' : (dto.workReportApprovalAccessType ?? 'auto'),
           minStaff: dto.minStaff,
           maxStaff: dto.maxStaff,

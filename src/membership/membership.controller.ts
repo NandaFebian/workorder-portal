@@ -8,10 +8,11 @@ import {
   Param,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { MembershipService } from './membership.service';
-import { GenerateMemberCodesDto } from './dto/generate-code.dto';
-import { ClaimMemberCodeDto } from './dto/claim-code.dto';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
@@ -23,7 +24,7 @@ import { ResponseUtil } from 'src/common/utils/response.util';
 @Controller('memberships')
 @UseGuards(AuthGuard)
 export class MembershipController {
-  constructor(private readonly membershipService: MembershipService) { }
+  constructor(private readonly membershipService: MembershipService) {}
 
   @Get()
   @UseGuards(RolesGuard)
@@ -37,7 +38,7 @@ export class MembershipController {
 @Controller('memberships/codes')
 @UseGuards(AuthGuard)
 export class MembershipCodeController {
-  constructor(private readonly membershipService: MembershipService) { }
+  constructor(private readonly membershipService: MembershipService) {}
 
   @Get()
   @UseGuards(RolesGuard)
@@ -50,17 +51,18 @@ export class MembershipCodeController {
   @Post()
   @UseGuards(RolesGuard)
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.AppAdmin)
-  async generateCodes(
-    @Body() dto: GenerateMemberCodesDto,
+  @UseInterceptors(FileInterceptor('file'))
+  async importCsv(
+    @UploadedFile() file: Express.Multer.File,
     @GetUser() user: AuthenticatedUser,
   ) {
-    const data = await this.membershipService.generateCodes(dto, user);
-    return ResponseUtil.success('Codes generated successfully', data);
+    const data = await this.membershipService.importFromCsv(file, user);
+    return ResponseUtil.success('Codes imported successfully', data);
   }
 
   @Post('claim')
   async claimCode(
-    @Body() dto: ClaimMemberCodeDto,
+    @Body() dto: { code: string },
     @GetUser() user: AuthenticatedUser,
   ) {
     return this.membershipService.claimCode(dto, user);
@@ -68,9 +70,13 @@ export class MembershipCodeController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
-  @Roles(Role.AppAdmin)
-  async remove(@Param('id') id: string) {
-    const data = await this.membershipService.remove(id);
+  @UseGuards(RolesGuard)
+  @Roles(Role.CompanyOwner, Role.CompanyManager, Role.AppAdmin)
+  async remove(
+    @Param('id') id: string,
+    @GetUser() user: AuthenticatedUser,
+  ) {
+    const data = await this.membershipService.remove(id, user);
     return ResponseUtil.success('Membership code deleted successfully', data);
   }
 }

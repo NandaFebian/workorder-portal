@@ -209,6 +209,28 @@ export class WorkOrderService {
     return saved;
   }
 
+  async autoCompleteByWorkReport(workOrderId: string): Promise<void> {
+    const wo = await this.workOrderModel.findOne({ _id: workOrderId, deletedAt: null }).exec();
+    if (!wo) return;
+
+    if (wo.status !== WorkOrderStatus.ON_PROGRESS) return;
+
+    wo.status = WorkOrderStatus.COMPLETED;
+    wo.completedAt = new Date();
+    await wo.save();
+
+    if (wo.serviceRequestId) {
+      await this._checkAndUpdateSRStatus(wo.serviceRequestId.toString());
+    }
+
+    await this._notifyAuthorizedManagers(
+      wo,
+      'Perintah Kerja Selesai (Otomatis)',
+      `Perintah Kerja (${wo.code}) telah selesai secara otomatis setelah laporan disetujui.`,
+      WorkOrderStatus.COMPLETED,
+    );
+  }
+
   /**
    * Returns raw (unpopulated) work order documents for a given service request.
    * Used by the report-for-requester endpoint.
@@ -607,9 +629,9 @@ export class WorkOrderService {
     try {
       const report = await this.workReportService.findOneQuietlyByWorkOrderId((wo._id as any).toString());
       if (report && report.status === WorkReportStatus.APPROVED) {
-        // can_complete/fail ONLY if current WO is on_progress AND report is approved
-        meta.workOrderCapabilities.can_complete = isOnProgress;
-        meta.workOrderCapabilities.can_fail = isOnProgress;
+        const isAutoReport = (wo as any).workReportApprovalAccessType === ApprovalAccessType.AUTO;
+        meta.workOrderCapabilities.can_complete = isOnProgress && !isAutoReport;
+        meta.workOrderCapabilities.can_fail = isOnProgress && !isAutoReport;
       }
 
       if ([WorkOrderStatus.ON_PROGRESS, WorkOrderStatus.COMPLETED, WorkOrderStatus.FAILED].includes(wo.status)) {

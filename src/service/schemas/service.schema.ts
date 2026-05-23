@@ -45,7 +45,7 @@ class WorkOrderConfig {
 
   @Prop({
     type: String,
-    enum: ['auto', 'staff_pic', 'staff_any'],
+    enum: ['auto'],
     default: 'auto',
   })
   workOrderApprovalAccessType: string;

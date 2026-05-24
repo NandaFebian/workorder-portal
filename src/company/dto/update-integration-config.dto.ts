@@ -1,25 +1,29 @@
-import { IsBoolean, IsOptional, IsString, IsUrl } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, IsUrl, ValidateIf } from 'class-validator';
 
 export class UpdateIntegrationConfigDto {
   @IsOptional()
+  @ValidateIf((o) => o.integration_type !== 'claim_token')
   @IsUrl({ require_tld: false })
-  external_login_url?: string;
+  external_login_url?: string | null;
 
   @IsOptional()
+  @ValidateIf((o) => o.integration_type !== 'claim_token')
   @IsUrl({ require_tld: false })
-  external_verify_url?: string;
+  external_verify_url?: string | null;
 
   @IsOptional()
+  @ValidateIf((o) => o.integration_type !== 'claim_token')
   @IsUrl({ require_tld: false })
-  external_check_memberships_url?: string;
+  external_check_memberships_url?: string | null;
 
   @IsOptional()
+  @ValidateIf((o) => o.integration_type !== 'claim_token')
   @IsUrl({ require_tld: false })
-  external_check_status_url?: string;
+  external_check_status_url?: string | null;
 
   @IsOptional()
   @IsString()
-  secret_key?: string;
+  secret_key?: string | null;
 
   @IsOptional()
   @IsBoolean()

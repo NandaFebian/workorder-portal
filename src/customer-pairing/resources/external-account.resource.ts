@@ -6,9 +6,9 @@ export class ExternalAccountResource {
 
     const result: any = {
       _id: obj._id,
-      external_customer_email: obj.externalCustomerEmail,
-      external_customer_name: obj.externalCustomerName,
-      paired_at: obj.pairedAt,
+      externalCustomerEmail: obj.externalCustomerEmail,
+      externalCustomerName: obj.externalCustomerName,
+      pairedAt: obj.pairedAt,
     };
 
     if (obj.companyId && typeof obj.companyId === 'object' && obj.companyId._id) {

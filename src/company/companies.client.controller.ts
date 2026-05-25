@@ -27,13 +27,14 @@ export class CompaniesClientController {
     @Param('id') id: string,
     @GetUser() user: AuthenticatedUser | null,
   ) {
-    const { company, isSubscribed, isIntegrationActive } = await this.clientService.findPublicById(id, user);
+    const { company, isSubscribed, isIntegrationActive, integrationType } = await this.clientService.findPublicById(id, user);
     return {
       message: 'Company retrieved successfully',
       data: company,
       meta: {
         isSubscribed,
         isIntegrationActive,
+        integrationType,
       },
     };
   }

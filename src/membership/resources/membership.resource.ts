@@ -29,36 +29,36 @@ export class MembershipResource {
 
     const result: any = {
       _id: obj._id,
-      company_id: obj.companyId,
-      external_customer_email: obj.externalCustomerEmail,
-      external_customer_name: obj.externalCustomerName,
+      companyId: obj.companyId,
+      externalCustomerEmail: obj.externalCustomerEmail,
+      externalCustomerName: obj.externalCustomerName,
       token: obj.token,
-      claimed_at: obj.claimedAt,
-      integration_type: obj.integrationType || 'claim_token',
-      deleted_at: obj.deletedAt,
-      created_at: obj.createdAt,
-      updated_at: obj.updatedAt,
+      claimedAt: obj.claimedAt,
+      integrationType: obj.integrationType || 'claim_token',
+      deletedAt: obj.deletedAt,
+      createdAt: obj.createdAt,
+      updatedAt: obj.updatedAt,
     };
 
     if (obj.claimedBy) {
       if (typeof obj.claimedBy === 'object' && obj.claimedBy._id) {
-        result.claimed_by = {
+        result.claimedBy = {
           _id: obj.claimedBy._id,
           name: obj.claimedBy.name,
           email: obj.claimedBy.email,
           role: obj.claimedBy.role,
         };
         if (obj.claimedBy.createdAt) {
-          result.claimed_by.created_at = obj.claimedBy.createdAt;
+          result.claimedBy.createdAt = obj.claimedBy.createdAt;
         }
         if (obj.claimedBy.updatedAt) {
-          result.claimed_by.updated_at = obj.claimedBy.updatedAt;
+          result.claimedBy.updatedAt = obj.claimedBy.updatedAt;
         }
       } else {
-        result.claimed_by = obj.claimedBy;
+        result.claimedBy = obj.claimedBy;
       }
     } else {
-      result.claimed_by = null;
+      result.claimedBy = null;
     }
 
     return result;

@@ -46,6 +46,7 @@ export class CompaniesClientService {
 
     const { isSubscribed } = await this.servicesClientService.findAllByCompanyId(id, user);
     const isIntegrationActive = company.integrationConfig?.isIntegrationActive ?? false;
+    const integrationType = company.integrationConfig?.integrationType ?? 'external_system';
 
     const { integrationConfig, ...companyObj } = company.toObject();
 
@@ -53,6 +54,7 @@ export class CompaniesClientService {
       company: companyObj,
       isSubscribed,
       isIntegrationActive,
+      integrationType,
     };
   }
 

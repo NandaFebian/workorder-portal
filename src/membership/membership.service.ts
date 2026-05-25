@@ -238,8 +238,8 @@ export class MembershipService {
       const clientId = (membership.claimedBy as any)._id.toString();
       result.set(clientId, {
         user: membership.claimedBy,
-        external_account: null,
-        integration_type: (membership as any).integrationType || 'claim_token',
+        externalAccount: null,
+        integrationType: (membership as any).integrationType || 'claim_token',
       });
     }
 
@@ -250,21 +250,21 @@ export class MembershipService {
 
       if (result.has(clientId)) {
         const existing = result.get(clientId);
-        existing.external_account = ExternalAccountResource.transform(ea);
+        existing.externalAccount = ExternalAccountResource.transform(ea);
         
         const m = memberships.find((x) => (x.claimedBy as any)?._id?.toString() === clientId);
         if (m) {
           const mTime = m.claimedAt ? new Date(m.claimedAt).getTime() : Infinity;
           const eaTime = ea.pairedAt ? new Date(ea.pairedAt).getTime() : Infinity;
           if (eaTime < mTime) {
-            existing.integration_type = eaMethod;
+            existing.integrationType = eaMethod;
           }
         }
       } else {
         result.set(clientId, {
           user: ea.userId,
-          external_account: ExternalAccountResource.transform(ea),
-          integration_type: eaMethod,
+          externalAccount: ExternalAccountResource.transform(ea),
+          integrationType: eaMethod,
         });
       }
     }
@@ -283,6 +283,18 @@ export class MembershipService {
 
     if (!codeDoc) {
       throw new NotFoundException('Invalid membership code');
+    }
+
+    const company = await this.companyModel.findOne({
+      _id: codeDoc.companyId,
+      deletedAt: null,
+    }).select('integrationConfig').lean();
+
+    const integrationType = company?.integrationConfig?.integrationType ?? 'external_system';
+    if (integrationType !== 'claim_token') {
+      throw new BadRequestException(
+        'This company does not use token-based membership. Please use the external account integration.',
+      );
     }
 
     if (codeDoc.claimedBy) {

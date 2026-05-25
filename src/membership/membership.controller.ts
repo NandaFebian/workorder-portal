@@ -59,7 +59,8 @@ export class MembershipCodeController {
     @GetUser() user: AuthenticatedUser,
   ) {
     const data = await this.membershipService.importFromCsv(file, user);
-    return ResponseUtil.success('Codes imported successfully', data);
+    const transformed = MembershipResource.transformMembershipCodeList(data);
+    return ResponseUtil.success('Codes imported successfully', transformed);
   }
 
   @Post('claim')

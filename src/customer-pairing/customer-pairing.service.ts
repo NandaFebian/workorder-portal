@@ -255,7 +255,7 @@ export class CustomerPairingService {
 
     return accounts.map((account: any) => ({
       user: account.userId,
-      external_account: ExternalAccountResource.transform(account),
+      externalAccount: ExternalAccountResource.transform(account),
     }));
   }
 }

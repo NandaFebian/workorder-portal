@@ -32,6 +32,7 @@ describe('MembershipResource', () => {
         external_customer_name: 'Test Name',
         token: 'TOKEN123',
         claimed_at: new Date('2026-01-01T00:00:00.000Z'),
+        integration_type: 'claim_token',
         deleted_at: null,
         created_at: new Date('2026-01-01T00:00:00.000Z'),
         updated_at: new Date('2026-01-01T00:00:00.000Z'),

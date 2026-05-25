@@ -23,6 +23,9 @@ export class MembershipCode {
   @Prop({ default: null })
   claimedAt: Date;
 
+  @Prop({ type: String, enum: ['external_system', 'claim_token'], default: null })
+  integrationType: string;
+
   @Prop({ type: Date, default: null })
   deletedAt: Date;
 }

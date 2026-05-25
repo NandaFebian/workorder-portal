@@ -34,6 +34,7 @@ export class MembershipResource {
       external_customer_name: obj.externalCustomerName,
       token: obj.token,
       claimed_at: obj.claimedAt,
+      integration_type: obj.integrationType || 'claim_token',
       deleted_at: obj.deletedAt,
       created_at: obj.createdAt,
       updated_at: obj.updatedAt,

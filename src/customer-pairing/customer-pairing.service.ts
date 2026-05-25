@@ -134,6 +134,7 @@ export class CustomerPairingService {
       userId: user._id,
       pairedAt: new Date(),
       expiresAt,
+      integrationType: 'external_system',
     });
 
     const populated = await this.externalAccountModel

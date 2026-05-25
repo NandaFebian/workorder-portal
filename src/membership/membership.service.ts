@@ -210,13 +210,6 @@ export class MembershipService {
 
     const companyId = user.company._id;
 
-    const company = await this.companyModel.findOne({
-      _id: companyId,
-      deletedAt: null,
-    }).select('integrationConfig').lean();
-
-    const activeIntegrationType = company?.integrationConfig?.integrationType ?? 'external_system';
-
     const memberships = await this.membershipCodeModel
       .find({
         companyId,
@@ -246,22 +239,32 @@ export class MembershipService {
       result.set(clientId, {
         user: membership.claimedBy,
         external_account: null,
-        integration_type: 'claim_token',
+        integration_type: (membership as any).integrationType || 'claim_token',
       });
     }
 
     for (const ea of externalAccounts) {
       if (!ea.userId) continue;
       const clientId = (ea.userId as any)._id.toString();
+      const eaMethod = (ea as any).integrationType || 'external_system';
+
       if (result.has(clientId)) {
         const existing = result.get(clientId);
         existing.external_account = ExternalAccountResource.transform(ea);
-        existing.integration_type = activeIntegrationType;
+        
+        const m = memberships.find((x) => (x.claimedBy as any)?._id?.toString() === clientId);
+        if (m) {
+          const mTime = m.claimedAt ? new Date(m.claimedAt).getTime() : Infinity;
+          const eaTime = ea.pairedAt ? new Date(ea.pairedAt).getTime() : Infinity;
+          if (eaTime < mTime) {
+            existing.integration_type = eaMethod;
+          }
+        }
       } else {
         result.set(clientId, {
           user: ea.userId,
           external_account: ExternalAccountResource.transform(ea),
-          integration_type: 'external_system',
+          integration_type: eaMethod,
         });
       }
     }
@@ -298,15 +301,16 @@ export class MembershipService {
     }
 
     const updatedDoc = await this.membershipCodeModel.findOneAndUpdate(
-      { _id: codeDoc._id, claimedBy: null },
-      {
-        $set: {
-          claimedBy: user._id,
-          claimedAt: new Date(),
-        },
-      },
-      { new: true }
-    );
+       { _id: codeDoc._id, claimedBy: null },
+       {
+         $set: {
+           claimedBy: user._id,
+           claimedAt: new Date(),
+           integrationType: 'claim_token',
+         },
+       },
+       { new: true }
+     );
 
     if (!updatedDoc) {
       throw new ConflictException('Membership code already claimed by another concurrent request');

@@ -20,6 +20,7 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from 'src/common/enums/role.enum';
 import { ResponseUtil } from 'src/common/utils/response.util';
+import { MembershipResource } from './resources/membership.resource';
 
 @Controller('memberships')
 @UseGuards(AuthGuard)
@@ -45,7 +46,8 @@ export class MembershipCodeController {
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.AppAdmin)
   async findAll(@GetUser() user: AuthenticatedUser) {
     const data = await this.membershipService.findAll(user);
-    return ResponseUtil.success('Membership codes loaded successfully', data);
+    const transformed = MembershipResource.transformMembershipCodeList(data);
+    return ResponseUtil.success('Membership codes loaded successfully', transformed);
   }
 
   @Post()

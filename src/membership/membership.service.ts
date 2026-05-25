@@ -210,6 +210,13 @@ export class MembershipService {
 
     const companyId = user.company._id;
 
+    const company = await this.companyModel.findOne({
+      _id: companyId,
+      deletedAt: null,
+    }).select('integrationConfig').lean();
+
+    const activeIntegrationType = company?.integrationConfig?.integrationType ?? 'external_system';
+
     const memberships = await this.membershipCodeModel
       .find({
         companyId,
@@ -239,6 +246,7 @@ export class MembershipService {
       result.set(clientId, {
         user: membership.claimedBy,
         external_account: null,
+        integration_type: 'claim_token',
       });
     }
 
@@ -248,10 +256,12 @@ export class MembershipService {
       if (result.has(clientId)) {
         const existing = result.get(clientId);
         existing.external_account = ExternalAccountResource.transform(ea);
+        existing.integration_type = activeIntegrationType;
       } else {
         result.set(clientId, {
           user: ea.userId,
           external_account: ExternalAccountResource.transform(ea),
+          integration_type: 'external_system',
         });
       }
     }

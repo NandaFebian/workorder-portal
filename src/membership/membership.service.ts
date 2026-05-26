@@ -81,6 +81,20 @@ export class MembershipService {
       });
     }
 
+    const tokens = docs.map((d) => d.token);
+    const existingCodes = await this.membershipCodeModel.find({
+      companyId: user.company._id,
+      token: { $in: tokens },
+      deletedAt: null,
+    }).select('token').lean();
+
+    if (existingCodes.length > 0) {
+      const duplicates = existingCodes.map((c) => c.token);
+      throw new ConflictException(
+        `Duplicate token(s) already exist in database for this company: ${duplicates.join(', ')}`,
+      );
+    }
+
     try {
       return (await this.membershipCodeModel.insertMany(docs)) as any;
     } catch (error: any) {
@@ -122,7 +136,8 @@ export class MembershipService {
         deletedAt: null,
       }).select('integrationConfig').lean();
 
-      const integrationType = company?.integrationConfig?.integrationType ?? 'external_system';
+      const config = company?.integrationConfig;
+      const integrationType = config?.integrationType || (config as any)?.integration_type || 'external_system';
 
       if (integrationType === 'claim_token') {
         const membership = await this.membershipCodeModel.findOne({
@@ -133,8 +148,9 @@ export class MembershipService {
         return !!membership;
       }
 
-      if (company?.integrationConfig?.isIntegrationActive) {
-        return this.checkExternalSubscription(userId, companyId, company.integrationConfig as any);
+      const isIntegrationActive = config?.isIntegrationActive || (config as any)?.is_integration_active || false;
+      if (isIntegrationActive) {
+        return this.checkExternalSubscription(userId, companyId, config as any);
       }
 
       const membership = await this.membershipCodeModel.findOne({
@@ -163,15 +179,17 @@ export class MembershipService {
     if (!account) return false;
 
     const cfg = integrationConfig;
-    if (!cfg?.externalCheckMembershipsUrl || !cfg?.secretKey) {
+    const externalCheckMembershipsUrl = cfg?.externalCheckMembershipsUrl || cfg?.external_check_memberships_url;
+    const secretKey = cfg?.secretKey || cfg?.secret_key;
+    if (!externalCheckMembershipsUrl || !secretKey) {
       return !!account;
     }
 
     try {
       const response = await firstValueFrom(
-        this.httpService.post(cfg.externalCheckMembershipsUrl, {
+        this.httpService.post(externalCheckMembershipsUrl, {
           emails: [account.externalCustomerEmail],
-          client_secret: cfg.secretKey,
+          client_secret: secretKey,
         }),
       );
 
@@ -272,13 +290,24 @@ export class MembershipService {
   }
 
   async claimCode(
-    dto: { code: string },
+    dto: { code?: string; token?: string; companyId?: string; company_id?: string },
     user: AuthenticatedUser,
   ): Promise<any> {
-    const codeDoc = await this.membershipCodeModel.findOne({
-      token: dto.code,
+    const token = dto.token || dto.code;
+    if (!token) {
+      throw new BadRequestException('Membership code or token is required');
+    }
+
+    const targetCompanyId = dto.companyId || dto.company_id;
+    const query: any = {
+      token,
       deletedAt: null,
-    });
+    };
+    if (targetCompanyId) {
+      query.companyId = targetCompanyId;
+    }
+
+    const codeDoc = await this.membershipCodeModel.findOne(query);
 
     if (!codeDoc) {
       throw new NotFoundException('Invalid membership code');
@@ -289,7 +318,8 @@ export class MembershipService {
       deletedAt: null,
     }).select('integrationConfig').lean();
 
-    const integrationType = company?.integrationConfig?.integrationType ?? 'external_system';
+    const config = company?.integrationConfig;
+    const integrationType = config?.integrationType || (config as any)?.integration_type || 'external_system';
     if (integrationType !== 'claim_token') {
       throw new BadRequestException(
         'This company does not use token-based membership. Please use the external account integration.',

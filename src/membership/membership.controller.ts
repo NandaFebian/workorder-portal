@@ -21,6 +21,7 @@ import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from 'src/common/enums/role.enum';
 import { ResponseUtil } from 'src/common/utils/response.util';
 import { MembershipResource } from './resources/membership.resource';
+import { ClaimMemberCodeDto } from './dto/claim-code.dto';
 
 @Controller('memberships')
 @UseGuards(AuthGuard)
@@ -65,7 +66,7 @@ export class MembershipCodeController {
 
   @Post('claim')
   async claimCode(
-    @Body() dto: { code: string },
+    @Body() dto: ClaimMemberCodeDto,
     @GetUser() user: AuthenticatedUser,
   ) {
     return this.membershipService.claimCode(dto, user);

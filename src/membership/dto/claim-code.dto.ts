@@ -1,7 +1,19 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class ClaimMemberCodeDto {
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  code: string;
+  code?: string;
+
+  @IsOptional()
+  @IsString()
+  token?: string;
+
+  @IsOptional()
+  @IsString()
+  companyId?: string;
+
+  @IsOptional()
+  @IsString()
+  company_id?: string;
 }

@@ -19,6 +19,11 @@ describe('MembershipService', () => {
       findOne: jest.fn(),
       findOneAndUpdate: jest.fn(),
       findById: jest.fn(),
+      find: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue([]),
+        }),
+      }),
     };
 
     companyModelMock = {
@@ -172,6 +177,25 @@ describe('MembershipService', () => {
         service.importFromCsv(mockFile, mockUser),
       ).rejects.toThrow(BadRequestException);
     });
+
+    it('should throw ConflictException if token already exists in the database for the company', async () => {
+      const csvContent = 
+        'email,name,token\n' +
+        'user1@example.com,User One,TOKEN123';
+      const mockFile = {
+        buffer: Buffer.from(csvContent),
+      } as any;
+
+      membershipCodeModelMock.find.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue([{ token: 'TOKEN123' }]),
+        }),
+      });
+
+      await expect(
+        service.importFromCsv(mockFile, mockUser),
+      ).rejects.toThrow(ConflictException);
+    });
   });
 
   describe('claimCode', () => {
@@ -249,6 +273,68 @@ describe('MembershipService', () => {
         pairedAt: expect.any(Date),
         integrationType: 'claim_token',
       });
+    });
+
+    it('should successfully claim code when token is passed instead of code', async () => {
+      const mockCodeDoc = {
+        _id: 'code-id-123',
+        companyId: 'company-id-123',
+        externalCustomerEmail: 'external@example.com',
+        externalCustomerName: 'External Name',
+        token: 'TOKEN123',
+        claimedBy: null,
+      };
+
+      membershipCodeModelMock.findOne.mockImplementation((query) => {
+        if (query.token === 'TOKEN123') {
+          return mockCodeDoc;
+        }
+        return {
+          select: jest.fn().mockReturnValue({
+            lean: jest.fn().mockResolvedValue(null),
+          }),
+        };
+      });
+
+      companyModelMock.findOne.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue({
+            integrationConfig: {
+              integrationType: 'claim_token',
+            },
+          }),
+        }),
+      });
+
+      membershipCodeModelMock.findOneAndUpdate.mockResolvedValue({
+        ...mockCodeDoc,
+        claimedBy: mockUser._id,
+      });
+
+      membershipCodeModelMock.findById.mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockReturnValue({
+            exec: jest.fn().mockResolvedValue({
+              toObject: jest.fn().mockReturnValue({
+                companyId: 'company-id-123',
+                externalCustomerEmail: 'external@example.com',
+                externalCustomerName: 'External Name',
+                token: 'TOKEN123',
+                claimedBy: { _id: 'user-id-123' },
+              }),
+            }),
+          }),
+        }),
+      });
+
+      const result = await service.claimCode({ token: 'TOKEN123' }, mockUser);
+      expect(result).toBeDefined();
+      expect(externalAccountModelMock.create).toHaveBeenCalled();
+    });
+    it('should throw BadRequestException if both token and code are missing', async () => {
+      await expect(
+        service.claimCode({}, mockUser),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

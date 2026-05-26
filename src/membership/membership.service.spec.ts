@@ -152,6 +152,29 @@ describe('MembershipService', () => {
       ]);
     });
 
+    it('should support any column order and spaced/capitalized headers', async () => {
+      const csvContent = 
+        ' Token , Name , email \n' +
+        'TOKEN999,User Nine,user9@example.com';
+      const mockFile = {
+        buffer: Buffer.from(csvContent),
+      } as any;
+
+      membershipCodeModelMock.insertMany.mockResolvedValue([
+        { externalCustomerEmail: 'user9@example.com', externalCustomerName: 'User Nine', token: 'TOKEN999' },
+      ]);
+
+      await service.importFromCsv(mockFile, mockUser);
+      expect(membershipCodeModelMock.insertMany).toHaveBeenCalledWith([
+        {
+          companyId: 'company-id-123',
+          externalCustomerEmail: 'user9@example.com',
+          externalCustomerName: 'User Nine',
+          token: 'TOKEN999',
+        },
+      ]);
+    });
+
     it('should throw BadRequestException if token column is missing or empty', async () => {
       const csvContent = 
         'external_customer_email,external_customer_name,token\n' +

@@ -49,7 +49,7 @@ export class MembershipService {
     let records: any[];
     try {
       records = parse(file.buffer.toString('utf-8'), {
-        columns: true,
+        columns: (headers) => headers.map((h) => h.trim().toLowerCase()),
         skip_empty_lines: true,
         trim: true,
       });
@@ -59,6 +59,17 @@ export class MembershipService {
 
     if (records.length === 0) {
       throw new BadRequestException('CSV file is empty.');
+    }
+
+    const firstRecordHeaders = Object.keys(records[0]);
+    const hasEmail = firstRecordHeaders.includes('external_customer_email') || firstRecordHeaders.includes('email');
+    const hasName = firstRecordHeaders.includes('external_customer_name') || firstRecordHeaders.includes('name');
+    const hasToken = firstRecordHeaders.includes('token');
+
+    if (!hasEmail || !hasName || !hasToken) {
+      throw new BadRequestException(
+        'CSV must contain external_customer_email (or email), external_customer_name (or name), and token columns.',
+      );
     }
 
     const docs: any[] = [];

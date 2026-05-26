@@ -21,7 +21,6 @@ import {
 } from 'src/customer-pairing/schemas/external-account.schema';
 import { ExternalAccountResource } from 'src/customer-pairing/resources/external-account.resource';
 import { parse } from 'csv-parse/sync';
-import * as crypto from 'crypto';
 
 @Injectable()
 export class MembershipService {
@@ -66,11 +65,11 @@ export class MembershipService {
     for (const row of records) {
       const email = row.external_customer_email || row.email;
       const name = row.external_customer_name || row.name;
-      const token = row.token || `TKN-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+      const token = row.token;
 
-      if (!email || !name) {
+      if (!email || !name || !token) {
         throw new BadRequestException(
-          'Each row must have external_customer_email and external_customer_name columns.',
+          'Each row must have external_customer_email, external_customer_name, and token columns.',
         );
       }
 
@@ -327,6 +326,15 @@ export class MembershipService {
     if (!updatedDoc) {
       throw new ConflictException('Membership code already claimed by another concurrent request');
     }
+
+    await this.externalAccountModel.create({
+      externalCustomerEmail: codeDoc.externalCustomerEmail,
+      externalCustomerName: codeDoc.externalCustomerName,
+      companyId: codeDoc.companyId,
+      userId: user._id,
+      pairedAt: new Date(),
+      integrationType: 'claim_token',
+    });
 
     const populated = await this.membershipCodeModel
       .findById(codeDoc._id)

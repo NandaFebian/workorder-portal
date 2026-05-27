@@ -9,6 +9,8 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Company, CompanyDocument } from './schemas/company.schemas';
+import { ExternalAccount, ExternalAccountDocument } from 'src/customer-pairing/schemas/external-account.schema';
+import { MembershipCode, MembershipCodeDocument } from 'src/membership/schemas/membership.schema';
 import { UpdateCompanyDto } from './dto/update-company.dto';
 import { Invitation, InvitationDocument } from './schemas/invitation.schemas';
 import { UsersService } from '../users/users.service';
@@ -33,6 +35,10 @@ export class CompaniesInternalService {
     @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
     @InjectModel(Invitation.name)
     private invitationModel: Model<InvitationDocument>,
+    @InjectModel(ExternalAccount.name)
+    private externalAccountModel: Model<ExternalAccountDocument>,
+    @InjectModel(MembershipCode.name)
+    private membershipCodeModel: Model<MembershipCodeDocument>,
     private usersService: UsersService,
     private positionsService: PositionsService,
     private fcmService: FcmService,
@@ -311,6 +317,10 @@ export class CompaniesInternalService {
     dto: UpdateIntegrationConfigDto,
   ): Promise<any> {
     const company = await this.findInternalById(companyId);
+    const currentType = (company as any).integrationConfig?.integrationType ?? 'external_system';
+    const newType = dto.integration_type;
+    const isTypeChanging = newType !== undefined && newType !== currentType;
+
     const update: Record<string, any> = {};
 
     if (dto.external_login_url !== undefined)
@@ -329,6 +339,18 @@ export class CompaniesInternalService {
       update['integrationConfig.integrationType'] = dto.integration_type;
 
     await this.companyModel.updateOne({ _id: company._id }, { $set: update });
+
+    if (isTypeChanging) {
+      const now = new Date();
+      await this.externalAccountModel.updateMany(
+        { companyId: company._id, deletedAt: null },
+        { $set: { deletedAt: now } },
+      );
+      await this.membershipCodeModel.updateMany(
+        { companyId: company._id, deletedAt: null },
+        { $set: { deletedAt: now } },
+      );
+    }
 
     return this.getIntegrationConfig(companyId);
   }

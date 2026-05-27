@@ -3,6 +3,8 @@ import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Company, CompanySchema } from './schemas/company.schemas';
 import { Invitation, InvitationSchema } from './schemas/invitation.schemas';
+import { ExternalAccount, ExternalAccountSchema } from 'src/customer-pairing/schemas/external-account.schema';
+import { MembershipCode, MembershipCodeSchema } from 'src/membership/schemas/membership.schema';
 import { CompaniesInternalController } from './companies.internal.controller';
 import { CompaniesClientController } from './companies.client.controller';
 import { AuthModule } from 'src/auth/auth.module';
@@ -17,6 +19,8 @@ import { CompaniesClientService } from './companies.client.service';
     MongooseModule.forFeature([
       { name: Company.name, schema: CompanySchema },
       { name: Invitation.name, schema: InvitationSchema },
+      { name: ExternalAccount.name, schema: ExternalAccountSchema },
+      { name: MembershipCode.name, schema: MembershipCodeSchema },
     ]),
     UsersModule,
     forwardRef(() => AuthModule),

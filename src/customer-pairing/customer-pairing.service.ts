@@ -197,6 +197,10 @@ export class CustomerPairingService {
       throw new ForbiddenException('You do not have permission to unpair this account');
     }
 
+    if (account.integrationType === 'claim_token') {
+      throw new ForbiddenException('Token-based paired accounts cannot be detached. Contact the company to remove your membership.');
+    }
+
     account.deletedAt = new Date();
     await account.save();
 

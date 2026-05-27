@@ -368,7 +368,7 @@ export class MembershipService {
       throw new ConflictException('Membership code already claimed by another concurrent request');
     }
 
-    await this.externalAccountModel.create({
+    const createdEa = await this.externalAccountModel.create({
       externalCustomerEmail: codeDoc.externalCustomerEmail,
       externalCustomerName: codeDoc.externalCustomerName,
       companyId: codeDoc.companyId,
@@ -376,6 +376,12 @@ export class MembershipService {
       pairedAt: new Date(),
       integrationType: 'claim_token',
     });
+
+    const populatedEa = await this.externalAccountModel
+      .findById(createdEa._id)
+      .populate('companyId')
+      .lean()
+      .exec();
 
     const populated = await this.membershipCodeModel
       .findById(codeDoc._id)
@@ -388,6 +394,7 @@ export class MembershipService {
     return {
       ...rest,
       company: companyId,
+      externalAccount: ExternalAccountResource.transform(populatedEa),
     } as any;
   }
 

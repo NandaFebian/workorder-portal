@@ -8,6 +8,7 @@ export class ExternalAccountResource {
       _id: obj._id,
       externalCustomerEmail: obj.externalCustomerEmail,
       externalCustomerName: obj.externalCustomerName,
+      integrationType: obj.integrationType ?? null,
       pairedAt: obj.pairedAt,
     };
 

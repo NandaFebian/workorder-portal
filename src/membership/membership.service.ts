@@ -383,19 +383,7 @@ export class MembershipService {
       .lean()
       .exec();
 
-    const populated = await this.membershipCodeModel
-      .findById(codeDoc._id)
-      .populate('claimedBy', 'name email role')
-      .populate('companyId', 'name address')
-      .exec();
-
-    const doc = populated!.toObject() as any;
-    const { companyId, ...rest } = doc;
-    return {
-      ...rest,
-      company: companyId,
-      externalAccount: ExternalAccountResource.transform(populatedEa),
-    } as any;
+    return ExternalAccountResource.transform(populatedEa);
   }
 
   async remove(id: string, user: AuthenticatedUser): Promise<any> {

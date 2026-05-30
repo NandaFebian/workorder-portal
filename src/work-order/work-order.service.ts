@@ -112,9 +112,9 @@ export class WorkOrderService {
       );
     }
 
-    const selected = eligible.slice(0, maxStaff);
+    const selected = eligible.slice(0, minStaff);
     return {
-      staffPIC: selected.length > 0 ? (selected[0]._id as Types.ObjectId) : null,
+      staffPIC: null,
       assignedStaff: selected.map((s: any) => s._id as Types.ObjectId),
     };
   }

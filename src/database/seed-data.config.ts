@@ -6,6 +6,8 @@ import { FieldType } from '../common/enums/field-type.enum';
 export const COMPANY_TYPE_IDS = {
   PT: new Types.ObjectId('665000000000000000000001'),
   CV: new Types.ObjectId('665000000000000000000002'),
+  Koperasi: new Types.ObjectId('665000000000000000000003'),
+  Yayasan: new Types.ObjectId('665000000000000000000004'),
 };
 
 export const companyTypesData = [
@@ -18,6 +20,16 @@ export const companyTypesData = [
     _id: COMPANY_TYPE_IDS.CV,
     name: 'CV (Commanditaire Vennootschap)',
     description: 'Persekutuan komanditer, badan usaha yang terdiri dari sekutu aktif dan sekutu pasif. Umum digunakan oleh UMKM.',
+  },
+  {
+    _id: COMPANY_TYPE_IDS.Koperasi,
+    name: 'Koperasi',
+    description: 'Badan usaha yang beranggotakan orang-seorang atau badan hukum koperasi dengan melandaskan kegiatannya berdasarkan prinsip koperasi.',
+  },
+  {
+    _id: COMPANY_TYPE_IDS.Yayasan,
+    name: 'Yayasan',
+    description: 'Badan hukum yang terdiri atas kekayaan yang dipisahkan dan diperuntukkan untuk mencapai tujuan tertentu di bidang sosial, keagamaan, dan kemanusiaan.',
   },
 ];
 
@@ -229,4 +241,8 @@ export const serviceTemplatesData = [
   { ...template2Maintenance, companyTypeId: COMPANY_TYPE_IDS.PT },
   { ...template1Pengadaan, companyTypeId: COMPANY_TYPE_IDS.CV },
   { ...template2Maintenance, companyTypeId: COMPANY_TYPE_IDS.CV },
+  { ...template1Pengadaan, companyTypeId: COMPANY_TYPE_IDS.Koperasi },
+  { ...template2Maintenance, companyTypeId: COMPANY_TYPE_IDS.Koperasi },
+  { ...template1Pengadaan, companyTypeId: COMPANY_TYPE_IDS.Yayasan },
+  { ...template2Maintenance, companyTypeId: COMPANY_TYPE_IDS.Yayasan },
 ];

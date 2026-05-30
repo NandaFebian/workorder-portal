@@ -75,7 +75,8 @@ export class TemplateService {
     const service = {
       title: template.title,
       description: template.description,
-      accessType: 'internal', // templates generate internal by default
+      accessType: (template as any).accessType ?? 'internal',
+      draftingWorkOrderType: (template as any).draftingWorkOrderType ?? 'manual',
       isActive: false,
       serviceRequestConfig: {
         intakeForm: template.serviceRequestConfig?.intakeForm
@@ -216,7 +217,8 @@ export class TemplateService {
       const createServiceDto: any = {
         title: template.title,
         description: template.description,
-        accessType: 'internal', // Generated services default to internal
+        accessType: (template as any).accessType ?? 'internal',
+        draftingWorkOrderType: (template as any).draftingWorkOrderType ?? 'manual',
         isActive: false,        // Must be inactive until owner manually activates
         serviceRequestConfig: {
           intakeFormId,

@@ -33,216 +33,117 @@ export const companyTypesData = [
   },
 ];
 
-const template1Pengadaan = {
-  title: 'Pengadaan Perangkat Baru',
-  description: 'Template layanan pengadaan perangkat IT baru.',
-  serviceRequestConfig: {
-    serviceRequestApprovalAccessType: ApprovalAccessType.MANAGER,
-    reviewNeed: true,
-    intakeForm: {
-      title: 'Formulir Permintaan Perangkat Baru',
-      description: 'Formulir awal untuk pengguna meminta pengadaan komputer atau laptop baru.',
-      formType: SubmissionType.Intake,
-      fields: [
-        { order: 1, label: 'Nama Pengguna', type: FieldType.Text, required: true, placeholder: 'nama anda..', options: [] },
-        { order: 2, label: 'Alasan Permintaan', type: FieldType.Textarea, required: true, placeholder: 'alasan anda..', options: [] },
-      ],
-    },
-    reviewForm: {
-      title: 'Formulir Evaluasi Vendor Pengadaan',
-      description: 'Formulir untuk mengevaluasi kinerja vendor setelah barang diterima.',
-      formType: SubmissionType.Review,
-      fields: [
-        { 
-          order: 1, 
-          label: 'Rating Kualitas Barang', 
-          type: FieldType.SingleSelect, 
-          required: true, 
-          options: [
-            { key: '1776928352039', value: '1' },
-            { key: '1776928356338', value: '2' },
-            { key: '1776928357023', value: '3' },
-            { key: '1776928357743', value: '4' },
-            { key: '1776928358516', value: '5' }
-          ] 
-        },
-        { 
-          order: 2, 
-          label: 'Rating Kecepatan Pengiriman', 
-          type: FieldType.SingleSelect, 
-          required: true, 
-          options: [
-            { key: '1776928375393', value: 'Cepat' },
-            { key: '1776928379871', value: 'Lambat' }
-          ] 
-        },
-      ],
-    },
-  },
-  workOrdersConfig: [
-    {
-      configId: null,
-      positionsOnDuty: {
-        _id: "69e9c3b64ed12731e6970808",
-        name: "Information Technology (IT)",
-        description: "Menangani infrastruktur jaringan, perangkat lunak, dan dukungan teknis perusahaan.",
-        companyId: "69e909874ed12731e697072e"
-      },
-      workOrderApprovalAccessType: ApprovalAccessType.STAFF_PIC,
-      workReportApprovalAccessType: ApprovalAccessType.MANAGER,
-      minStaff: 1,
-      maxStaff: 1,
-      workOrderForm: {
-        title: 'Formulir Pembelian Hardware',
-        description: 'Instruksi kerja untuk tim IT Purchasing melakukan pembelian barang.',
-        formType: SubmissionType.WorkOrder,
-        fields: [
-          { order: 1, label: 'Spesifikasi Perangkat', type: FieldType.Textarea, required: true, placeholder: 'spesifikasi yang diperlukan..' },
-          { 
-            order: 2, 
-            label: 'Estimasi Biaya (Rp)', 
-            type: FieldType.SingleSelect, 
-            required: false, 
-            options: [
-              { key: '1776927950039', value: '<= Rp10K' },
-              { key: '1776927965875', value: 'Rp10K <= 20K' },
-              { key: '1776927995774', value: '>= 21K' }
-            ] 
-          },
-          { 
-            order: 3, 
-            label: 'Vendor Terpilih', 
-            type: FieldType.SingleSelect, 
-            required: true, 
-            options: [
-              { key: '1776928016668', value: 'Vendor 1' },
-              { key: '1776928022122', value: 'Vendor 2' },
-              { key: '1776928023125', value: 'Vendor 3' }
-            ] 
-          },
-        ],
-      },
-      workReportForm: {
-        title: 'Laporan Bukti Pembelian & Serah Terima Gudang',
-        description: 'Formulir untuk mengunggah nota pembelian dan foto bukti barang masuk.',
-        formType: SubmissionType.Report,
-        fields: [
-          { order: 1, label: 'Total Pengeluaran Asli (Rp)', type: FieldType.Text, required: true, placeholder: 'Total pengeluaran..' },
-          { order: 2, label: 'Bukti Pembelian', type: FieldType.Image, required: true },
-        ],
-      },
-    },
-  ],
-};
+function generateTemplates() {
+  const templates: any[] = [];
+  const accessTypes = ['public', 'member_only', 'internal'];
+  const woTypes = ['auto', 'manual'];
+  const reviewNeeds = [false, true];
 
-const template2Maintenance = {
-  title: 'Maintenance Berkala Sistem IT',
-  description: 'Template layanan perawatan rutin infrastruktur IT perusahaan.',
-  serviceRequestConfig: {
-    serviceRequestApprovalAccessType: ApprovalAccessType.AUTO,
-    reviewNeed: false,
-    intakeForm: {
-      title: 'Form Permintaan Maintenance IT',
-      description: 'Data awal kebutuhan maintenance sistem IT',
-      formType: SubmissionType.Intake,
-      fields: [
-        { order: 1, label: 'Nama PIC IT', type: FieldType.Text, required: true },
-        { 
-          order: 2, 
-          label: 'Scope Maintenance', 
-          type: FieldType.MultiSelect, 
-          required: true,
-          options: [
-            { key: 'm1', value: 'Server' },
-            { key: 'm2', value: 'Jaringan' },
-            { key: 'm3', value: 'Perangkat Endpoint' }
-          ]
-        },
-        { order: 3, label: 'Periode Terakhir Maintenance', type: FieldType.Date, required: false },
-      ],
-    },
-    reviewForm: {
-      title: 'Formulir Evaluasi Maintenance',
-      description: 'Review hasil maintenance sistem IT.',
-      formType: SubmissionType.Review,
-      fields: [
-        { 
-          order: 1, 
-          label: 'Tingkat Kepuasan', 
-          type: FieldType.SingleSelect, 
-          required: true, 
-          options: [
-            { key: 's1', value: 'Sangat Puas' },
-            { key: 's2', value: 'Cukup' },
-            { key: 's3', value: 'Kurang' }
-          ] 
-        },
-        { order: 2, label: 'Saran Tambahan', type: FieldType.Textarea, required: false },
-      ],
-    },
-  },
-  workOrdersConfig: [
-    {
-      configId: null,
-      positionsOnDuty: {
-        _id: "69e9c3b64ed12731e6970808",
-        name: "Information Technology (IT)",
-        description: "Menangani infrastruktur jaringan, perangkat lunak, dan dukungan teknis perusahaan.",
-        companyId: "69e909874ed12731e697072e"
-      },
-      workOrderApprovalAccessType: ApprovalAccessType.STAFF_PIC,
-      workReportApprovalAccessType: ApprovalAccessType.AUTO,
-      minStaff: 1,
-      maxStaff: 3,
-      workOrderForm: {
-        title: 'Form Instruksi Maintenance IT',
-        description: 'Checklist pekerjaan maintenance IT',
-        formType: SubmissionType.WorkOrder,
-        fields: [
-          { 
-            order: 1, 
-            label: 'Tugas yang Harus Dikerjakan', 
-            type: FieldType.MultiSelect, 
-            required: true,
-            options: [
-              { key: 't1', value: 'Update Antivirus' },
-              { key: 't2', value: 'Cek Log Server' },
-              { key: 't3', value: 'Backup Data' }
-            ]
-          },
-        ],
-      },
-      workReportForm: {
-        title: 'Form Laporan Maintenance IT',
-        description: 'Ringkasan hasil maintenance',
-        formType: SubmissionType.Report,
-        fields: [
-          { 
-            order: 1, 
-            label: 'Item yang Diselesaikan', 
-            type: FieldType.MultiSelect, 
-            required: true,
-            options: [
-              { key: 'd1', value: 'Update Antivirus Selesai' },
-              { key: 'd2', value: 'Cek Log Server Selesai' },
-              { key: 'd3', value: 'Backup Data Selesai' }
-            ]
-          },
-          { order: 2, label: 'Temuan Masalah', type: FieldType.Textarea, required: false },
-          { order: 3, label: 'Rekomendasi Lanjutan', type: FieldType.Textarea, required: false },
-        ],
-      },
-    },
-  ],
-};
+  const companyTypeEntries = [
+    { id: COMPANY_TYPE_IDS.PT, name: 'PT' },
+    { id: COMPANY_TYPE_IDS.CV, name: 'CV' },
+    { id: COMPANY_TYPE_IDS.Koperasi, name: 'Koperasi' },
+    { id: COMPANY_TYPE_IDS.Yayasan, name: 'Yayasan' },
+  ];
 
-export const serviceTemplatesData = [
-  { ...template1Pengadaan, companyTypeId: COMPANY_TYPE_IDS.PT },
-  { ...template2Maintenance, companyTypeId: COMPANY_TYPE_IDS.PT },
-  { ...template1Pengadaan, companyTypeId: COMPANY_TYPE_IDS.CV },
-  { ...template2Maintenance, companyTypeId: COMPANY_TYPE_IDS.CV },
-  { ...template1Pengadaan, companyTypeId: COMPANY_TYPE_IDS.Koperasi },
-  { ...template2Maintenance, companyTypeId: COMPANY_TYPE_IDS.Koperasi },
-  { ...template1Pengadaan, companyTypeId: COMPANY_TYPE_IDS.Yayasan },
-  { ...template2Maintenance, companyTypeId: COMPANY_TYPE_IDS.Yayasan },
-];
+  for (const company of companyTypeEntries) {
+    for (const access of accessTypes) {
+      for (const wo of woTypes) {
+        for (const review of reviewNeeds) {
+          // If WO is auto, report approval access type is forced to 'auto'.
+          // If WO is manual, we can have both 'auto' and 'manager' for report.
+          const reports = wo === 'auto' ? ['auto'] : ['auto', 'manager'];
+
+          for (const report of reports) {
+            const displayAccess = access === 'public' ? 'Public' : access === 'member_only' ? 'Member' : 'Internal';
+            const displayWO = wo === 'auto' ? 'WO Auto' : 'WO Manual';
+            const displayReport = report === 'auto' ? 'Report Auto' : 'Report Manual';
+            const displayReview = review ? 'Review Manual' : 'Review Auto';
+
+            const title = `${displayAccess} - ${displayWO} - ${displayReport} - ${displayReview} (${company.name})`;
+            const description = `Template layanan dengan tipe akses ${displayAccess}, ${displayWO}, persetujuan report ${displayReport}, dan verifikasi review ${displayReview} untuk ${company.name}.`;
+
+            // Prepare Work Order form blueprint
+            // For WO Auto, workOrderForm must be null
+            const workOrderFormBlueprint = wo === 'auto' ? null : {
+              title: `Formulir Kerja - ${title}`,
+              description: 'Formulir untuk memandu eksekusi kerja staff.',
+              formType: SubmissionType.WorkOrder,
+              fields: [
+                { order: 1, label: 'Laporan Pekerjaan', type: FieldType.Textarea, required: true, placeholder: 'detail kerja...' }
+              ]
+            };
+
+            const template = {
+              title,
+              description,
+              companyTypeId: company.id,
+              accessType: access,
+              draftingWorkOrderType: wo,
+              serviceRequestConfig: {
+                serviceRequestApprovalAccessType: wo === 'auto' ? ApprovalAccessType.AUTO : ApprovalAccessType.MANAGER,
+                reviewNeed: review,
+                intakeForm: {
+                  title: `Formulir Permintaan - ${title}`,
+                  description: 'Formulir awal untuk mengajukan request layanan ini.',
+                  formType: SubmissionType.Intake,
+                  fields: [
+                    { order: 1, label: 'Nama Pemohon', type: FieldType.Text, required: true, placeholder: 'nama...' },
+                    { order: 2, label: 'Keterangan Kebutuhan', type: FieldType.Textarea, required: true, placeholder: 'detail...' }
+                  ]
+                },
+                reviewForm: review ? {
+                  title: `Formulir Evaluasi - ${title}`,
+                  description: 'Formulir evaluasi setelah pengerjaan selesai.',
+                  formType: SubmissionType.Review,
+                  fields: [
+                    {
+                      order: 1,
+                      label: 'Tingkat Kepuasan',
+                      type: FieldType.SingleSelect,
+                      required: true,
+                      options: [
+                        { key: 'opt1', value: 'Sangat Puas' },
+                        { key: 'opt2', value: 'Cukup Puas' },
+                        { key: 'opt3', value: 'Kurang Puas' }
+                      ]
+                    }
+                  ]
+                } : null
+              },
+              workOrdersConfig: [
+                {
+                  configId: null,
+                  positionsOnDuty: {
+                    _id: "665000000000000000000005",
+                    name: "General Services",
+                    description: "Divisi umum untuk penanganan operasional layanan.",
+                  },
+                  workOrderApprovalAccessType: ApprovalAccessType.AUTO,
+                  workReportApprovalAccessType: report === 'auto' ? ApprovalAccessType.AUTO : ApprovalAccessType.MANAGER,
+                  minStaff: 1,
+                  maxStaff: 2,
+                  workOrderForm: workOrderFormBlueprint,
+                  workReportForm: {
+                    title: `Formulir Laporan Kerja - ${title}`,
+                    description: 'Laporan penyelesaian pekerjaan dari staff.',
+                    formType: SubmissionType.Report,
+                    fields: [
+                      { order: 1, label: 'Catatan Penyelesaian', type: FieldType.Textarea, required: true, placeholder: 'pekerjaan selesai...' },
+                      { order: 2, label: 'Bukti Foto', type: FieldType.Image, required: false }
+                    ]
+                  }
+                }
+              ]
+            };
+
+            templates.push(template);
+          }
+        }
+      }
+    }
+  }
+  return templates;
+}
+
+export const serviceTemplatesData = generateTemplates();

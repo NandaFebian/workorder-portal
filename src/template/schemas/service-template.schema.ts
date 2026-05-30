@@ -88,6 +88,12 @@ export class ServiceTemplate {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'CompanyType', required: true })
   companyTypeId: MongooseSchema.Types.ObjectId;
 
+  @Prop({ required: true, enum: ['public', 'member_only', 'internal'], default: 'internal' })
+  accessType: string;
+
+  @Prop({ required: true, enum: ['auto', 'manual'], default: 'manual' })
+  draftingWorkOrderType: string;
+
   @Prop({ type: ServiceRequestTemplateConfigSchema, default: () => ({}) })
   serviceRequestConfig: ServiceRequestTemplateConfig;
 

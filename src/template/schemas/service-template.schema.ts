@@ -57,7 +57,7 @@ export class WorkOrderTemplateConfig {
 
   @Prop({
     type: String,
-    enum: [ApprovalAccessType.AUTO, ApprovalAccessType.STAFF_PIC, ApprovalAccessType.STAFF_ANY],
+    enum: [ApprovalAccessType.AUTO],
     default: ApprovalAccessType.AUTO,
   })
   workOrderApprovalAccessType: string;

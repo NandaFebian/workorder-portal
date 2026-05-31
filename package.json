@@ -21,6 +21,7 @@
     "seed": "ts-node -r tsconfig-paths/register src/database/seed.ts",
     "seed:clear": "ts-node -r tsconfig-paths/register src/database/seed.ts clear",
     "seed:status": "ts-node -r tsconfig-paths/register src/database/seed.ts status",
+    "seed:templates": "ts-node -r tsconfig-paths/register src/database/seed-templates.ts",
     "generate:erd": "ts-node -r tsconfig-paths/register src/generate-erd.ts"
   },
   "engine": {

@@ -16,22 +16,20 @@ export class WorkOrderResource {
             isActive: wo.serviceId.isActive,
           }
         : null,
-      createdBy: wo.createdBy
-        ? this.transformUser(wo.createdBy)
-        : null,
-      approvedBy: wo.approvedBy
-        ? this.transformUser(wo.approvedBy)
-        : null,
+      createdBy: wo.createdBy ? this.transformUser(wo.createdBy) : null,
+      approvedBy: wo.approvedBy ? this.transformUser(wo.approvedBy) : null,
       workOrderApprovalAccessType: wo.workOrderApprovalAccessType,
       positionsOnDuty: wo.positionId
-        ? (wo.positionId.name ? this.transformPosition(wo.positionId) : wo.positionId)
+        ? wo.positionId.name
+          ? this.transformPosition(wo.positionId)
+          : wo.positionId
         : null,
       minStaff: wo.minStaff,
       maxStaff: wo.maxStaff,
-      assignedStaff: (wo.assignedStaff || []).map((s: any) => this.transformUser(s)),
-      staffPIC: wo.staffPIC
-        ? this.transformUser(wo.staffPIC)
-        : null,
+      assignedStaff: (wo.assignedStaff || []).map((s: any) =>
+        this.transformUser(s),
+      ),
+      staffPIC: wo.staffPIC ? this.transformUser(wo.staffPIC) : null,
       status: wo.status,
       has_issue: wo.has_issue ?? false,
       issue_note: wo.issue_note ?? null,

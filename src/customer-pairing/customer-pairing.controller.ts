@@ -23,7 +23,9 @@ import { ResponseUtil } from 'src/common/utils/response.util';
 @Controller('customer-pairing')
 @UseGuards(AuthGuard)
 export class CustomerPairingController {
-  constructor(private readonly customerPairingService: CustomerPairingService) {}
+  constructor(
+    private readonly customerPairingService: CustomerPairingService,
+  ) {}
 
   @Post('start')
   @UseGuards(RolesGuard)
@@ -66,7 +68,10 @@ export class CustomerPairingController {
     @Param('companyId') companyId: string,
     @GetUser() user: AuthenticatedUser,
   ) {
-    const data = await this.customerPairingService.findForUserInCompany(companyId, user);
+    const data = await this.customerPairingService.findForUserInCompany(
+      companyId,
+      user,
+    );
     return ResponseUtil.success('Paired account retrieved successfully', data);
   }
 

@@ -1,7 +1,6 @@
 import { Module, Global } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { NotificationProducer } from './notification.producer';
 import { NotificationWorker } from './notification.worker';
 
 @Global()
@@ -18,7 +17,9 @@ import { NotificationWorker } from './notification.worker';
           maxRetriesPerRequest: null,
           // Prevent application crash if Redis is unavailable
           retryStrategy: (times: number) => {
-            console.warn(`[Redis] Connection failed (attempt ${times}). Retrying...`);
+            console.warn(
+              `[Redis] Connection failed (attempt ${times}). Retrying...`,
+            );
             // Limit retries or delay
             return Math.min(times * 1000, 3000);
           },
@@ -30,7 +31,6 @@ import { NotificationWorker } from './notification.worker';
       name: 'notification',
     }),
   ],
-  providers: [NotificationProducer, NotificationWorker],
-  exports: [NotificationProducer],
+  providers: [NotificationWorker],
 })
-export class NotificationQueueModule { }
+export class NotificationQueueModule {}

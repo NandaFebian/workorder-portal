@@ -19,7 +19,9 @@ export class FormTemplateBlueprint {
   @Prop({ type: [Object], default: [] })
   fields: any[];
 }
-const FormTemplateBlueprintSchema = SchemaFactory.createForClass(FormTemplateBlueprint);
+const FormTemplateBlueprintSchema = SchemaFactory.createForClass(
+  FormTemplateBlueprint,
+);
 
 @Schema({ _id: false })
 export class ServiceRequestTemplateConfig {
@@ -39,7 +41,9 @@ export class ServiceRequestTemplateConfig {
   @Prop({ default: false })
   reviewNeed: boolean;
 }
-const ServiceRequestTemplateConfigSchema = SchemaFactory.createForClass(ServiceRequestTemplateConfig);
+const ServiceRequestTemplateConfigSchema = SchemaFactory.createForClass(
+  ServiceRequestTemplateConfig,
+);
 
 @Schema({ _id: false })
 export class WorkOrderTemplateConfig {
@@ -75,7 +79,9 @@ export class WorkOrderTemplateConfig {
   @Prop({ required: true, min: 1 })
   maxStaff: number;
 }
-const WorkOrderTemplateConfigSchema = SchemaFactory.createForClass(WorkOrderTemplateConfig);
+const WorkOrderTemplateConfigSchema = SchemaFactory.createForClass(
+  WorkOrderTemplateConfig,
+);
 
 @Schema({ timestamps: true })
 export class ServiceTemplate {
@@ -85,10 +91,18 @@ export class ServiceTemplate {
   @Prop({ required: true })
   description: string;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'CompanyType', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'CompanyType',
+    required: true,
+  })
   companyTypeId: MongooseSchema.Types.ObjectId;
 
-  @Prop({ required: true, enum: ['public', 'member_only', 'internal'], default: 'internal' })
+  @Prop({
+    required: true,
+    enum: ['public', 'member_only', 'internal'],
+    default: 'internal',
+  })
   accessType: string;
 
   @Prop({ required: true, enum: ['auto', 'manual'], default: 'manual' })
@@ -101,4 +115,5 @@ export class ServiceTemplate {
   workOrdersConfig: WorkOrderTemplateConfig[];
 }
 
-export const ServiceTemplateSchema = SchemaFactory.createForClass(ServiceTemplate);
+export const ServiceTemplateSchema =
+  SchemaFactory.createForClass(ServiceTemplate);

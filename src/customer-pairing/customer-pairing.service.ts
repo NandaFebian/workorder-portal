@@ -20,7 +20,11 @@ import { StartPairingDto } from './dto/start-pairing.dto';
 import { CompletePairingDto } from './dto/complete-pairing.dto';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { ExternalAccountResource } from './resources/external-account.resource';
-import { PairingState, PairingStateDocument } from './schemas/pairing-state.schema';
+import {
+  PairingState,
+  PairingStateDocument,
+} from './schemas/pairing-state.schema';
+import { decrypt } from 'src/common/utils/crypto.util';
 
 @Injectable()
 export class CustomerPairingService {
@@ -32,9 +36,12 @@ export class CustomerPairingService {
     @InjectModel(PairingState.name)
     private pairingStateModel: Model<PairingStateDocument>,
     private httpService: HttpService,
-  ) { }
+  ) {}
 
-  async startPairing(dto: StartPairingDto, user: AuthenticatedUser): Promise<any> {
+  async startPairing(
+    dto: StartPairingDto,
+    user: AuthenticatedUser,
+  ): Promise<any> {
     const company = await this.companyModel
       .findOne({ _id: dto.company_id, deletedAt: null })
       .exec();
@@ -45,7 +52,9 @@ export class CustomerPairingService {
 
     const cfg = (company as any).integrationConfig;
     if (!cfg?.isIntegrationActive) {
-      throw new BadRequestException('Integration is not active for this company');
+      throw new BadRequestException(
+        'Integration is not active for this company',
+      );
     }
     if (!cfg?.externalLoginUrl) {
       throw new BadRequestException('External login URL is not configured');
@@ -65,7 +74,10 @@ export class CustomerPairingService {
     return { redirect_url: redirectUrl };
   }
 
-  async completePairing(dto: CompletePairingDto, user: AuthenticatedUser): Promise<any> {
+  async completePairing(
+    dto: CompletePairingDto,
+    user: AuthenticatedUser,
+  ): Promise<any> {
     const stateDoc = await this.pairingStateModel.findOne({
       state: dto.state,
       userId: user._id,
@@ -87,29 +99,42 @@ export class CustomerPairingService {
     }
 
     const cfg = (company as any).integrationConfig;
-    if (!cfg?.externalVerifyUrl || !cfg?.secretKey) {
-      throw new BadRequestException('External verify URL or secret key is not configured');
+    const secretKey = cfg?.secretKey ? decrypt(cfg.secretKey) : null;
+    if (!cfg?.externalVerifyUrl || !secretKey) {
+      throw new BadRequestException(
+        'External verify URL or secret key is not configured',
+      );
     }
 
-    let externalProfile: { external_customer_id: string; name: string; subscription_status: string };
+    let externalProfile: {
+      external_customer_id: string;
+      name: string;
+      subscription_status: string;
+    };
     try {
       const response = await firstValueFrom(
         this.httpService.post(cfg.externalVerifyUrl, {
           code: dto.code,
-          client_secret: cfg.secretKey,
+          client_secret: secretKey,
         }),
       );
       externalProfile = response.data;
     } catch {
-      throw new BadRequestException('Failed to verify code with external system');
+      throw new BadRequestException(
+        'Failed to verify code with external system',
+      );
     }
 
     if (!externalProfile?.external_customer_id) {
-      throw new BadRequestException('External system did not return a valid profile');
+      throw new BadRequestException(
+        'External system did not return a valid profile',
+      );
     }
 
     if (externalProfile.subscription_status !== 'ACTIVE') {
-      throw new BadRequestException('Your subscription on the external system is not active');
+      throw new BadRequestException(
+        'Your subscription on the external system is not active',
+      );
     }
 
     const existing = await this.externalAccountModel.findOne({
@@ -157,7 +182,10 @@ export class CustomerPairingService {
     return ExternalAccountResource.transformList(accounts);
   }
 
-  async findForUserInCompany(companyId: string, user: AuthenticatedUser): Promise<any> {
+  async findForUserInCompany(
+    companyId: string,
+    user: AuthenticatedUser,
+  ): Promise<any> {
     if (!Types.ObjectId.isValid(companyId)) {
       throw new NotFoundException('Invalid company ID');
     }
@@ -194,11 +222,15 @@ export class CustomerPairingService {
 
     const isOwnAccount = account.userId.toString() === user._id.toString();
     if (!isOwnAccount) {
-      throw new ForbiddenException('You do not have permission to unpair this account');
+      throw new ForbiddenException(
+        'You do not have permission to unpair this account',
+      );
     }
 
     if (account.integrationType === 'claim_token') {
-      throw new ForbiddenException('Token-based paired accounts cannot be detached. Contact the company to remove your membership.');
+      throw new ForbiddenException(
+        'Token-based paired accounts cannot be detached. Contact the company to remove your membership.',
+      );
     }
 
     account.deletedAt = new Date();
@@ -229,10 +261,15 @@ export class CustomerPairingService {
 
     const cfg = (company as any).integrationConfig;
     if (!cfg?.isIntegrationActive) {
-      throw new BadRequestException('Integration is not active for this company');
+      throw new BadRequestException(
+        'Integration is not active for this company',
+      );
     }
-    if (!cfg?.externalCheckMembershipsUrl || !cfg?.secretKey) {
-      throw new BadRequestException('External memberships URL or secret key is not configured');
+    const secretKey = cfg?.secretKey ? decrypt(cfg.secretKey) : null;
+    if (!cfg?.externalCheckMembershipsUrl || !secretKey) {
+      throw new BadRequestException(
+        'External memberships URL or secret key is not configured',
+      );
     }
 
     const accounts = await this.externalAccountModel
@@ -249,12 +286,14 @@ export class CustomerPairingService {
       const response = await firstValueFrom(
         this.httpService.post(cfg.externalCheckMembershipsUrl, {
           emails,
-          client_secret: cfg.secretKey,
+          client_secret: secretKey,
         }),
       );
       externalData = response.data;
     } catch {
-      throw new BadRequestException('Failed to check memberships from external system');
+      throw new BadRequestException(
+        'Failed to check memberships from external system',
+      );
     }
 
     return accounts.map((account: any) => ({

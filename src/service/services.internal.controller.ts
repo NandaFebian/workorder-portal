@@ -36,7 +36,7 @@ export class ServicesController {
     private readonly internalService: ServicesInternalService,
     private readonly csrService: ServiceRequestService,
     private readonly workOrderService: WorkOrderService,
-  ) { }
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -78,7 +78,11 @@ export class ServicesController {
     @Param('serviceId') serviceId: string,
     @GetUser() user: AuthenticatedUser,
   ) {
-    const data = await this.csrService.getIntakeForm(serviceId, user, 'internal');
+    const data = await this.csrService.getIntakeForm(
+      serviceId,
+      user,
+      'internal',
+    );
     return ResponseUtil.success('Load intake form success', data ?? null);
   }
 
@@ -91,18 +95,24 @@ export class ServicesController {
     @GetUser() user: AuthenticatedUser,
   ) {
     const createWorkOrderDto = { ...body, serviceId };
-    
-    // In WorkOrderService, create internal will fetch the service definition 
+
+    // In WorkOrderService, create internal will fetch the service definition
     // and extract the configuration needed to auto-build the WO and Report.
-    const serviceData = await this.internalService.findByVersionId(serviceId, user);
-    
+    const serviceData = await this.internalService.findByVersionId(
+      serviceId,
+      user,
+    );
+
     const batchId = new Types.ObjectId().toString();
     const configs = serviceData.workOrdersConfig || [];
     const createdWorkOrdersRaw = await Promise.all(
       configs.map(async (config: any) => {
-        const workOrderFormId = config.workOrderForm?._id ?? config.workOrderFormId ?? null;
-        const reportFormId = config.workReportForm?._id ?? config.workReportFormId ?? null;
-        const positionId = config.positionsOnDuty?._id ?? config.positionId ?? null;
+        const workOrderFormId =
+          config.workOrderForm?._id ?? config.workOrderFormId ?? null;
+        const reportFormId =
+          config.workReportForm?._id ?? config.workReportFormId ?? null;
+        const positionId =
+          config.positionsOnDuty?._id ?? config.positionId ?? null;
 
         return this.workOrderService.createInternal({
           companyId: serviceData.companyId,
@@ -113,8 +123,10 @@ export class ServicesController {
           configId: config._id || null,
           workOrderFormId,
           reportFormId,
-          workOrderApprovalAccessType: config.workOrderApprovalAccessType ?? 'auto',
-          workReportApprovalAccessType: config.workReportApprovalAccessType ?? 'auto',
+          workOrderApprovalAccessType:
+            config.workOrderApprovalAccessType ?? 'auto',
+          workReportApprovalAccessType:
+            config.workReportApprovalAccessType ?? 'auto',
           minStaff: config.minStaff ?? 0,
           maxStaff: config.maxStaff ?? 1,
           createdBy: user._id,
@@ -122,16 +134,22 @@ export class ServicesController {
           showReportToRequester: config.showReportToRequester ?? false,
           ...createWorkOrderDto,
         });
-      })
+      }),
     );
 
     const workOrders = await Promise.all(
       createdWorkOrdersRaw.map(async (wo: any) => {
-        const woRes = await this.workOrderService.findOneInternal(wo._id.toString(), user);
+        const woRes = await this.workOrderService.findOneInternal(
+          wo._id.toString(),
+          user,
+        );
         return woRes.data;
-      })
+      }),
     );
-    return ResponseUtil.success('Work Order created manually successfully', workOrders[0] || null);
+    return ResponseUtil.success(
+      'Work Order created manually successfully',
+      workOrders[0] || null,
+    );
   }
 
   @Put(':id')

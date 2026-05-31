@@ -56,7 +56,12 @@ describe('PositionsController (e2e)', () => {
     // Register a client user (non-staff)
     await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ name: 'Client User', email: 'client@pos.com', password: 'password123', role: Role.Client })
+      .send({
+        name: 'Client User',
+        email: 'client@pos.com',
+        password: 'password123',
+        role: Role.Client,
+      })
       .expect(200);
 
     const clientLoginRes = await request(app.getHttpServer())
@@ -73,7 +78,10 @@ describe('PositionsController (e2e)', () => {
       const res = await request(app.getHttpServer())
         .post('/positions')
         .set('Authorization', ownerToken)
-        .send({ name: 'Teknisi Lapangan', description: 'Bertanggung jawab atas instalasi lapangan' })
+        .send({
+          name: 'Teknisi Lapangan',
+          description: 'Bertanggung jawab atas instalasi lapangan',
+        })
         .expect(201);
 
       expect(res.body.data).toEqual(
@@ -96,7 +104,9 @@ describe('PositionsController (e2e)', () => {
         .send({ name: 'Admin Gudang', description: 'Kelola inventaris gudang' })
         .expect(201);
 
-      const pos = await connection.model('Position').findOne({ name: 'Admin Gudang' });
+      const pos = await connection
+        .model('Position')
+        .findOne({ name: 'Admin Gudang' });
       expect(pos).toBeDefined();
       expect(pos!.name).toBe('Admin Gudang');
     });
@@ -108,9 +118,7 @@ describe('PositionsController (e2e)', () => {
         .send({ name: '', description: '' })
         .expect(400);
 
-      expect(res.body).toEqual(
-        expect.objectContaining({ code: 400 }),
-      );
+      expect(res.body).toEqual(expect.objectContaining({ code: 400 }));
     });
   });
 
@@ -128,9 +136,11 @@ describe('PositionsController (e2e)', () => {
         .set('Authorization', ownerToken)
         .expect(200);
 
-      expect(res.body.data).toEqual(expect.arrayContaining([
-        expect.objectContaining({ name: 'Supervisor' }),
-      ]));
+      expect(res.body.data).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: 'Supervisor' }),
+        ]),
+      );
     });
 
     it('[TC-POS-02] should only return positions belonging to owner company (Whitebox)', async () => {
@@ -144,7 +154,12 @@ describe('PositionsController (e2e)', () => {
       // Register company B
       const regB = await request(app.getHttpServer())
         .post('/auth/register-company')
-        .send({ name: 'Owner B', email: 'ownerb@pos.com', password: 'password123', companyName: 'Company B' })
+        .send({
+          name: 'Owner B',
+          email: 'ownerb@pos.com',
+          password: 'password123',
+          companyName: 'Company B',
+        })
         .expect(200);
 
       const tokenB = regB.body.data.token;
@@ -174,7 +189,9 @@ describe('PositionsController (e2e)', () => {
         .set('Authorization', ownerToken)
         .expect(200);
 
-      expect(res.body.data).toEqual(expect.objectContaining({ name: 'QA Engineer' }));
+      expect(res.body.data).toEqual(
+        expect.objectContaining({ name: 'QA Engineer' }),
+      );
     });
 
     it('[TC-POS-04] should return 404 Not Found for invalid ID (Blackbox)', async () => {
@@ -193,9 +210,7 @@ describe('PositionsController (e2e)', () => {
         .expect(201);
 
       const posId = created.body.data._id;
-      await request(app.getHttpServer())
-        .get(`/positions/${posId}`)
-        .expect(401);
+      await request(app.getHttpServer()).get(`/positions/${posId}`).expect(401);
     });
   });
 
@@ -216,7 +231,9 @@ describe('PositionsController (e2e)', () => {
         .send({ name: 'New Name', description: 'New Desc' })
         .expect(200);
 
-      expect(res.body.data).toEqual(expect.objectContaining({ name: 'New Name' }));
+      expect(res.body.data).toEqual(
+        expect.objectContaining({ name: 'New Name' }),
+      );
 
       const dbPos = await connection.model('Position').findById(posId);
       expect(dbPos!.name).toBe('New Name');

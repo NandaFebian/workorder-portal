@@ -10,6 +10,7 @@ import {
   UseGuards,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { AuthGuard } from './guards/auth.guard';
 import { AuthService } from './auth.service';
 import { RegisterAuthDto } from './dto/register-auth.dto';
@@ -17,6 +18,7 @@ import { RegisterCompanyDto } from './dto/register-company.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { ResponseUtil } from 'src/common/utils/response.util';
 
+@UseGuards(ThrottlerGuard)
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}

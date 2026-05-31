@@ -23,7 +23,10 @@ export function setupApp(app: INestApplication) {
           return `${parentPath}.${property}`;
         };
 
-        const flattenErrors = (validationErrors: ValidationError[], parentPath = '') => {
+        const flattenErrors = (
+          validationErrors: ValidationError[],
+          parentPath = '',
+        ) => {
           for (const error of validationErrors) {
             const currentPath = buildPath(parentPath, error.property);
             if (error.constraints) {
@@ -42,9 +45,11 @@ export function setupApp(app: INestApplication) {
 
         flattenErrors(errors);
 
-        const fieldArray = Array.from(fieldMap.entries()).map(([key, value]) => ({
-          [key]: value.join('\n'),
-        }));
+        const fieldArray = Array.from(fieldMap.entries()).map(
+          ([key, value]) => ({
+            [key]: value.join('\n'),
+          }),
+        );
 
         const formattedErrors = {
           field: fieldArray,
@@ -59,10 +64,16 @@ export function setupApp(app: INestApplication) {
     }),
   );
 
+  const corsAllowedOrigins = process.env.CORS_ALLOWED_ORIGINS;
+  const origin =
+    corsAllowedOrigins && corsAllowedOrigins !== '*'
+      ? corsAllowedOrigins.split(',').map((o) => o.trim())
+      : '*';
+
   app.enableCors({
-    origin: '*',
+    origin,
     methods: 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
-    credentials: false,
+    credentials: true,
   });
 
   app.useGlobalInterceptors(new ResponseInterceptor());

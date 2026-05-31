@@ -48,7 +48,10 @@ export class MembershipCodeController {
   async findAll(@GetUser() user: AuthenticatedUser) {
     const data = await this.membershipService.findAll(user);
     const transformed = MembershipResource.transformMembershipCodeList(data);
-    return ResponseUtil.success('Membership codes loaded successfully', transformed);
+    return ResponseUtil.success(
+      'Membership codes loaded successfully',
+      transformed,
+    );
   }
 
   @Post()
@@ -76,10 +79,7 @@ export class MembershipCodeController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(RolesGuard)
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.AppAdmin)
-  async remove(
-    @Param('id') id: string,
-    @GetUser() user: AuthenticatedUser,
-  ) {
+  async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const data = await this.membershipService.remove(id, user);
     return ResponseUtil.success('Membership code deleted successfully', data);
   }

@@ -9,8 +9,14 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Company, CompanyDocument } from './schemas/company.schemas';
-import { ExternalAccount, ExternalAccountDocument } from 'src/customer-pairing/schemas/external-account.schema';
-import { MembershipCode, MembershipCodeDocument } from 'src/membership/schemas/membership.schema';
+import {
+  ExternalAccount,
+  ExternalAccountDocument,
+} from 'src/customer-pairing/schemas/external-account.schema';
+import {
+  MembershipCode,
+  MembershipCodeDocument,
+} from 'src/membership/schemas/membership.schema';
 import { UpdateCompanyDto } from './dto/update-company.dto';
 import { Invitation, InvitationDocument } from './schemas/invitation.schemas';
 import { UsersService } from '../users/users.service';
@@ -28,6 +34,7 @@ import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.i
 import { InvitationResource } from '../invitations/resources/invitation.resource';
 import { FcmService } from 'src/fcm/fcm.service';
 import { DepartmentAuthHelper } from 'src/common/helpers/department-auth.helper';
+import { encrypt, decrypt } from 'src/common/utils/crypto.util';
 
 @Injectable()
 export class CompaniesInternalService {
@@ -123,35 +130,49 @@ export class CompaniesInternalService {
       if (invite.role === Role.CompanyManager) {
         if (invite.positionId) {
           if (!Types.ObjectId.isValid(invite.positionId)) {
-            errors.push({ [`invites[${i}].positionId`]: 'Invalid Position ID format' });
+            errors.push({
+              [`invites[${i}].positionId`]: 'Invalid Position ID format',
+            });
             continue;
           }
           try {
             position = await this.positionsService.findById(invite.positionId);
           } catch {
-            errors.push({ [`invites[${i}].positionId`]: `Position with ID ${invite.positionId} not found` });
+            errors.push({
+              [`invites[${i}].positionId`]: `Position with ID ${invite.positionId} not found`,
+            });
             continue;
           }
         }
       } else {
         // company_staff — positionId required
         if (!invite.positionId) {
-          errors.push({ [`invites[${i}].positionId`]: 'Position ID is required for staff role' });
+          errors.push({
+            [`invites[${i}].positionId`]:
+              'Position ID is required for staff role',
+          });
           continue;
         }
         if (!Types.ObjectId.isValid(invite.positionId)) {
-          errors.push({ [`invites[${i}].positionId`]: 'Invalid Position ID format' });
+          errors.push({
+            [`invites[${i}].positionId`]: 'Invalid Position ID format',
+          });
           continue;
         }
         try {
           position = await this.positionsService.findById(invite.positionId);
         } catch {
-          errors.push({ [`invites[${i}].positionId`]: `Position with ID ${invite.positionId} not found` });
+          errors.push({
+            [`invites[${i}].positionId`]: `Position with ID ${invite.positionId} not found`,
+          });
           continue;
         }
 
         // Department Manager: can only invite staff for their own position
-        if (invitingUser && DepartmentAuthHelper.isDepartmentManager(invitingUser)) {
+        if (
+          invitingUser &&
+          DepartmentAuthHelper.isDepartmentManager(invitingUser)
+        ) {
           const managerPositionId = invitingUser.position!._id.toString();
           if (invite.positionId !== managerPositionId) {
             errors.push({
@@ -169,11 +190,15 @@ export class CompaniesInternalService {
         continue;
       }
       if (user.companyId) {
-        errors.push({ [`invites[${i}].email`]: 'User already belongs to a company' });
+        errors.push({
+          [`invites[${i}].email`]: 'User already belongs to a company',
+        });
         continue;
       }
       if (user.role !== Role.UnassignedStaff) {
-        errors.push({ [`invites[${i}].email`]: 'User is not available for invitation' });
+        errors.push({
+          [`invites[${i}].email`]: 'User is not available for invitation',
+        });
         continue;
       }
 
@@ -189,7 +214,10 @@ export class CompaniesInternalService {
     }
 
     // Second Pass: All entries valid — safely create all invitations
-    const company = await this.companyModel.findById(companyId).select('name').exec();
+    const company = await this.companyModel
+      .findById(companyId)
+      .select('name')
+      .exec();
     const newlyCreatedInviteIds: any[] = [];
     for (const validInvite of usersToInvite) {
       const { inviteData, user } = validInvite;
@@ -223,7 +251,10 @@ export class CompaniesInternalService {
         (user as any)._id.toString(),
         'Undangan Bergabung Perusahaan',
         `Anda telah diundang untuk bergabung dengan ${company?.name || 'perusahaan'} sebagai ${inviteData.role.replace('_', ' ')}.`,
-        { resource: 'invitation', resourceId: (newInvitation as any)._id.toString() }
+        {
+          resource: 'invitation',
+          resourceId: (newInvitation as any)._id.toString(),
+        },
       );
 
       newlyCreatedInviteIds.push(newInvitation._id);
@@ -238,7 +269,9 @@ export class CompaniesInternalService {
       ])
       .exec();
 
-    const transformedData = InvitationResource.transformInvitationList(newlyCreatedInvitations);
+    const transformedData = InvitationResource.transformInvitationList(
+      newlyCreatedInvitations,
+    );
 
     return {
       message: `Successfully invited ${transformedData.length} member(s)`,
@@ -263,7 +296,8 @@ export class CompaniesInternalService {
       await this.fcmService.markAsReadByType(userId, 'invitation');
     }
 
-    const transformedInvitations = InvitationResource.transformInvitationList(invitations);
+    const transformedInvitations =
+      InvitationResource.transformInvitationList(invitations);
 
     return {
       message: 'Invitations retrieved successfully',
@@ -306,7 +340,7 @@ export class CompaniesInternalService {
       external_verify_url: cfg.externalVerifyUrl ?? null,
       external_check_memberships_url: cfg.externalCheckMembershipsUrl ?? null,
       external_check_status_url: cfg.externalCheckStatusUrl ?? null,
-      secret_key: cfg.secretKey ?? null,
+      secret_key: cfg.secretKey ? decrypt(cfg.secretKey) : null,
       is_integration_active: cfg.isIntegrationActive ?? false,
       integration_type: cfg.integrationType ?? 'external_system',
     };
@@ -317,7 +351,8 @@ export class CompaniesInternalService {
     dto: UpdateIntegrationConfigDto,
   ): Promise<any> {
     const company = await this.findInternalById(companyId);
-    const currentType = (company as any).integrationConfig?.integrationType ?? 'external_system';
+    const currentType =
+      (company as any).integrationConfig?.integrationType ?? 'external_system';
     const newType = dto.integration_type;
     const isTypeChanging = newType !== undefined && newType !== currentType;
 
@@ -328,13 +363,18 @@ export class CompaniesInternalService {
     if (dto.external_verify_url !== undefined)
       update['integrationConfig.externalVerifyUrl'] = dto.external_verify_url;
     if (dto.external_check_memberships_url !== undefined)
-      update['integrationConfig.externalCheckMembershipsUrl'] = dto.external_check_memberships_url;
+      update['integrationConfig.externalCheckMembershipsUrl'] =
+        dto.external_check_memberships_url;
     if (dto.external_check_status_url !== undefined)
-      update['integrationConfig.externalCheckStatusUrl'] = dto.external_check_status_url;
+      update['integrationConfig.externalCheckStatusUrl'] =
+        dto.external_check_status_url;
     if (dto.secret_key !== undefined)
-      update['integrationConfig.secretKey'] = dto.secret_key;
+      update['integrationConfig.secretKey'] = dto.secret_key
+        ? encrypt(dto.secret_key)
+        : null;
     if (dto.is_integration_active !== undefined)
-      update['integrationConfig.isIntegrationActive'] = dto.is_integration_active;
+      update['integrationConfig.isIntegrationActive'] =
+        dto.is_integration_active;
     if (dto.integration_type !== undefined)
       update['integrationConfig.integrationType'] = dto.integration_type;
 

@@ -36,7 +36,9 @@ export class FaqProviderService {
   ) {
     const url = this.configService.get<string>('FAQ_SERVICE_URL');
     if (!url) {
-      throw new Error('FAQ_SERVICE_URL is not configured in environment variables.');
+      throw new Error(
+        'FAQ_SERVICE_URL is not configured in environment variables.',
+      );
     }
     this.baseUrl = url;
   }
@@ -176,10 +178,9 @@ export class FaqProviderService {
   async deleteDocument(apiKey: string, docId: number): Promise<void> {
     try {
       await firstValueFrom(
-        this.httpService.delete(
-          `${this.baseUrl}/faq/documents/${docId}`,
-          { headers: this.getHeaders(apiKey) },
-        ),
+        this.httpService.delete(`${this.baseUrl}/faq/documents/${docId}`, {
+          headers: this.getHeaders(apiKey),
+        }),
       );
     } catch (error) {
       this.handleError(error, 'deleteDocument');

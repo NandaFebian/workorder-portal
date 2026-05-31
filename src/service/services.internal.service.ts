@@ -22,7 +22,7 @@ export class ServicesInternalService {
   constructor(
     @InjectModel(Service.name) private serviceModel: Model<ServiceDocument>,
     private readonly formsService: FormsService,
-  ) { }
+  ) {}
 
   /**
    * Build serviceRequestConfig.
@@ -44,8 +44,12 @@ export class ServicesInternalService {
     const isAuto = draftingWorkOrderType === 'auto';
 
     return {
-      intakeFormId: configDto.intakeFormId ? new Types.ObjectId(configDto.intakeFormId) : null,
-      reviewFormId: configDto.reviewFormId ? new Types.ObjectId(configDto.reviewFormId) : null,
+      intakeFormId: configDto.intakeFormId
+        ? new Types.ObjectId(configDto.intakeFormId)
+        : null,
+      reviewFormId: configDto.reviewFormId
+        ? new Types.ObjectId(configDto.reviewFormId)
+        : null,
       // Auto drafting locks SR approval to auto
       serviceRequestApprovalAccessType: isAuto
         ? 'auto'
@@ -70,12 +74,15 @@ export class ServicesInternalService {
 
     return Promise.all(
       configsDto.map(async (dto) => {
-        const pos = await this.serviceModel.db
-          .collection('positions')
-          .findOne({ _id: new Types.ObjectId(dto.positionId), deletedAt: null });
+        const pos = await this.serviceModel.db.collection('positions').findOne({
+          _id: new Types.ObjectId(dto.positionId),
+          deletedAt: null,
+        });
 
         if (!pos) {
-          throw new NotFoundException(`Position with ID ${dto.positionId} not found`);
+          throw new NotFoundException(
+            `Position with ID ${dto.positionId} not found`,
+          );
         }
 
         // Auto draft: workOrderFormId must be null
@@ -96,11 +103,19 @@ export class ServicesInternalService {
           _id: dto._id ? new Types.ObjectId(dto._id) : new Types.ObjectId(),
           configId: dto.configId || uuidv4(),
           positionId: new Types.ObjectId(dto.positionId),
-          workOrderFormId: isAuto ? null : (dto.workOrderFormId ? new Types.ObjectId(dto.workOrderFormId) : null),
-          workReportFormId: dto.workReportFormId ? new Types.ObjectId(dto.workReportFormId) : null,
+          workOrderFormId: isAuto
+            ? null
+            : dto.workOrderFormId
+              ? new Types.ObjectId(dto.workOrderFormId)
+              : null,
+          workReportFormId: dto.workReportFormId
+            ? new Types.ObjectId(dto.workReportFormId)
+            : null,
           // Auto drafting locks all approvals to auto
           workOrderApprovalAccessType: 'auto',
-          workReportApprovalAccessType: isAuto ? 'auto' : (dto.workReportApprovalAccessType ?? 'auto'),
+          workReportApprovalAccessType: isAuto
+            ? 'auto'
+            : (dto.workReportApprovalAccessType ?? 'auto'),
           minStaff: dto.minStaff,
           maxStaff: dto.maxStaff,
           showReportToRequester: dto.showReportToRequester ?? false,
@@ -109,21 +124,30 @@ export class ServicesInternalService {
     );
   }
 
-  async create(createServiceDto: CreateServiceDto, user: AuthenticatedUser): Promise<any> {
+  async create(
+    createServiceDto: CreateServiceDto,
+    user: AuthenticatedUser,
+  ): Promise<any> {
     if (!user.company?._id) {
       throw new ForbiddenException('User is not associated with any company.');
     }
 
     // Department Manager: can only create services where all WO configs match their position
     if (DepartmentAuthHelper.isDepartmentManager(user)) {
-      if (!DepartmentAuthHelper.canCreateServiceWithConfigs(user, createServiceDto.workOrdersConfig ?? [])) {
+      if (
+        !DepartmentAuthHelper.canCreateServiceWithConfigs(
+          user,
+          createServiceDto.workOrdersConfig ?? [],
+        )
+      ) {
         throw new ForbiddenException(
           'Department managers can only create services for positions in their department.',
         );
       }
     }
 
-    const draftingWorkOrderType = createServiceDto.draftingWorkOrderType ?? 'manual';
+    const draftingWorkOrderType =
+      createServiceDto.draftingWorkOrderType ?? 'manual';
 
     const serviceRequestConfig = await this.buildServiceRequestConfig(
       createServiceDto.serviceRequestConfig,
@@ -165,7 +189,11 @@ export class ServicesInternalService {
     );
   }
 
-  async update(serviceKey: string, dto: UpdateServiceDto, user: AuthenticatedUser): Promise<any> {
+  async update(
+    serviceKey: string,
+    dto: UpdateServiceDto,
+    user: AuthenticatedUser,
+  ): Promise<any> {
     if (!user.company?._id) {
       throw new ForbiddenException('User is not associated with any company.');
     }
@@ -181,7 +209,12 @@ export class ServicesInternalService {
 
     // Department Manager: can only update if all WO configs match their position
     if (DepartmentAuthHelper.isDepartmentManager(user)) {
-      if (!DepartmentAuthHelper.canManageService(user, latestVersion.workOrdersConfig ?? [])) {
+      if (
+        !DepartmentAuthHelper.canManageService(
+          user,
+          latestVersion.workOrdersConfig ?? [],
+        )
+      ) {
         throw new ForbiddenException(
           'Department managers can only update services where all departments match their position.',
         );
@@ -189,14 +222,23 @@ export class ServicesInternalService {
     }
 
     // Determine the effective draftingWorkOrderType for this update
-    const draftingWorkOrderType = dto.draftingWorkOrderType ?? (latestVersion as any).draftingWorkOrderType ?? 'manual';
+    const draftingWorkOrderType =
+      dto.draftingWorkOrderType ??
+      (latestVersion as any).draftingWorkOrderType ??
+      'manual';
 
     const serviceRequestConfig = dto.serviceRequestConfig
-      ? await this.buildServiceRequestConfig(dto.serviceRequestConfig, draftingWorkOrderType)
+      ? await this.buildServiceRequestConfig(
+          dto.serviceRequestConfig,
+          draftingWorkOrderType,
+        )
       : latestVersion.serviceRequestConfig;
 
     const workOrdersConfig = dto.workOrdersConfig
-      ? await this.buildWorkOrdersConfig(dto.workOrdersConfig, draftingWorkOrderType)
+      ? await this.buildWorkOrdersConfig(
+          dto.workOrdersConfig,
+          draftingWorkOrderType,
+        )
       : latestVersion.workOrdersConfig;
 
     const { isActive: _, ...updateData } = dto as any;
@@ -231,7 +273,11 @@ export class ServicesInternalService {
     );
   }
 
-  async updateById(id: string, dto: UpdateServiceDto, user: AuthenticatedUser): Promise<any> {
+  async updateById(
+    id: string,
+    dto: UpdateServiceDto,
+    user: AuthenticatedUser,
+  ): Promise<any> {
     if (!user.company?._id) {
       throw new ForbiddenException('User is not associated with any company.');
     }
@@ -241,7 +287,11 @@ export class ServicesInternalService {
     }
 
     const service = await this.serviceModel
-      .findOne({ _id: new Types.ObjectId(id), companyId: user.company._id, deletedAt: null })
+      .findOne({
+        _id: new Types.ObjectId(id),
+        companyId: user.company._id,
+        deletedAt: null,
+      })
       .exec();
 
     if (!service) {
@@ -250,7 +300,12 @@ export class ServicesInternalService {
 
     // Department Manager: verify access before proceeding
     if (DepartmentAuthHelper.isDepartmentManager(user)) {
-      if (!DepartmentAuthHelper.canManageService(user, service.workOrdersConfig ?? [])) {
+      if (
+        !DepartmentAuthHelper.canManageService(
+          user,
+          service.workOrdersConfig ?? [],
+        )
+      ) {
         throw new ForbiddenException(
           'Department managers can only update services where all departments match their position.',
         );
@@ -271,7 +326,11 @@ export class ServicesInternalService {
     return this.update(service.serviceKey, dto, user);
   }
 
-  async toggleActive(id: string, isActive: boolean, user: AuthenticatedUser): Promise<any> {
+  async toggleActive(
+    id: string,
+    isActive: boolean,
+    user: AuthenticatedUser,
+  ): Promise<any> {
     if (!user.company?._id) {
       throw new ForbiddenException('User is not associated with any company.');
     }
@@ -281,7 +340,11 @@ export class ServicesInternalService {
     }
 
     const service = await this.serviceModel
-      .findOne({ _id: new Types.ObjectId(id), companyId: user.company._id, deletedAt: null })
+      .findOne({
+        _id: new Types.ObjectId(id),
+        companyId: user.company._id,
+        deletedAt: null,
+      })
       .exec();
 
     if (!service) {
@@ -291,7 +354,7 @@ export class ServicesInternalService {
     // Update all versions of this service key to match the active state
     await this.serviceModel.updateMany(
       { serviceKey: service.serviceKey, companyId: user.company._id },
-      { $set: { isActive } }
+      { $set: { isActive } },
     );
 
     const populatedServices = await getServicesWithAggregation(
@@ -354,7 +417,12 @@ export class ServicesInternalService {
 
     // Department Manager: verify access
     if (DepartmentAuthHelper.isDepartmentManager(user)) {
-      if (!DepartmentAuthHelper.canManageService(user, service.workOrdersConfig ?? [])) {
+      if (
+        !DepartmentAuthHelper.canManageService(
+          user,
+          service.workOrdersConfig ?? [],
+        )
+      ) {
         throw new ForbiddenException(
           'Department managers can only view services where all departments match their position.',
         );
@@ -389,7 +457,12 @@ export class ServicesInternalService {
 
     // Department Manager: verify access before deleting
     if (DepartmentAuthHelper.isDepartmentManager(user)) {
-      if (!DepartmentAuthHelper.canManageService(user, serviceDetails.workOrdersConfig ?? [])) {
+      if (
+        !DepartmentAuthHelper.canManageService(
+          user,
+          serviceDetails.workOrdersConfig ?? [],
+        )
+      ) {
         throw new ForbiddenException(
           'Department managers can only delete services where all departments match their position.',
         );
@@ -397,7 +470,11 @@ export class ServicesInternalService {
     }
 
     const service = await this.serviceModel
-      .findOne({ _id: new Types.ObjectId(id), companyId: user.company._id, deletedAt: null })
+      .findOne({
+        _id: new Types.ObjectId(id),
+        companyId: user.company._id,
+        deletedAt: null,
+      })
       .exec();
 
     if (!service) {
@@ -405,7 +482,11 @@ export class ServicesInternalService {
     }
 
     const latestVersion = (await this.serviceModel
-      .findOne({ serviceKey: service.serviceKey, companyId: user.company._id, deletedAt: null })
+      .findOne({
+        serviceKey: service.serviceKey,
+        companyId: user.company._id,
+        deletedAt: null,
+      })
       .sort({ __v: -1 })
       .exec()) as any;
 
@@ -417,8 +498,12 @@ export class ServicesInternalService {
 
     const deletedAt = new Date();
     await this.serviceModel.updateMany(
-      { serviceKey: service.serviceKey, companyId: user.company._id, deletedAt: null },
-      { $set: { deletedAt } }
+      {
+        serviceKey: service.serviceKey,
+        companyId: user.company._id,
+        deletedAt: null,
+      },
+      { $set: { deletedAt } },
     );
 
     return {

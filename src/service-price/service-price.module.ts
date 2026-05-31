@@ -1,6 +1,9 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ServicePrice, ServicePriceSchema } from './schemas/service-price.schema';
+import {
+  ServicePrice,
+  ServicePriceSchema,
+} from './schemas/service-price.schema';
 import { ServicePriceController } from './service-price.controller';
 import { ServicePriceService } from './service-price.service';
 import { Service, ServiceSchema } from 'src/service/schemas/service.schema';

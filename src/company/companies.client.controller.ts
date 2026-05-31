@@ -1,5 +1,12 @@
 // src/company/companies.client.controller.ts
-import { Controller, Get, HttpCode, HttpStatus, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
 import { CompaniesClientService } from './companies.client.service';
 import { OptionalAuthGuard } from 'src/auth/guards/optional-auth.guard';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
@@ -7,7 +14,7 @@ import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interf
 
 @Controller('public/companies')
 export class CompaniesClientController {
-  constructor(private readonly clientService: CompaniesClientService) { }
+  constructor(private readonly clientService: CompaniesClientService) {}
 
   @Get()
   @HttpCode(HttpStatus.OK)
@@ -27,7 +34,8 @@ export class CompaniesClientController {
     @Param('id') id: string,
     @GetUser() user: AuthenticatedUser | null,
   ) {
-    const { company, isSubscribed, isIntegrationActive, integrationType } = await this.clientService.findPublicById(id, user);
+    const { company, isSubscribed, isIntegrationActive, integrationType } =
+      await this.clientService.findPublicById(id, user);
     return {
       message: 'Company retrieved successfully',
       data: company,
@@ -47,10 +55,11 @@ export class CompaniesClientController {
     @Param('id') id: string,
     @GetUser() user: AuthenticatedUser | null,
   ) {
-    const { services, isSubscribed } = await this.clientService.findPublicServicesByCompanyId(id, user);
+    const { services, isSubscribed } =
+      await this.clientService.findPublicServicesByCompanyId(id, user);
     return {
       message: 'Services retrieved successfully',
-      data: services
+      data: services,
     };
   }
 }

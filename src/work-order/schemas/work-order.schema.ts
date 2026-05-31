@@ -26,10 +26,20 @@ export class WorkOrder {
   @Prop({ type: String, default: null })
   configId: string | null;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Service', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Service',
+    required: true,
+    index: true,
+  })
   serviceId: MongooseSchema.Types.ObjectId;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Company', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Company',
+    required: true,
+    index: true,
+  })
   companyId: MongooseSchema.Types.ObjectId;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', default: null })
@@ -41,14 +51,23 @@ export class WorkOrder {
   @Prop({
     type: [{ type: MongooseSchema.Types.ObjectId, ref: 'User' }],
     default: [],
+    index: true,
   })
   assignedStaff: MongooseSchema.Types.ObjectId[];
 
   // Store single form id (from the matching workOrdersConfig entry)
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormTemplate', default: null })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'FormTemplate',
+    default: null,
+  })
   workOrderFormId: MongooseSchema.Types.ObjectId | null;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormTemplate', default: null })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'FormTemplate',
+    default: null,
+  })
   reportFormId: MongooseSchema.Types.ObjectId | null;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Position', default: null })
@@ -78,6 +97,7 @@ export class WorkOrder {
     required: true,
     enum: Object.values(WorkOrderStatus),
     default: WorkOrderStatus.DRAFTED,
+    index: true,
   })
   status: WorkOrderStatus;
 
@@ -112,8 +132,13 @@ export class WorkOrder {
   @Prop({ type: Date, default: null })
   cancelledAt: Date | null;
 
-  @Prop({ type: Date, default: null })
+  @Prop({ type: Date, default: null, index: true })
   deletedAt: Date | null;
 }
 
 export const WorkOrderSchema = SchemaFactory.createForClass(WorkOrder);
+
+WorkOrderSchema.index({ companyId: 1, deletedAt: 1 });
+WorkOrderSchema.index({ companyId: 1, status: 1, deletedAt: 1 });
+WorkOrderSchema.index({ serviceRequestId: 1, deletedAt: 1 });
+WorkOrderSchema.index({ assignedStaff: 1, status: 1, deletedAt: 1 });

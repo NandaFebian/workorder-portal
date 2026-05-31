@@ -19,7 +19,10 @@ class ServiceRequestConfigDto {
   @IsNotEmpty({ message: 'intakeFormId is required' })
   intakeFormId?: string;
 
-  @ValidateIf((o) => o.reviewNeed === true && o.reviewFormId !== "" && o.reviewFormId !== null)
+  @ValidateIf(
+    (o) =>
+      o.reviewNeed === true && o.reviewFormId !== '' && o.reviewFormId !== null,
+  )
   @IsNotEmpty({ message: 'reviewFormId is required when reviewNeed is true' })
   @IsMongoId({ message: 'reviewFormId must be a valid MongoDB ObjectId' })
   reviewFormId?: string | null;
@@ -47,7 +50,7 @@ class WorkOrderConfigDto {
   configId?: string;
 
   @IsOptional()
-  @ValidateIf((o, v) => v !== "" && v !== null)
+  @ValidateIf((o, v) => v !== '' && v !== null)
   @IsMongoId({ message: 'workOrderFormId must be a valid MongoDB ObjectId' })
   workOrderFormId?: string | null;
 
@@ -113,6 +116,8 @@ export class CreateServiceDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => WorkOrderConfigDto)
-  @ArrayMinSize(1, { message: 'At least one workOrdersConfig entry is required' })
+  @ArrayMinSize(1, {
+    message: 'At least one workOrdersConfig entry is required',
+  })
   workOrdersConfig: WorkOrderConfigDto[];
 }

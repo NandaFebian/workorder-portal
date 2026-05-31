@@ -12,7 +12,10 @@ import { Model } from 'mongoose';
 import { Company, CompanyDocument } from 'src/company/schemas/company.schemas';
 import { FaqProviderService } from './faq-provider.service';
 import { FaqResource } from './resources/faq.resource';
-import { FaqDocument, FaqHistoryItem } from './interfaces/faq-document.interface';
+import {
+  FaqDocument,
+  FaqHistoryItem,
+} from './interfaces/faq-document.interface';
 import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 
 @Injectable()

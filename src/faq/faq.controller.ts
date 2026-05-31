@@ -51,7 +51,10 @@ export class FaqController {
     // Strip sensitive provider token from response
     delete transformed.faqApiKey;
     delete transformed.faqExternalCompanyId;
-    return ResponseUtil.success('FAQ feature updated successfully.', transformed);
+    return ResponseUtil.success(
+      'FAQ feature updated successfully.',
+      transformed,
+    );
   }
 
   /**

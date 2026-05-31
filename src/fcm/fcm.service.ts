@@ -1,9 +1,20 @@
-import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import * as admin from 'firebase-admin';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { User, UserDocument } from '../users/schemas/user.schema';
-import { Notification, NotificationDocument } from './schemas/notification.schema';
+import {
+  Notification,
+  NotificationDocument,
+} from './schemas/notification.schema';
 
 @Injectable()
 export class FcmService {
@@ -14,6 +25,8 @@ export class FcmService {
     private userModel: Model<UserDocument>,
     @InjectModel(Notification.name)
     private notificationModel: Model<NotificationDocument>,
+    @InjectQueue('notification')
+    private readonly notificationQueue: Queue,
   ) {
     this.initializeFirebase();
   }
@@ -27,15 +40,20 @@ export class FcmService {
         : undefined;
 
       if (!projectId || !clientEmail || !privateKey) {
-        this.logger.warn('Firebase credentials are not set. FCM will not work.');
+        this.logger.warn(
+          'Firebase credentials are not set. FCM will not work.',
+        );
         return;
       }
 
       if (!admin.apps.length) {
         // More robust private key cleaning
-        const cleanPrivateKey = privateKey.startsWith('"') && privateKey.endsWith('"')
-          ? privateKey.substring(1, privateKey.length - 1).replace(/\\n/g, '\n')
-          : privateKey.replace(/\\n/g, '\n');
+        const cleanPrivateKey =
+          privateKey.startsWith('"') && privateKey.endsWith('"')
+            ? privateKey
+                .substring(1, privateKey.length - 1)
+                .replace(/\\n/g, '\n')
+            : privateKey.replace(/\\n/g, '\n');
 
         admin.initializeApp({
           credential: admin.credential.cert({
@@ -62,7 +80,9 @@ export class FcmService {
   ): Promise<void> {
     try {
       if (!admin.apps.length) {
-        this.logger.warn('Firebase app not initialized. Cannot send notification.');
+        this.logger.warn(
+          'Firebase app not initialized. Cannot send notification.',
+        );
         return;
       }
 
@@ -105,12 +125,16 @@ export class FcmService {
   ): Promise<void> {
     try {
       if (!admin.apps.length) {
-        this.logger.warn('Firebase app not initialized. Cannot send notifications.');
+        this.logger.warn(
+          'Firebase app not initialized. Cannot send notifications.',
+        );
         return;
       }
 
       // Filter out empty or invalid tokens
-      const validTokens = tokens.filter(t => t && typeof t === 'string' && t.trim() !== '');
+      const validTokens = tokens.filter(
+        (t) => t && typeof t === 'string' && t.trim() !== '',
+      );
       if (validTokens.length === 0) {
         return;
       }
@@ -132,7 +156,7 @@ export class FcmService {
           body,
         },
         data: sanitizedData,
-        tokens: validTokens.map(t => t.trim()),
+        tokens: validTokens.map((t) => t.trim()),
       };
 
       const response = await admin.messaging().sendEachForMulticast(message);
@@ -150,7 +174,9 @@ export class FcmService {
         this.handleInvalidTokens(response, failedTokens);
       }
     } catch (error: any) {
-      this.logger.error(`Error sending message to multiple devices: ${error.message}`);
+      this.logger.error(
+        `Error sending message to multiple devices: ${error.message}`,
+      );
     }
   }
 
@@ -185,7 +211,7 @@ export class FcmService {
   }
 
   /**
-   * Send a notification to all devices of a user
+   * Send a notification to all devices of a user via BullMQ (non-blocking)
    */
   async sendToUser(
     userId: string,
@@ -194,18 +220,85 @@ export class FcmService {
     data?: Record<string, any>,
   ): Promise<void> {
     try {
-      // Persist to inbox
+      // 1. Persist to inbox
       await this.saveNotification(userId, title, body, data);
 
-      const user = await this.userModel.findById(userId).select('fcmTokens').exec();
+      // 2. Enqueue sending FCM to BullMQ
+      await this.notificationQueue.add(
+        'sendFcmNotification',
+        { userId, title, body, data },
+        {
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 1000,
+          },
+          removeOnComplete: true,
+        },
+      );
+      this.logger.debug(
+        `Enqueued sendFcmNotification job for userId: ${userId}`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to enqueue sendFcmNotification: ${error.message}. Falling back to direct send.`,
+      );
+      // Fallback to direct send to prevent losing notifications if Redis is down
+      await this.sendFcmDirect(userId, title, body, data);
+    }
+  }
+
+  /**
+   * Direct send FCM notification (runs in worker, or fallback)
+   */
+  async sendFcmDirect(
+    userId: string,
+    title: string,
+    body: string,
+    data?: Record<string, any>,
+  ): Promise<void> {
+    try {
+      const user = await this.userModel
+        .findById(userId)
+        .select('fcmTokens')
+        .exec();
       if (!user || !user.fcmTokens || user.fcmTokens.length === 0) {
         this.logger.debug(`No FCM tokens found for user ${userId}`);
         return;
       }
-
       await this.sendToMultipleDevices(user.fcmTokens, title, body, data);
     } catch (error: any) {
-      this.logger.error(`Error sending notification to user ${userId}: ${error.message}`);
+      this.logger.error(
+        `Error sending direct FCM notification to user ${userId}: ${error.message}`,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Mark a notification as read directly in DB (non-blocking)
+   */
+  async markAsRead(notificationId: string): Promise<void> {
+    try {
+      if (!Types.ObjectId.isValid(notificationId)) {
+        this.logger.warn(`Invalid notification ID: ${notificationId}`);
+        return;
+      }
+      await this.notificationModel
+        .updateOne(
+          { _id: new Types.ObjectId(notificationId) },
+          {
+            $set: {
+              isRead: true,
+              readAt: new Date(),
+            },
+          },
+        )
+        .exec();
+      this.logger.log(`Notification ${notificationId} marked as read directly`);
+    } catch (error: any) {
+      this.logger.error(`Error marking notification as read: ${error.message}`);
+      throw error;
     }
   }
 
@@ -234,7 +327,9 @@ export class FcmService {
         isRead: false,
       });
     } catch (error: any) {
-      this.logger.error(`Error saving notification to database: ${error.message}`);
+      this.logger.error(
+        `Error saving notification to database: ${error.message}`,
+      );
     }
   }
 
@@ -271,7 +366,9 @@ export class FcmService {
         )
         .exec();
     } catch (error: any) {
-      this.logger.error(`Error marking notifications as read: ${error.message}`);
+      this.logger.error(
+        `Error marking notifications as read: ${error.message}`,
+      );
     }
   }
 
@@ -302,7 +399,9 @@ export class FcmService {
    */
   private async handleInvalidTokens(response: any, failedTokens?: string[]) {
     if (failedTokens && failedTokens.length > 0) {
-      this.logger.warn(`Found invalid FCM tokens. Removing from database: ${failedTokens.join(', ')}`);
+      this.logger.warn(
+        `Found invalid FCM tokens. Removing from database: ${failedTokens.join(', ')}`,
+      );
       try {
         await this.userModel.updateMany(
           { fcmTokens: { $in: failedTokens } },

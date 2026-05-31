@@ -23,20 +23,33 @@ export class User {
   })
   role: string;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Company', default: null })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Company',
+    default: null,
+    index: true,
+  })
   companyId: MongooseSchema.Types.ObjectId;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Position', default: null })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Position',
+    default: null,
+    index: true,
+  })
   positionId: MongooseSchema.Types.ObjectId;
 
   @Prop({ type: [String], default: [], select: false })
   fcmTokens: string[];
 
-  @Prop({ type: Date, default: null })
+  @Prop({ type: Date, default: null, index: true })
   deletedAt: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+
+UserSchema.index({ companyId: 1, deletedAt: 1 });
+UserSchema.index({ role: 1, companyId: 1 });
 
 UserSchema.pre<UserDocument>('save', async function (next) {
   if (!this.isModified('password')) return next();

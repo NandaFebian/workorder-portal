@@ -22,7 +22,7 @@ export class ServicesClientController {
   constructor(
     private readonly clientService: ServicesClientService,
     private readonly csrService: ServiceRequestService,
-  ) { }
+  ) {}
 
   @Get('company/:companyId')
   @UseGuards(OptionalAuthGuard)
@@ -31,7 +31,10 @@ export class ServicesClientController {
     @Param('companyId') companyId: string,
     @GetUser() user: AuthenticatedUser | null,
   ) {
-    const { services: data } = await this.clientService.findAllByCompanyId(companyId, user);
+    const { services: data } = await this.clientService.findAllByCompanyId(
+      companyId,
+      user,
+    );
     return {
       message: 'Load data success',
       data,

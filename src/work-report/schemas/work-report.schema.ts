@@ -11,14 +11,24 @@ export class WorkReport {
     type: MongooseSchema.Types.ObjectId,
     ref: 'WorkOrder',
     required: true,
+    index: true,
   })
   workOrderId: MongooseSchema.Types.ObjectId;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Company', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Company',
+    required: true,
+    index: true,
+  })
   companyId: MongooseSchema.Types.ObjectId;
 
   // Store single form id (from the matching workOrdersConfig entry)
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormTemplate', default: null })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'FormTemplate',
+    default: null,
+  })
   reportFormId: MongooseSchema.Types.ObjectId | null;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', default: null })
@@ -35,6 +45,7 @@ export class WorkReport {
     required: true,
     enum: Object.values(WorkReportStatus),
     default: WorkReportStatus.DRAFTED,
+    index: true,
   })
   status: WorkReportStatus;
 
@@ -53,8 +64,12 @@ export class WorkReport {
   @Prop({ type: Boolean, default: false })
   showReportToRequester: boolean;
 
-  @Prop({ type: Date, default: null })
+  @Prop({ type: Date, default: null, index: true })
   deletedAt: Date | null;
 }
 
 export const WorkReportSchema = SchemaFactory.createForClass(WorkReport);
+
+WorkReportSchema.index({ workOrderId: 1, deletedAt: 1 });
+WorkReportSchema.index({ companyId: 1, deletedAt: 1 });
+WorkReportSchema.index({ companyId: 1, status: 1, deletedAt: 1 });

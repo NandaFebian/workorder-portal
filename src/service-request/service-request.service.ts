@@ -28,7 +28,6 @@ import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interf
 import { WorkReportService } from 'src/work-report/work-report.service';
 import { SrResponseUtil } from './utils/sr-response.util';
 import { FcmService } from 'src/fcm/fcm.service';
-import { NotificationProducer } from 'src/notification-queue/notification.producer';
 import { UsersService } from 'src/users/users.service';
 import { AssignStaffDto } from 'src/work-order/dto/assign-staff.dto';
 import { Role } from 'src/common/enums/role.enum';
@@ -57,7 +56,6 @@ export class ServiceRequestService {
     private readonly workReportService: WorkReportService,
     private readonly membershipService: MembershipService,
     private readonly fcmService: FcmService,
-    private readonly notificationProducer: NotificationProducer,
     private readonly usersService: UsersService,
   ) {}
 
@@ -76,15 +74,23 @@ export class ServiceRequestService {
     user: AuthenticatedUser | null,
     attemptType: 'public' | 'internal',
   ): Promise<any> {
-    const service = await this._getValidatedLatestService(serviceId, user, attemptType);
+    const service = await this._getValidatedLatestService(
+      serviceId,
+      user,
+      attemptType,
+    );
 
     const src = (service as any).serviceRequestConfig || {};
     if (!src.intakeFormId) return null;
-    
+
     try {
-      const specificForm = await this.formsService.findTemplateById(src.intakeFormId.toString());
+      const specificForm = await this.formsService.findTemplateById(
+        src.intakeFormId.toString(),
+      );
       if (!specificForm) return null;
-      return await this.formsService.findLatestTemplateByKey(specificForm.formKey);
+      return await this.formsService.findLatestTemplateByKey(
+        specificForm.formKey,
+      );
     } catch {
       return null;
     }
@@ -118,69 +124,97 @@ export class ServiceRequestService {
     // - internal → must be internal staff of the provider company
     // - member_only → must be a registered member (handled by 'public' path which checks membership)
     // - public → any authenticated user (nClient)
-    const attemptType = preliminaryAccessType === 'internal' ? 'internal' : 'public';
+    const attemptType =
+      preliminaryAccessType === 'internal' ? 'internal' : 'public';
 
     // Additional enforcement for 'internal' services:
     // External clients (no company association with the provider) are not allowed.
     if (preliminaryAccessType === 'internal') {
       // _getValidatedLatestService with 'internal' will enforce company membership
       if (!user.company?._id) {
-        throw new ForbiddenException('Klien eksternal tidak diizinkan untuk mengakses layanan internal.');
+        throw new ForbiddenException(
+          'Klien eksternal tidak diizinkan untuk mengakses layanan internal.',
+        );
       }
     }
 
-    const service = await this._getValidatedLatestService(serviceId, user, attemptType);
+    const service = await this._getValidatedLatestService(
+      serviceId,
+      user,
+      attemptType,
+    );
 
     const src = (service as any).serviceRequestConfig || {};
-    
+
     let intakeFormId: Types.ObjectId | null = null;
     let reviewFormId: Types.ObjectId | null = null;
     let templateFields: any[] = [];
-    
+
     if (src.intakeFormId) {
       try {
-        const specificForm = await this.formsService.findTemplateById(src.intakeFormId.toString());
+        const specificForm = await this.formsService.findTemplateById(
+          src.intakeFormId.toString(),
+        );
         if (specificForm) {
-            const template = await this.formsService.findLatestTemplateByKey(specificForm.formKey);
-            if (template) {
-                intakeFormId = template._id as Types.ObjectId;
-                templateFields = template.fields || [];
-            }
+          const template = await this.formsService.findLatestTemplateByKey(
+            specificForm.formKey,
+          );
+          if (template) {
+            intakeFormId = template._id as Types.ObjectId;
+            templateFields = template.fields || [];
+          }
         }
       } catch {}
     }
-    
+
     if (src.reviewFormId) {
       try {
-        const specificReviewForm = await this.formsService.findTemplateById(src.reviewFormId.toString());
+        const specificReviewForm = await this.formsService.findTemplateById(
+          src.reviewFormId.toString(),
+        );
         if (specificReviewForm) {
-            const latestReviewForm = await this.formsService.findLatestTemplateByKey(specificReviewForm.formKey);
-            if (latestReviewForm) {
-                reviewFormId = latestReviewForm._id as Types.ObjectId;
-            }
+          const latestReviewForm =
+            await this.formsService.findLatestTemplateByKey(
+              specificReviewForm.formKey,
+            );
+          if (latestReviewForm) {
+            reviewFormId = latestReviewForm._id as Types.ObjectId;
+          }
         }
       } catch {}
     }
-    
-    const submission = (dto && dto.formId) ? dto : (dto.submission || null);
+
+    const submission = dto && dto.formId ? dto : dto.submission || null;
 
     // Strict Request Payload Validation: Ensure user doesn't submit random form IDs
     if (submission) {
       if (!intakeFormId) {
-        throw new BadRequestException('Layanan ini tidak memerlukan pengiriman formulir intake.');
+        throw new BadRequestException(
+          'Layanan ini tidak memerlukan pengiriman formulir intake.',
+        );
       }
-      
+
       let isValidForm = false;
       try {
-        const submittedForm = await this.formsService.findTemplateById(submission.formId);
-        const expectedForm = await this.formsService.findTemplateById(intakeFormId.toString());
-        if (submittedForm && expectedForm && submittedForm.formKey === expectedForm.formKey) {
+        const submittedForm = await this.formsService.findTemplateById(
+          submission.formId,
+        );
+        const expectedForm = await this.formsService.findTemplateById(
+          intakeFormId.toString(),
+        );
+        if (
+          submittedForm &&
+          expectedForm &&
+          submittedForm.formKey === expectedForm.formKey
+        ) {
           isValidForm = true;
         }
       } catch {}
 
       if (!isValidForm) {
-        throw new BadRequestException(`ID formulir yang dikirimkan (${submission.formId}) tidak cocok dengan formulir intake yang diperlukan untuk layanan ini.`);
+        throw new BadRequestException(
+          `ID formulir yang dikirimkan (${submission.formId}) tidak cocok dengan formulir intake yang diperlukan untuk layanan ini.`,
+        );
       }
 
       // Ensure we process it as the latest form
@@ -197,8 +231,10 @@ export class ServiceRequestService {
     // If this is an auto-draft service and there is not enough staff available
     // for any of the WO configs, we must fail NOW (before the SR is created)
     // so no orphaned Service Request is left in the database.
-    const isAutoService = (src.serviceRequestApprovalAccessType ?? ApprovalAccessType.AUTO) === ApprovalAccessType.AUTO
-      && (service as any).draftingWorkOrderType === 'auto';
+    const isAutoService =
+      (src.serviceRequestApprovalAccessType ?? ApprovalAccessType.AUTO) ===
+        ApprovalAccessType.AUTO &&
+      (service as any).draftingWorkOrderType === 'auto';
     if (isAutoService) {
       const woConfigs = (service as any).workOrdersConfig || [];
       if (woConfigs.length > 0) {
@@ -212,7 +248,7 @@ export class ServiceRequestService {
         );
       }
     }
-    
+
     const newSR = await this.srModel.create({
       code: `SR-${generateCode()}`,
       serviceId: service._id,
@@ -220,14 +256,19 @@ export class ServiceRequestService {
       companyId: service.companyId,
       intakeFormId,
       reviewFormId,
-      serviceRequestApprovalAccessType: src.serviceRequestApprovalAccessType ?? ApprovalAccessType.AUTO,
+      serviceRequestApprovalAccessType:
+        src.serviceRequestApprovalAccessType ?? ApprovalAccessType.AUTO,
       reviewNeed: src.reviewNeed ?? false,
       serviceRequestStatus: ServiceRequestStatus.RECEIVED,
       receivedAt: new Date(),
     });
 
     // Save submission if provided and valid
-    if (submission && intakeFormId && submission.formId === intakeFormId.toString()) {
+    if (
+      submission &&
+      intakeFormId &&
+      submission.formId === intakeFormId.toString()
+    ) {
       const subDocId = new Types.ObjectId();
       await this.submissionModel.create({
         _id: subDocId,
@@ -242,13 +283,16 @@ export class ServiceRequestService {
       newSR.intakeSubmissionId = subDocId;
       await newSR.save();
     }
-    
+
     // Notify requester about SR creation
     await this.fcmService.sendToUser(
       user._id.toString(),
       'Permintaan Layanan Diterima',
       `Permintaan layanan Anda (${newSR.code}) telah berhasil dibuat dan sedang menunggu peninjauan.`,
-      { resource: 'service_request', resourceId: (newSR as any)._id.toString() }
+      {
+        resource: 'service_request',
+        resourceId: (newSR as any)._id.toString(),
+      },
     );
 
     // Notify provider company managers/owner
@@ -258,22 +302,33 @@ export class ServiceRequestService {
     );
 
     for (const manager of providerManagers) {
-      if (!DepartmentAuthHelper.canManageService(manager as any, (service as any).workOrdersConfig ?? [])) {
+      if (
+        !DepartmentAuthHelper.canManageService(
+          manager,
+          (service as any).workOrdersConfig ?? [],
+        )
+      ) {
         continue;
       }
 
       await this.fcmService.sendToUser(
-        (manager as any)._id.toString(),
+        manager._id.toString(),
         'Permintaan Layanan Baru',
         `Terdapat permintaan layanan baru (${newSR.code}) dari ${user.name}.`,
-        { resource: 'service_request', resourceId: (newSR as any)._id.toString() }
+        {
+          resource: 'service_request',
+          resourceId: (newSR as any)._id.toString(),
+        },
       );
     }
-    
-    if ((src.serviceRequestApprovalAccessType ?? ApprovalAccessType.AUTO) === ApprovalAccessType.AUTO) {
+
+    if (
+      (src.serviceRequestApprovalAccessType ?? ApprovalAccessType.AUTO) ===
+      ApprovalAccessType.AUTO
+    ) {
       await this._autoApproveServiceRequest(newSR, user, service);
     }
-    
+
     // Return the appropriate response format based on who submitted:
     // - Internal staff submitting to their own service → internal format
     // - Everyone else (clients, members) → public (requester) format
@@ -285,10 +340,17 @@ export class ServiceRequestService {
     if (isInternalSubmitter) {
       return this.findOneInternal((newSR as any)._id.toString(), user);
     }
-    return this.findOneForClient((newSR as any)._id.toString(), user._id.toString());
+    return this.findOneForClient(
+      (newSR as any)._id.toString(),
+      user._id.toString(),
+    );
   }
 
-  private async _autoApproveServiceRequest(sr: ServiceRequestDocument, user: AuthenticatedUser, service: any): Promise<void> {
+  private async _autoApproveServiceRequest(
+    sr: ServiceRequestDocument,
+    user: AuthenticatedUser,
+    service: any,
+  ): Promise<void> {
     const now = new Date();
     sr.serviceRequestStatus = ServiceRequestStatus.APPROVED;
     (sr as any).approvedAt = now;
@@ -296,14 +358,17 @@ export class ServiceRequestService {
 
     const batchId = new Types.ObjectId().toString();
     const configs = service.workOrdersConfig || [];
-    
+
     if (configs.length > 0) {
       await Promise.all(
         configs.map(async (config: any) => {
-          const workOrderFormId = config.workOrderForm?._id ?? config.workOrderFormId ?? null;
-          const reportFormId = config.workReportForm?._id ?? config.workReportFormId ?? null;
-          const positionId = config.positionsOnDuty?._id ?? config.positionId ?? null;
-          
+          const workOrderFormId =
+            config.workOrderForm?._id ?? config.workOrderFormId ?? null;
+          const reportFormId =
+            config.workReportForm?._id ?? config.workReportFormId ?? null;
+          const positionId =
+            config.positionsOnDuty?._id ?? config.positionId ?? null;
+
           return this.workOrderService.createInternal({
             companyId: sr.companyId,
             serviceId: sr.serviceId,
@@ -313,15 +378,17 @@ export class ServiceRequestService {
             configId: config.configId ?? config._id?.toString() ?? null,
             workOrderFormId,
             reportFormId,
-            workOrderApprovalAccessType: config.workOrderApprovalAccessType ?? 'auto',
-            workReportApprovalAccessType: config.workReportApprovalAccessType ?? 'auto',
+            workOrderApprovalAccessType:
+              config.workOrderApprovalAccessType ?? 'auto',
+            workReportApprovalAccessType:
+              config.workReportApprovalAccessType ?? 'auto',
             minStaff: config.minStaff ?? 0,
             maxStaff: config.maxStaff ?? 1,
             createdBy: null,
             draftingWorkOrderType: service.draftingWorkOrderType ?? 'manual',
             showReportToRequester: config.showReportToRequester ?? false,
           });
-        })
+        }),
       );
 
       // Update sr workOrderCreatedAt timestamp
@@ -335,56 +402,85 @@ export class ServiceRequestService {
     user: AuthenticatedUser,
     dto: any,
   ): Promise<any> {
-    if (!Types.ObjectId.isValid(srId)) throw new BadRequestException('Invalid ID');
+    if (!Types.ObjectId.isValid(srId))
+      throw new BadRequestException('Invalid ID');
 
-    const sr = await this.srModel.findOne({ _id: srId, deletedAt: null }).exec();
+    const sr = await this.srModel
+      .findOne({ _id: srId, deletedAt: null })
+      .exec();
     if (!sr) throw new NotFoundException('Service Request not found');
 
-    const requestedById = sr.requestedBy?._id ? sr.requestedBy._id.toString() : sr.requestedBy?.toString();
+    const requestedById = sr.requestedBy?._id
+      ? sr.requestedBy._id.toString()
+      : sr.requestedBy?.toString();
     if (requestedById !== user._id.toString()) {
-      throw new ForbiddenException('Hanya pemohon yang membuat permintaan layanan ini yang dapat mengirimkan ulasan.');
+      throw new ForbiddenException(
+        'Hanya pemohon yang membuat permintaan layanan ini yang dapat mengirimkan ulasan.',
+      );
     }
 
-    if (sr.serviceRequestStatus !== ServiceRequestStatus.COMPLETED && sr.serviceRequestStatus !== ServiceRequestStatus.CLOSED) {
-      throw new UnprocessableEntityException('Ulasan hanya dapat dikirimkan saat status permintaan layanan selesai atau ditutup.');
+    if (
+      sr.serviceRequestStatus !== ServiceRequestStatus.COMPLETED &&
+      sr.serviceRequestStatus !== ServiceRequestStatus.CLOSED
+    ) {
+      throw new UnprocessableEntityException(
+        'Ulasan hanya dapat dikirimkan saat status permintaan layanan selesai atau ditutup.',
+      );
     }
 
     if (!sr.reviewFormId) {
-      throw new UnprocessableEntityException('Permintaan layanan ini tidak memiliki formulir ulasan.');
+      throw new UnprocessableEntityException(
+        'Permintaan layanan ini tidak memiliki formulir ulasan.',
+      );
     }
 
-    const template = await this.formsService.findTemplateById(sr.reviewFormId!.toString());
-    if (!template) throw new UnprocessableEntityException('Templat formulir ulasan tidak ditemukan.');
+    const template = await this.formsService.findTemplateById(
+      sr.reviewFormId.toString(),
+    );
+    if (!template)
+      throw new UnprocessableEntityException(
+        'Templat formulir ulasan tidak ditemukan.',
+      );
     const templateFields = template.fields || [];
 
-    const submission = (dto && dto.formId) ? dto : (dto.submission || null);
+    const submission = dto && dto.formId ? dto : dto.submission || null;
 
     if (!submission) {
       throw new UnprocessableEntityException({
         message: 'Validasi gagal',
-        errors: { field: [{ '*' : 'Payload ulasan kosong atau tidak valid.' }] },
+        errors: { field: [{ '*': 'Payload ulasan kosong atau tidak valid.' }] },
       });
     }
 
     let isValidForm = false;
     try {
-      const submittedForm = await this.formsService.findTemplateById(submission.formId);
-      const expectedForm = await this.formsService.findTemplateById(sr.reviewFormId!.toString());
-      if (submittedForm && expectedForm && submittedForm.formKey === expectedForm.formKey) {
+      const submittedForm = await this.formsService.findTemplateById(
+        submission.formId,
+      );
+      const expectedForm = await this.formsService.findTemplateById(
+        sr.reviewFormId.toString(),
+      );
+      if (
+        submittedForm &&
+        expectedForm &&
+        submittedForm.formKey === expectedForm.formKey
+      ) {
         isValidForm = true;
       }
     } catch {}
 
     if (!isValidForm) {
-      throw new BadRequestException(`ID formulir yang dikirimkan (${submission.formId}) tidak cocok dengan formulir ulasan untuk permintaan layanan ini.`);
+      throw new BadRequestException(
+        `ID formulir yang dikirimkan (${submission.formId}) tidak cocok dengan formulir ulasan untuk permintaan layanan ini.`,
+      );
     }
 
     // Override with the correct one attached to SR
-    submission.formId = sr.reviewFormId!.toString();
+    submission.formId = sr.reviewFormId.toString();
 
     const submissionData = submission.fieldsData || [];
     validateFormSubmission(templateFields, submissionData);
-      
+
     const subDocId = new Types.ObjectId();
     await this.submissionModel.create({
       _id: subDocId,
@@ -396,9 +492,9 @@ export class ServiceRequestService {
       status: FormSubmissionStatus.SUBMITTED,
       submittedAt: new Date(),
     });
-      
+
     sr.reviewSubmissionId = subDocId;
-      
+
     sr.serviceRequestStatus = ServiceRequestStatus.CLOSED;
     sr.closedAt = new Date();
     await sr.save();
@@ -409,15 +505,23 @@ export class ServiceRequestService {
       [Role.CompanyOwner, Role.CompanyManager],
     );
 
-    const svc = await this.serviceModel.findOne({ _id: sr.serviceId, deletedAt: null }).exec();
+    const svc = await this.serviceModel
+      .findOne({ _id: sr.serviceId, deletedAt: null })
+      .exec();
 
     for (const manager of providerManagers) {
-      if (svc && !DepartmentAuthHelper.canManageService(manager as any, (svc as any).workOrdersConfig ?? [])) {
+      if (
+        svc &&
+        !DepartmentAuthHelper.canManageService(
+          manager,
+          (svc as any).workOrdersConfig ?? [],
+        )
+      ) {
         continue;
       }
 
       await this.fcmService.sendToUser(
-        (manager as any)._id.toString(),
+        manager._id.toString(),
         'Ulasan Permintaan Layanan Masuk',
         `Pemohon ${user.name} telah mengirimkan ulasan untuk ${sr.code}.`,
         {
@@ -428,7 +532,10 @@ export class ServiceRequestService {
       );
     }
 
-    return this.findOneForClient((sr as any)._id.toString(), user._id.toString());
+    return this.findOneForClient(
+      (sr as any)._id.toString(),
+      user._id.toString(),
+    );
   }
 
   async findAllByClientId(userId: string): Promise<any[]> {
@@ -447,7 +554,8 @@ export class ServiceRequestService {
   }
 
   async findOneForClient(id: string, userId: string): Promise<any> {
-    if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
+    if (!Types.ObjectId.isValid(id))
+      throw new BadRequestException('Invalid ID');
 
     const sr = await this.srModel
       .findOne({ _id: id, deletedAt: null })
@@ -459,16 +567,23 @@ export class ServiceRequestService {
       .exec();
 
     if (!sr) throw new NotFoundException('Service Request not found');
-    
-    const requestedById = sr.requestedBy?._id ? sr.requestedBy._id.toString() : sr.requestedBy?.toString();
+
+    const requestedById = sr.requestedBy?._id
+      ? sr.requestedBy._id.toString()
+      : sr.requestedBy?.toString();
     if (requestedById !== userId) {
-      throw new ForbiddenException('Anda tidak memiliki akses ke Permintaan Layanan ini.');
+      throw new ForbiddenException(
+        'Anda tidak memiliki akses ke Permintaan Layanan ini.',
+      );
     }
 
     return this._enrichAndFormat(sr, false);
   }
 
-  async findAllByCompanyId(companyId: string, user?: AuthenticatedUser): Promise<any[]> {
+  async findAllByCompanyId(
+    companyId: string,
+    user?: AuthenticatedUser,
+  ): Promise<any[]> {
     const requests = await this.srModel
       .find({ companyId: new Types.ObjectId(companyId), deletedAt: null })
       .populate('companyId', 'name address description isActive')
@@ -489,11 +604,19 @@ export class ServiceRequestService {
         const svcId = r.serviceId?._id?.toString() ?? r.serviceId?.toString();
         if (!svcId) continue;
         if (!serviceCache.has(svcId)) {
-          const svc = await this.serviceModel.findOne({ _id: svcId, deletedAt: null }).exec();
+          const svc = await this.serviceModel
+            .findOne({ _id: svcId, deletedAt: null })
+            .exec();
           serviceCache.set(svcId, svc);
         }
         const svc = serviceCache.get(svcId);
-        if (svc && DepartmentAuthHelper.canManageService(user, svc.workOrdersConfig ?? [])) {
+        if (
+          svc &&
+          DepartmentAuthHelper.canManageService(
+            user,
+            svc.workOrdersConfig ?? [],
+          )
+        ) {
           filtered.push(r);
         }
       }
@@ -503,7 +626,8 @@ export class ServiceRequestService {
   }
 
   async findOneInternal(id: string, user?: AuthenticatedUser): Promise<any> {
-    if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
+    if (!Types.ObjectId.isValid(id))
+      throw new BadRequestException('Invalid ID');
 
     const sr = await this.srModel
       .findOne({ _id: id, deletedAt: null })
@@ -516,30 +640,45 @@ export class ServiceRequestService {
 
     if (!sr) throw new NotFoundException('Service Request not found');
 
-    const companyIdStr = sr.companyId?._id ? sr.companyId._id.toString() : sr.companyId?.toString();
+    const companyIdStr = sr.companyId?._id
+      ? sr.companyId._id.toString()
+      : sr.companyId?.toString();
     if (user?.company?._id && companyIdStr !== user.company._id.toString()) {
-      throw new ForbiddenException('Anda tidak memiliki akses ke Permintaan Layanan ini.');
+      throw new ForbiddenException(
+        'Anda tidak memiliki akses ke Permintaan Layanan ini.',
+      );
     }
 
     return this._enrichAndFormat(sr, true);
   }
 
-  async getUnifiedDetail(id: string, user: AuthenticatedUser, notificationId?: string): Promise<any> {
-    if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
-    
+  async getUnifiedDetail(
+    id: string,
+    user: AuthenticatedUser,
+    notificationId?: string,
+  ): Promise<any> {
+    if (!Types.ObjectId.isValid(id))
+      throw new BadRequestException('Invalid ID');
+
     const sr = await this.srModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!sr) throw new NotFoundException('Service Request not found');
 
-    const requestedById = sr.requestedBy?._id ? sr.requestedBy._id.toString() : sr.requestedBy?.toString();
+    const requestedById = sr.requestedBy?._id
+      ? sr.requestedBy._id.toString()
+      : sr.requestedBy?.toString();
     const isRequester = requestedById === user._id.toString();
-    const isProvider = user.company?._id && sr.companyId.toString() === user.company._id.toString();
+    const isProvider =
+      user.company?._id &&
+      sr.companyId.toString() === user.company._id.toString();
 
-    // Mark notifications as read using background job if notificationId is provided
+    // Mark notifications as read directly if notificationId is provided
     if (notificationId) {
-      this.notificationProducer.enqueueMarkAsRead(notificationId);
+      this.fcmService.markAsRead(notificationId).catch(console.error);
     } else {
-      // Fallback
-      this.fcmService.markAsReadByResource(user._id.toString(), 'service_request', id).catch(console.error);
+      // Fallback using resource-based update if no ID
+      this.fcmService
+        .markAsReadByResource(user._id.toString(), 'service_request', id)
+        .catch(console.error);
     }
 
     if (isRequester) {
@@ -547,7 +686,9 @@ export class ServiceRequestService {
     } else if (isProvider) {
       return this.findOneInternal(id, user);
     } else {
-      throw new ForbiddenException('Anda tidak memiliki akses ke Permintaan Layanan ini.');
+      throw new ForbiddenException(
+        'Anda tidak memiliki akses ke Permintaan Layanan ini.',
+      );
     }
   }
 
@@ -558,10 +699,18 @@ export class ServiceRequestService {
     let intakeForm: any = null;
     if (doc.intakeFormId) {
       try {
-        const template = await this.formsService.findTemplateById(doc.intakeFormId.toString());
+        const template = await this.formsService.findTemplateById(
+          doc.intakeFormId.toString(),
+        );
         if (template) {
           const t = template.toObject ? template.toObject() : template;
-          intakeForm = { _id: t._id, title: t.title, description: t.description, formType: t.formType, fields: t.fields };
+          intakeForm = {
+            _id: t._id,
+            title: t.title,
+            description: t.description,
+            formType: t.formType,
+            fields: t.fields,
+          };
         }
       } catch {}
     }
@@ -570,10 +719,18 @@ export class ServiceRequestService {
     let reviewForm: any = null;
     if (doc.reviewFormId) {
       try {
-        const template = await this.formsService.findTemplateById(doc.reviewFormId.toString());
+        const template = await this.formsService.findTemplateById(
+          doc.reviewFormId.toString(),
+        );
         if (template) {
           const t = template.toObject ? template.toObject() : template;
-          reviewForm = { _id: t._id, title: t.title, description: t.description, formType: t.formType, fields: t.fields };
+          reviewForm = {
+            _id: t._id,
+            title: t.title,
+            description: t.description,
+            formType: t.formType,
+            fields: t.fields,
+          };
         }
       } catch {}
     }
@@ -582,24 +739,47 @@ export class ServiceRequestService {
     const [intakeSubmission, reviewSubmission] = await Promise.all([
       doc.intakeFormId
         ? this.submissionModel
-            .findOne({ ownerId: doc._id, formId: doc.intakeFormId, submissionType: SubmissionType.Intake })
+            .findOne({
+              ownerId: doc._id,
+              formId: doc.intakeFormId,
+              submissionType: SubmissionType.Intake,
+            })
             .lean()
             .exec()
         : Promise.resolve(null),
       doc.reviewFormId
         ? this.submissionModel
-            .findOne({ ownerId: doc._id, formId: doc.reviewFormId, submissionType: SubmissionType.Review })
+            .findOne({
+              ownerId: doc._id,
+              formId: doc.reviewFormId,
+              submissionType: SubmissionType.Review,
+            })
             .lean()
             .exec()
         : Promise.resolve(null),
     ]);
 
     return isInternal
-      ? SrResponseUtil.formatInternal(doc, intakeForm, reviewForm, intakeSubmission, reviewSubmission)
-      : SrResponseUtil.formatPublic(doc, intakeForm, reviewForm, intakeSubmission, reviewSubmission);
+      ? SrResponseUtil.formatInternal(
+          doc,
+          intakeForm,
+          reviewForm,
+          intakeSubmission,
+          reviewSubmission,
+        )
+      : SrResponseUtil.formatPublic(
+          doc,
+          intakeForm,
+          reviewForm,
+          intakeSubmission,
+          reviewSubmission,
+        );
   }
 
-  async updateSRStatusSystemically(id: string, status: ServiceRequestStatus): Promise<void> {
+  async updateSRStatusSystemically(
+    id: string,
+    status: ServiceRequestStatus,
+  ): Promise<void> {
     const sr = await this.srModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!sr) return;
     const now = new Date();
@@ -634,7 +814,9 @@ export class ServiceRequestService {
 
     // Notify requester about the systemic status update
     if (sr.requestedBy) {
-      const requesterId = sr.requestedBy._id ? sr.requestedBy._id.toString() : sr.requestedBy.toString();
+      const requesterId = sr.requestedBy._id
+        ? sr.requestedBy._id.toString()
+        : sr.requestedBy.toString();
       const statusLabel = StatusTranslator.translateSRStatus(targetStatus);
       await this.fcmService.sendToUser(
         requesterId,
@@ -654,29 +836,57 @@ export class ServiceRequestService {
     status: ServiceRequestStatus,
     user: AuthenticatedUser,
   ): Promise<any> {
-    if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
+    if (!Types.ObjectId.isValid(id))
+      throw new BadRequestException('Invalid ID');
 
     const sr = await this.srModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!sr) throw new NotFoundException('Service Request not found');
 
-    if (sr.serviceRequestStatus !== ServiceRequestStatus.RECEIVED && (status === ServiceRequestStatus.CANCELLED || status === ServiceRequestStatus.APPROVED || status === ServiceRequestStatus.REJECTED)) {
-       throw new UnprocessableEntityException('This action can only be performed when SR status is received.');
+    if (
+      sr.serviceRequestStatus !== ServiceRequestStatus.RECEIVED &&
+      (status === ServiceRequestStatus.CANCELLED ||
+        status === ServiceRequestStatus.APPROVED ||
+        status === ServiceRequestStatus.REJECTED)
+    ) {
+      throw new UnprocessableEntityException(
+        'This action can only be performed when SR status is received.',
+      );
     }
 
     if (status === ServiceRequestStatus.CANCELLED) {
-      const requestedById = sr.requestedBy?._id ? sr.requestedBy._id.toString() : sr.requestedBy?.toString();
+      const requestedById = sr.requestedBy?._id
+        ? sr.requestedBy._id.toString()
+        : sr.requestedBy?.toString();
       if (requestedById !== user._id.toString()) {
-        throw new ForbiddenException('Hanya pemohon yang dapat membatalkan Permintaan Layanan ini.');
+        throw new ForbiddenException(
+          'Hanya pemohon yang dapat membatalkan Permintaan Layanan ini.',
+        );
       }
-    } else if (status === ServiceRequestStatus.APPROVED || status === ServiceRequestStatus.REJECTED) {
-      if (!user.company?._id || user.company._id.toString() !== sr.companyId.toString()) {
-        throw new ForbiddenException('Only the provider company staff can perform this action.');
+    } else if (
+      status === ServiceRequestStatus.APPROVED ||
+      status === ServiceRequestStatus.REJECTED
+    ) {
+      if (
+        !user.company?._id ||
+        user.company._id.toString() !== sr.companyId.toString()
+      ) {
+        throw new ForbiddenException(
+          'Only the provider company staff can perform this action.',
+        );
       }
 
       // Department Manager: can only approve/reject SRs whose service configs match their position
       if (DepartmentAuthHelper.isDepartmentManager(user)) {
-        const svc = await this.serviceModel.findOne({ _id: sr.serviceId, deletedAt: null }).exec();
-        if (!svc || !DepartmentAuthHelper.canManageService(user, svc.workOrdersConfig ?? [])) {
+        const svc = await this.serviceModel
+          .findOne({ _id: sr.serviceId, deletedAt: null })
+          .exec();
+        if (
+          !svc ||
+          !DepartmentAuthHelper.canManageService(
+            user,
+            svc.workOrdersConfig ?? [],
+          )
+        ) {
           throw new ForbiddenException(
             'Department managers can only handle service requests where all departments match their position.',
           );
@@ -684,19 +894,33 @@ export class ServiceRequestService {
       }
 
       if (sr.serviceRequestApprovalAccessType === ApprovalAccessType.MANAGER) {
-        if (user.role !== Role.CompanyOwner && user.role !== Role.CompanyManager) {
-          throw new ForbiddenException('Hanya Manager atau Owner yang dapat melakukan aksi ini');
+        if (
+          user.role !== Role.CompanyOwner &&
+          user.role !== Role.CompanyManager
+        ) {
+          throw new ForbiddenException(
+            'Hanya Manager atau Owner yang dapat melakukan aksi ini',
+          );
         }
-      } else if (sr.serviceRequestApprovalAccessType === ApprovalAccessType.STAFF_PIC) {
+      } else if (
+        sr.serviceRequestApprovalAccessType === ApprovalAccessType.STAFF_PIC
+      ) {
         if (!sr.staffPIC) {
-          throw new UnprocessableEntityException('Staff PIC harus ditentukan sebelum menyetujui Service Request ini');
+          throw new UnprocessableEntityException(
+            'Staff PIC harus ditentukan sebelum menyetujui Service Request ini',
+          );
         }
         const isPIC = sr.staffPIC.toString() === user._id.toString();
-        const isPrivileged = user.role === Role.CompanyOwner || user.role === Role.CompanyManager;
+        const isPrivileged =
+          user.role === Role.CompanyOwner || user.role === Role.CompanyManager;
         if (!isPIC && !isPrivileged) {
-          throw new ForbiddenException('Hanya Staff PIC yang ditunjuk yang dapat melakukan aksi ini');
+          throw new ForbiddenException(
+            'Hanya Staff PIC yang ditunjuk yang dapat melakukan aksi ini',
+          );
         }
-      } else if (sr.serviceRequestApprovalAccessType === ApprovalAccessType.STAFF_ANY) {
+      } else if (
+        sr.serviceRequestApprovalAccessType === ApprovalAccessType.STAFF_ANY
+      ) {
         // Mode staff_any allow any staff from the provider company
         // This is already covered by the companyId check at the top of this block,
         // but we explicitly label it here for clarity.
@@ -739,7 +963,9 @@ export class ServiceRequestService {
 
     // Notify requester about the status update
     if (sr.requestedBy) {
-      const requesterId = sr.requestedBy._id ? sr.requestedBy._id.toString() : sr.requestedBy.toString();
+      const requesterId = sr.requestedBy._id
+        ? sr.requestedBy._id.toString()
+        : sr.requestedBy.toString();
       const statusLabel = StatusTranslator.translateSRStatus(targetStatus);
       await this.fcmService.sendToUser(
         requesterId,
@@ -763,10 +989,13 @@ export class ServiceRequestService {
       const configs = serviceData.workOrdersConfig || [];
       const createdWorkOrdersRaw = await Promise.all(
         configs.map(async (config: any) => {
-          const workOrderFormId = config.workOrderForm?._id ?? config.workOrderFormId ?? null;
-          const reportFormId = config.workReportForm?._id ?? config.workReportFormId ?? null;
-          const positionId = config.positionsOnDuty?._id ?? config.positionId ?? null;
-          
+          const workOrderFormId =
+            config.workOrderForm?._id ?? config.workOrderFormId ?? null;
+          const reportFormId =
+            config.workReportForm?._id ?? config.workReportFormId ?? null;
+          const positionId =
+            config.positionsOnDuty?._id ?? config.positionId ?? null;
+
           return this.workOrderService.createInternal({
             companyId: sr.companyId,
             serviceId: sr.serviceId,
@@ -776,15 +1005,18 @@ export class ServiceRequestService {
             configId: config.configId ?? config._id?.toString() ?? null,
             workOrderFormId,
             reportFormId,
-            workOrderApprovalAccessType: config.workOrderApprovalAccessType ?? 'auto',
-            workReportApprovalAccessType: config.workReportApprovalAccessType ?? 'auto',
+            workOrderApprovalAccessType:
+              config.workOrderApprovalAccessType ?? 'auto',
+            workReportApprovalAccessType:
+              config.workReportApprovalAccessType ?? 'auto',
             minStaff: config.minStaff ?? 0,
             maxStaff: config.maxStaff ?? 1,
             createdBy: user._id,
-            draftingWorkOrderType: serviceData.draftingWorkOrderType ?? 'manual',
+            draftingWorkOrderType:
+              serviceData.draftingWorkOrderType ?? 'manual',
             showReportToRequester: config.showReportToRequester ?? false,
           });
-        })
+        }),
       );
 
       // Update sr workOrderCreatedAt timestamp
@@ -793,9 +1025,12 @@ export class ServiceRequestService {
 
       const workOrders = await Promise.all(
         createdWorkOrdersRaw.map(async (wo: any) => {
-          const woRes = await this.workOrderService.findOneInternal(wo._id.toString(), user);
+          const woRes = await this.workOrderService.findOneInternal(
+            wo._id.toString(),
+            user,
+          );
           return woRes.data;
-        })
+        }),
       );
 
       const serviceRequest = await this.findOneInternal(id, user);
@@ -807,7 +1042,8 @@ export class ServiceRequestService {
   }
 
   async remove(id: string, user: AuthenticatedUser): Promise<any> {
-    if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid ID');
+    if (!Types.ObjectId.isValid(id))
+      throw new BadRequestException('Invalid ID');
 
     const sr = await this.srModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!sr) throw new NotFoundException('Client service request not found');
@@ -816,7 +1052,9 @@ export class ServiceRequestService {
       throw new ForbiddenException('User is not associated with any company.');
     }
     if (sr.companyId.toString() !== user.company._id.toString()) {
-      throw new ForbiddenException('You do not have permission to delete this request.');
+      throw new ForbiddenException(
+        'You do not have permission to delete this request.',
+      );
     }
 
     // Capture full SR detail before deletion
@@ -829,8 +1067,13 @@ export class ServiceRequestService {
     return { ...srDetail, deletedAt };
   }
 
-  async assignStaff(id: string, assignStaffDto: AssignStaffDto, user: AuthenticatedUser): Promise<any> {
-    if (!user.company?._id) throw new ForbiddenException('User company information is missing');
+  async assignStaff(
+    id: string,
+    assignStaffDto: AssignStaffDto,
+    user: AuthenticatedUser,
+  ): Promise<any> {
+    if (!user.company?._id)
+      throw new ForbiddenException('User company information is missing');
 
     const sr = await this.srModel.findOne({
       _id: id,
@@ -843,11 +1086,20 @@ export class ServiceRequestService {
       if (!assignStaffDto.staff_pic || assignStaffDto.staff_pic === '') {
         sr.staffPIC = null;
       } else {
-        const picUser = await this.usersService.findOneByEmail(assignStaffDto.staff_pic);
+        const picUser = await this.usersService.findOneByEmail(
+          assignStaffDto.staff_pic,
+        );
         if (!picUser) {
-          throw new UnprocessableEntityException(`PIC Staff dengan email ${assignStaffDto.staff_pic} tidak ditemukan`);
-        } else if (picUser.companyId && picUser.companyId.toString() !== user.company._id.toString()) {
-          throw new UnprocessableEntityException(`PIC Staff dengan email ${assignStaffDto.staff_pic} bukan dari perusahaan Anda`);
+          throw new UnprocessableEntityException(
+            `PIC Staff dengan email ${assignStaffDto.staff_pic} tidak ditemukan`,
+          );
+        } else if (
+          picUser.companyId &&
+          picUser.companyId.toString() !== user.company._id.toString()
+        ) {
+          throw new UnprocessableEntityException(
+            `PIC Staff dengan email ${assignStaffDto.staff_pic} bukan dari perusahaan Anda`,
+          );
         } else {
           sr.staffPIC = picUser._id as any;
         }
@@ -861,7 +1113,7 @@ export class ServiceRequestService {
         sr.staffPIC.toString(),
         'Ditugaskan sebagai PIC Permintaan Layanan',
         `Anda telah ditunjuk sebagai PIC untuk Permintaan Layanan: ${sr.code}.`,
-        { resource: 'service_request', resourceId: id }
+        { resource: 'service_request', resourceId: id },
       );
     }
 
@@ -890,29 +1142,47 @@ export class ServiceRequestService {
       .sort({ __v: -1 })
       .exec();
 
-    if (!latestVersion || latestVersion.deletedAt !== null || !latestVersion.isActive) {
-      throw new NotFoundException('Layanan ini sudah dihapus atau sedang tidak aktif.');
+    if (
+      !latestVersion ||
+      latestVersion.deletedAt !== null ||
+      !latestVersion.isActive
+    ) {
+      throw new NotFoundException(
+        'Layanan ini sudah dihapus atau sedang tidak aktif.',
+      );
     }
 
     if (attemptType === 'public') {
       if (latestVersion.accessType === 'internal') {
-        throw new ForbiddenException('Klien eksternal tidak diizinkan untuk mengakses layanan internal.');
+        throw new ForbiddenException(
+          'Klien eksternal tidak diizinkan untuk mengakses layanan internal.',
+        );
       }
       if (latestVersion.accessType === 'member_only') {
         if (!user || !user._id) {
-          throw new ForbiddenException('Anda harus login untuk mengakses layanan khusus member ini.');
+          throw new ForbiddenException(
+            'Anda harus login untuk mengakses layanan khusus member ini.',
+          );
         }
         const isMember = await this.membershipService.isUserSubscribed(
           user._id.toString(),
           latestVersion.companyId.toString(),
         );
         if (!isMember) {
-          throw new ForbiddenException('Anda harus menjadi member perusahaan penyedia untuk mengakses layanan ini.');
+          throw new ForbiddenException(
+            'Anda harus menjadi member perusahaan penyedia untuk mengakses layanan ini.',
+          );
         }
       }
     } else if (attemptType === 'internal') {
-      if (!user || !user.company?._id || user.company._id.toString() !== latestVersion.companyId.toString()) {
-        throw new ForbiddenException('Hanya staf internal perusahaan penyedia yang dapat mengakses form ini.');
+      if (
+        !user ||
+        !user.company?._id ||
+        user.company._id.toString() !== latestVersion.companyId.toString()
+      ) {
+        throw new ForbiddenException(
+          'Hanya staf internal perusahaan penyedia yang dapat mengakses form ini.',
+        );
       }
     }
 
@@ -924,10 +1194,16 @@ export class ServiceRequestService {
    * Returns workReportForms and submissions for the requester.
    * Only returns data if showReportToRequester === true on the associated WorkReport.
    */
-  async getReportForRequester(srId: string, user: AuthenticatedUser): Promise<any> {
-    if (!Types.ObjectId.isValid(srId)) throw new BadRequestException('Invalid SR ID');
+  async getReportForRequester(
+    srId: string,
+    user: AuthenticatedUser,
+  ): Promise<any> {
+    if (!Types.ObjectId.isValid(srId))
+      throw new BadRequestException('Invalid SR ID');
 
-    const sr = await this.srModel.findOne({ _id: srId, deletedAt: null }).exec();
+    const sr = await this.srModel
+      .findOne({ _id: srId, deletedAt: null })
+      .exec();
     if (!sr) throw new NotFoundException('Service Request not found');
 
     // Only the original requester can access the report
@@ -939,7 +1215,8 @@ export class ServiceRequestService {
     }
 
     // Find all Work Orders under this SR
-    const workOrders = await this.workOrderService.findRawByServiceRequestId(srId);
+    const workOrders =
+      await this.workOrderService.findRawByServiceRequestId(srId);
 
     const workReportForms: any[] = [];
     const submissions: any[] = [];

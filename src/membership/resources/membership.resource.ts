@@ -72,4 +72,3 @@ export class MembershipResource {
     return codes.map((c) => this.transformMembershipCode(c));
   }
 }
-

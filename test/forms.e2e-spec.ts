@@ -18,7 +18,13 @@ describe('FormsController (e2e)', () => {
     description: 'Form untuk mengajukan request',
     formType: 'intake',
     fields: [
-      { order: 1, label: 'Nama Pemohon', type: 'text', required: true, placeholder: 'Masukkan nama' },
+      {
+        order: 1,
+        label: 'Nama Pemohon',
+        type: 'text',
+        required: true,
+        placeholder: 'Masukkan nama',
+      },
       { order: 2, label: 'Keterangan', type: 'textarea', required: true },
     ],
   };
@@ -47,7 +53,12 @@ describe('FormsController (e2e)', () => {
 
     const regRes = await request(app.getHttpServer())
       .post('/auth/register-company')
-      .send({ name: 'Form Owner', email: 'form@owner.com', password: 'password123', companyName: 'Form Corp' })
+      .send({
+        name: 'Form Owner',
+        email: 'form@owner.com',
+        password: 'password123',
+        companyName: 'Form Corp',
+      })
       .expect(200);
 
     ownerToken = regRes.body.data.token;
@@ -63,7 +74,10 @@ describe('FormsController (e2e)', () => {
         .expect(201);
 
       expect(res.body.data).toEqual(
-        expect.objectContaining({ title: intakeFormPayload.title, formType: 'intake' }),
+        expect.objectContaining({
+          title: intakeFormPayload.title,
+          formType: 'intake',
+        }),
       );
     });
 
@@ -115,9 +129,11 @@ describe('FormsController (e2e)', () => {
         .set('Authorization', ownerToken)
         .expect(200);
 
-      expect(res.body.data).toEqual(expect.arrayContaining([
-        expect.objectContaining({ title: intakeFormPayload.title }),
-      ]));
+      expect(res.body.data).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ title: intakeFormPayload.title }),
+        ]),
+      );
     });
 
     it('[TC-FORM-04] should only return forms from owner company (Whitebox)', async () => {
@@ -129,7 +145,12 @@ describe('FormsController (e2e)', () => {
 
       const regB = await request(app.getHttpServer())
         .post('/auth/register-company')
-        .send({ name: 'Owner B', email: 'ownerb@form.com', password: 'password123', companyName: 'Company B' })
+        .send({
+          name: 'Owner B',
+          email: 'ownerb@form.com',
+          password: 'password123',
+          companyName: 'Company B',
+        })
         .expect(200);
 
       const tokenB = regB.body.data.token;
@@ -159,7 +180,10 @@ describe('FormsController (e2e)', () => {
         .expect(200);
 
       expect(res.body.data).toEqual(
-        expect.objectContaining({ _id: formId, title: intakeFormPayload.title }),
+        expect.objectContaining({
+          _id: formId,
+          title: intakeFormPayload.title,
+        }),
       );
     });
 
@@ -226,7 +250,7 @@ describe('FormsController (e2e)', () => {
 
     it('[TC-FORM-09] should submit form with valid required fields (Blackbox + Whitebox)', async () => {
       const fields = await connection.model('FormTemplate').findById(formId);
-      const fieldId = (fields as any).fields[0]._id.toString();
+      const fieldId = fields.fields[0]._id.toString();
 
       const res = await request(app.getHttpServer())
         .post('/forms/submissions')
@@ -240,7 +264,9 @@ describe('FormsController (e2e)', () => {
       expect(res.body.data).toBeDefined();
 
       // Whitebox: record exists in DB
-      const submission = await connection.model('FormSubmission').findById(res.body.data._id);
+      const submission = await connection
+        .model('FormSubmission')
+        .findById(res.body.data._id);
       expect(submission).toBeDefined();
     });
 

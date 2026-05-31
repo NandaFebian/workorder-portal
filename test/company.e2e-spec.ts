@@ -350,14 +350,18 @@ describe('CompanyController (e2e)', () => {
       // Whitebox check: verified mapping in DB (camelCase mapping verification)
       const company = await connection.model('Company').findById(companyId);
       expect(company!.integrationConfig.isIntegrationActive).toBe(true);
-      expect(company!.integrationConfig.externalLoginUrl).toBe(updatePayload.external_login_url);
+      expect(company!.integrationConfig.externalLoginUrl).toBe(
+        updatePayload.external_login_url,
+      );
     });
   });
 
   describe('GET /public/companies', () => {
     it('should retrieve list of public companies without authentication (Blackbox & Whitebox)', async () => {
       // Let's activate the company first so that it is public/active
-      await connection.model('Company').findByIdAndUpdate(companyId, { isActive: true });
+      await connection
+        .model('Company')
+        .findByIdAndUpdate(companyId, { isActive: true });
 
       const res = await request(app.getHttpServer())
         .get('/public/companies')
@@ -388,7 +392,9 @@ describe('CompanyController (e2e)', () => {
 
     it('should retrieve public company details by id (Blackbox & Whitebox)', async () => {
       // Let's activate company
-      await connection.model('Company').findByIdAndUpdate(companyId, { isActive: true });
+      await connection
+        .model('Company')
+        .findByIdAndUpdate(companyId, { isActive: true });
 
       const res = await request(app.getHttpServer())
         .get(`/public/companies/${companyId}`)
@@ -414,7 +420,9 @@ describe('CompanyController (e2e)', () => {
 
     it('should retrieve public company services list (Blackbox & Whitebox)', async () => {
       // Let's activate the company first so that it is active
-      await connection.model('Company').findByIdAndUpdate(companyId, { isActive: true });
+      await connection
+        .model('Company')
+        .findByIdAndUpdate(companyId, { isActive: true });
 
       const res = await request(app.getHttpServer())
         .get(`/public/companies/${companyId}/services`)

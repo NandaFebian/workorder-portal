@@ -15,11 +15,19 @@ export class Position {
   @Prop({ default: true })
   isActive: boolean;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Company', default: null })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Company',
+    default: null,
+    index: true,
+  })
   companyId: MongooseSchema.Types.ObjectId;
 
-  @Prop({ type: Date, default: null })
+  @Prop({ type: Date, default: null, index: true })
   deletedAt: Date;
 }
 
 export const PositionSchema = SchemaFactory.createForClass(Position);
+
+PositionSchema.index({ companyId: 1, deletedAt: 1 });
+PositionSchema.index({ companyId: 1, isActive: 1, deletedAt: 1 });

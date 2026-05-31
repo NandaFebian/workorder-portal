@@ -5,7 +5,10 @@ import { getModelToken } from '@nestjs/mongoose';
 import { FormTemplate } from './schemas/form-template.schema';
 import { FormSubmission } from '../service/schemas/form-submission.schema';
 import { CompaniesInternalService } from '../company/companies.internal.service';
-import { NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import {
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import * as formValidationHelper from './helpers/form-validation.helper';
 
 describe('FormsService', () => {
@@ -186,7 +189,9 @@ describe('FormsService', () => {
       jest
         .spyOn(formValidationHelper, 'validateFormSubmission')
         .mockImplementation(() => {
-          throw new UnprocessableEntityException('Invalid type for number field');
+          throw new UnprocessableEntityException(
+            'Invalid type for number field',
+          );
         });
 
       const submissionDto = {
@@ -282,7 +287,9 @@ describe('FormsService', () => {
       jest
         .spyOn(formValidationHelper, 'validateFormSubmission')
         .mockImplementation(() => {
-          throw new UnprocessableEntityException('Invalid option for single_select');
+          throw new UnprocessableEntityException(
+            'Invalid option for single_select',
+          );
         });
 
       const submissionDto = {

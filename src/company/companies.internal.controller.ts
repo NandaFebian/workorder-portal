@@ -60,8 +60,11 @@ export class CompaniesInternalController {
         user.company._id.toString(),
       );
       const transformedCompany = CompanyResource.transformCompany(company);
-      
-      return ResponseUtil.success('Company retrieved successfully', transformedCompany);
+
+      return ResponseUtil.success(
+        'Company retrieved successfully',
+        transformedCompany,
+      );
     }
   }
 
@@ -197,7 +200,10 @@ export class CompaniesInternalController {
     const data = await this.companiesInternalService.getIntegrationConfig(
       user.company._id.toString(),
     );
-    return ResponseUtil.success('Integration config retrieved successfully', data);
+    return ResponseUtil.success(
+      'Integration config retrieved successfully',
+      data,
+    );
   }
 
   @Put('integration-config')
@@ -215,6 +221,9 @@ export class CompaniesInternalController {
       user.company._id.toString(),
       dto,
     );
-    return ResponseUtil.success('Integration config updated successfully', data);
+    return ResponseUtil.success(
+      'Integration config updated successfully',
+      data,
+    );
   }
 }

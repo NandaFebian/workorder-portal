@@ -14,22 +14,26 @@ export const companyTypesData = [
   {
     _id: COMPANY_TYPE_IDS.PT,
     name: 'PT (Perseroan Terbatas)',
-    description: 'Badan usaha berbadan hukum yang modalnya terkumpul dari berbagai saham. Cocok untuk bisnis skala menengah hingga besar.',
+    description:
+      'Badan usaha berbadan hukum yang modalnya terkumpul dari berbagai saham. Cocok untuk bisnis skala menengah hingga besar.',
   },
   {
     _id: COMPANY_TYPE_IDS.CV,
     name: 'CV (Commanditaire Vennootschap)',
-    description: 'Persekutuan komanditer, badan usaha yang terdiri dari sekutu aktif dan sekutu pasif. Umum digunakan oleh UMKM.',
+    description:
+      'Persekutuan komanditer, badan usaha yang terdiri dari sekutu aktif dan sekutu pasif. Umum digunakan oleh UMKM.',
   },
   {
     _id: COMPANY_TYPE_IDS.Koperasi,
     name: 'Koperasi',
-    description: 'Badan usaha yang beranggotakan orang-seorang atau badan hukum koperasi dengan melandaskan kegiatannya berdasarkan prinsip koperasi.',
+    description:
+      'Badan usaha yang beranggotakan orang-seorang atau badan hukum koperasi dengan melandaskan kegiatannya berdasarkan prinsip koperasi.',
   },
   {
     _id: COMPANY_TYPE_IDS.Yayasan,
     name: 'Yayasan',
-    description: 'Badan hukum yang terdiri atas kekayaan yang dipisahkan dan diperuntukkan untuk mencapai tujuan tertentu di bidang sosial, keagamaan, dan kemanusiaan.',
+    description:
+      'Badan hukum yang terdiri atas kekayaan yang dipisahkan dan diperuntukkan untuk mencapai tujuan tertentu di bidang sosial, keagamaan, dan kemanusiaan.',
   },
 ];
 
@@ -55,9 +59,15 @@ function generateTemplates() {
           const reports = wo === 'auto' ? ['auto'] : ['auto', 'manager'];
 
           for (const report of reports) {
-            const displayAccess = access === 'public' ? 'Public' : access === 'member_only' ? 'Member' : 'Internal';
+            const displayAccess =
+              access === 'public'
+                ? 'Public'
+                : access === 'member_only'
+                  ? 'Member'
+                  : 'Internal';
             const displayWO = wo === 'auto' ? 'WO Auto' : 'WO Manual';
-            const displayReport = report === 'auto' ? 'Report Auto' : 'Report Manual';
+            const displayReport =
+              report === 'auto' ? 'Report Auto' : 'Report Manual';
             const displayReview = review ? 'Review Manual' : 'Review Auto';
 
             const title = `${displayAccess} - ${displayWO} - ${displayReport} - ${displayReview} (${company.name})`;
@@ -65,14 +75,23 @@ function generateTemplates() {
 
             // Prepare Work Order form blueprint
             // For WO Auto, workOrderForm must be null
-            const workOrderFormBlueprint = wo === 'auto' ? null : {
-              title: `Formulir Kerja - ${title}`,
-              description: 'Formulir untuk memandu eksekusi kerja staff.',
-              formType: SubmissionType.WorkOrder,
-              fields: [
-                { order: 1, label: 'Laporan Pekerjaan', type: FieldType.Textarea, required: true, placeholder: 'detail kerja...' }
-              ]
-            };
+            const workOrderFormBlueprint =
+              wo === 'auto'
+                ? null
+                : {
+                    title: `Formulir Kerja - ${title}`,
+                    description: 'Formulir untuk memandu eksekusi kerja staff.',
+                    formType: SubmissionType.WorkOrder,
+                    fields: [
+                      {
+                        order: 1,
+                        label: 'Laporan Pekerjaan',
+                        type: FieldType.Textarea,
+                        required: true,
+                        placeholder: 'detail kerja...',
+                      },
+                    ],
+                  };
 
             const template = {
               title,
@@ -81,46 +100,69 @@ function generateTemplates() {
               accessType: access,
               draftingWorkOrderType: wo,
               serviceRequestConfig: {
-                serviceRequestApprovalAccessType: wo === 'auto' ? ApprovalAccessType.AUTO : ApprovalAccessType.MANAGER,
+                serviceRequestApprovalAccessType:
+                  wo === 'auto'
+                    ? ApprovalAccessType.AUTO
+                    : ApprovalAccessType.MANAGER,
                 reviewNeed: review,
                 intakeForm: {
                   title: `Formulir Permintaan - ${title}`,
-                  description: 'Formulir awal untuk mengajukan request layanan ini.',
+                  description:
+                    'Formulir awal untuk mengajukan request layanan ini.',
                   formType: SubmissionType.Intake,
-                  fields: [
-                    { order: 1, label: 'Nama Pemohon', type: FieldType.Text, required: true, placeholder: 'nama...' },
-                    { order: 2, label: 'Keterangan Kebutuhan', type: FieldType.Textarea, required: true, placeholder: 'detail...' }
-                  ]
-                },
-                reviewForm: review ? {
-                  title: `Formulir Evaluasi - ${title}`,
-                  description: 'Formulir evaluasi setelah pengerjaan selesai.',
-                  formType: SubmissionType.Review,
                   fields: [
                     {
                       order: 1,
-                      label: 'Tingkat Kepuasan',
-                      type: FieldType.SingleSelect,
+                      label: 'Nama Pemohon',
+                      type: FieldType.Text,
                       required: true,
-                      options: [
-                        { key: 'opt1', value: 'Sangat Puas' },
-                        { key: 'opt2', value: 'Cukup Puas' },
-                        { key: 'opt3', value: 'Kurang Puas' }
-                      ]
+                      placeholder: 'nama...',
+                    },
+                    {
+                      order: 2,
+                      label: 'Keterangan Kebutuhan',
+                      type: FieldType.Textarea,
+                      required: true,
+                      placeholder: 'detail...',
+                    },
+                  ],
+                },
+                reviewForm: review
+                  ? {
+                      title: `Formulir Evaluasi - ${title}`,
+                      description:
+                        'Formulir evaluasi setelah pengerjaan selesai.',
+                      formType: SubmissionType.Review,
+                      fields: [
+                        {
+                          order: 1,
+                          label: 'Tingkat Kepuasan',
+                          type: FieldType.SingleSelect,
+                          required: true,
+                          options: [
+                            { key: 'opt1', value: 'Sangat Puas' },
+                            { key: 'opt2', value: 'Cukup Puas' },
+                            { key: 'opt3', value: 'Kurang Puas' },
+                          ],
+                        },
+                      ],
                     }
-                  ]
-                } : null
+                  : null,
               },
               workOrdersConfig: [
                 {
                   configId: null,
                   positionsOnDuty: {
-                    _id: "665000000000000000000005",
-                    name: "General Services",
-                    description: "Divisi umum untuk penanganan operasional layanan.",
+                    _id: '665000000000000000000005',
+                    name: 'General Services',
+                    description:
+                      'Divisi umum untuk penanganan operasional layanan.',
                   },
                   workOrderApprovalAccessType: ApprovalAccessType.AUTO,
-                  workReportApprovalAccessType: report === 'auto' ? ApprovalAccessType.AUTO : ApprovalAccessType.MANAGER,
+                  workReportApprovalAccessType:
+                    report === 'auto'
+                      ? ApprovalAccessType.AUTO
+                      : ApprovalAccessType.MANAGER,
                   minStaff: 1,
                   maxStaff: 2,
                   workOrderForm: workOrderFormBlueprint,
@@ -129,12 +171,23 @@ function generateTemplates() {
                     description: 'Laporan penyelesaian pekerjaan dari staff.',
                     formType: SubmissionType.Report,
                     fields: [
-                      { order: 1, label: 'Catatan Penyelesaian', type: FieldType.Textarea, required: true, placeholder: 'pekerjaan selesai...' },
-                      { order: 2, label: 'Bukti Foto', type: FieldType.Image, required: false }
-                    ]
-                  }
-                }
-              ]
+                      {
+                        order: 1,
+                        label: 'Catatan Penyelesaian',
+                        type: FieldType.Textarea,
+                        required: true,
+                        placeholder: 'pekerjaan selesai...',
+                      },
+                      {
+                        order: 2,
+                        label: 'Bukti Foto',
+                        type: FieldType.Image,
+                        required: false,
+                      },
+                    ],
+                  },
+                },
+              ],
             };
 
             templates.push(template);

@@ -41,7 +41,11 @@ export class WorkOrderInternalController {
     @GetUser() user: AuthenticatedUser,
   ) {
     const result = await this.workOrderService.create(createWorkOrderDto, user);
-    return ResponseUtil.success('Work Order created successfully', result.data, result.meta);
+    return ResponseUtil.success(
+      'Work Order created successfully',
+      result.data,
+      result.meta,
+    );
   }
 
   @Get()
@@ -61,7 +65,11 @@ export class WorkOrderInternalController {
     @GetUser() user: AuthenticatedUser,
     @Query('notificationId') notificationId?: string,
   ) {
-    const result = await this.workOrderService.findOneInternal(id, user, notificationId);
+    const result = await this.workOrderService.findOneInternal(
+      id,
+      user,
+      notificationId,
+    );
     return ResponseUtil.success('Load data success', result.data, result.meta);
   }
 
@@ -77,7 +85,11 @@ export class WorkOrderInternalController {
       updateWorkOrderDto,
       user,
     );
-    return ResponseUtil.success('Work Order updated successfully', result.data, result.meta);
+    return ResponseUtil.success(
+      'Work Order updated successfully',
+      result.data,
+      result.meta,
+    );
   }
 
   @Patch(':id/status')
@@ -92,7 +104,11 @@ export class WorkOrderInternalController {
       updateStatusDto,
       user,
     );
-    return ResponseUtil.success('Work Order status updated successfully', result.data, result.meta);
+    return ResponseUtil.success(
+      'Work Order status updated successfully',
+      result.data,
+      result.meta,
+    );
   }
 
   @Put(':id/assign-staffs')
@@ -108,7 +124,11 @@ export class WorkOrderInternalController {
       assignStaffDto,
       user,
     );
-    return ResponseUtil.success('Staff assigned successfully', result.data, result.meta);
+    return ResponseUtil.success(
+      'Staff assigned successfully',
+      result.data,
+      result.meta,
+    );
   }
 
   @Put(':id/submissions')
@@ -123,29 +143,48 @@ export class WorkOrderInternalController {
       createSubmissionsDto,
       user,
     );
-    return ResponseUtil.success('Submissions saved successfully', result.data, result.meta);
+    return ResponseUtil.success(
+      'Submissions saved successfully',
+      result.data,
+      result.meta,
+    );
   }
 
   @Patch(':id/sent')
   @HttpCode(HttpStatus.OK)
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
-  async markAsSent(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+  async markAsSent(
+    @Param('id') id: string,
+    @GetUser() user: AuthenticatedUser,
+  ) {
     const result = await this.workOrderService.markAsSent(id, user);
-    return ResponseUtil.success('Work Order marked as sent', result.data, result.meta);
+    return ResponseUtil.success(
+      'Work Order marked as sent',
+      result.data,
+      result.meta,
+    );
   }
 
   @Patch(':id/approve')
   @HttpCode(HttpStatus.OK)
   async approve(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const result = await this.workOrderService.approve(id, user);
-    return ResponseUtil.success('Work Order approved', result.data, result.meta);
+    return ResponseUtil.success(
+      'Work Order approved',
+      result.data,
+      result.meta,
+    );
   }
 
   @Patch(':id/reject')
   @HttpCode(HttpStatus.OK)
   async reject(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const result = await this.workOrderService.reject(id, user);
-    return ResponseUtil.success('Work Order rejected', result.data, result.meta);
+    return ResponseUtil.success(
+      'Work Order rejected',
+      result.data,
+      result.meta,
+    );
   }
 
   @Post(':id/recreate')
@@ -153,7 +192,11 @@ export class WorkOrderInternalController {
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
   async recreate(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const result = await this.workOrderService.recreate(id, user);
-    return ResponseUtil.success('Work Order recreated', result.data, result.meta);
+    return ResponseUtil.success(
+      'Work Order recreated',
+      result.data,
+      result.meta,
+    );
   }
 
   @Patch(':id/cancel')
@@ -161,7 +204,11 @@ export class WorkOrderInternalController {
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
   async cancel(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const result = await this.workOrderService.cancel(id, user);
-    return ResponseUtil.success('Work Order cancelled', result.data, result.meta);
+    return ResponseUtil.success(
+      'Work Order cancelled',
+      result.data,
+      result.meta,
+    );
   }
 
   @Patch(':id/start')
@@ -177,10 +224,18 @@ export class WorkOrderInternalController {
   async complete(
     @Param('id') id: string,
     @Body('issue') issue: string,
-    @GetUser() user: AuthenticatedUser
+    @GetUser() user: AuthenticatedUser,
   ) {
-    const result = await this.workOrderService.complete(id, issue || null, user);
-    return ResponseUtil.success('Work Order completed', result.data, result.meta);
+    const result = await this.workOrderService.complete(
+      id,
+      issue || null,
+      user,
+    );
+    return ResponseUtil.success(
+      'Work Order completed',
+      result.data,
+      result.meta,
+    );
   }
 
   @Patch(':id/fail')
@@ -189,7 +244,7 @@ export class WorkOrderInternalController {
   async fail(
     @Param('id') id: string,
     @Body('issue') issue: string,
-    @GetUser() user: AuthenticatedUser
+    @GetUser() user: AuthenticatedUser,
   ) {
     const result = await this.workOrderService.fail(id, issue, user);
     return ResponseUtil.success('Work Order failed', result.data, result.meta);
@@ -200,14 +255,22 @@ export class WorkOrderInternalController {
   @Roles(Role.CompanyOwner, Role.CompanyManager)
   async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const result = await this.workOrderService.remove(id, user);
-    return ResponseUtil.success('Work order deleted successfully', result.data, result.meta);
+    return ResponseUtil.success(
+      'Work order deleted successfully',
+      result.data,
+      result.meta,
+    );
   }
 
   @Get(':id/report')
   @HttpCode(HttpStatus.OK)
   async getReport(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const result = await this.workOrderService.getReport(id, user);
-    return ResponseUtil.success('Report retrieved successfully', result.report, result.meta);
+    return ResponseUtil.success(
+      'Report retrieved successfully',
+      result.report,
+      result.meta,
+    );
   }
 
   @Put(':id/report')

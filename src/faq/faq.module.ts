@@ -17,12 +17,10 @@ import { AuthModule } from 'src/auth/auth.module';
   imports: [
     ConfigModule,
     HttpModule.register({
-      timeout: 30000,        // 30s — PDF uploads can be slow
+      timeout: 30000, // 30s — PDF uploads can be slow
       maxRedirects: 3,
     }),
-    MongooseModule.forFeature([
-      { name: Company.name, schema: CompanySchema },
-    ]),
+    MongooseModule.forFeature([{ name: Company.name, schema: CompanySchema }]),
     MulterModule.register({ storage: memoryStorage() }),
     AuthModule,
   ],

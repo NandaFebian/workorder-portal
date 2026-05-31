@@ -37,7 +37,12 @@ describe('DashboardController (e2e)', () => {
 
     const regRes = await request(app.getHttpServer())
       .post('/auth/register-company')
-      .send({ name: 'Dash Owner', email: 'dash@owner.com', password: 'password123', companyName: 'Dash Corp' })
+      .send({
+        name: 'Dash Owner',
+        email: 'dash@owner.com',
+        password: 'password123',
+        companyName: 'Dash Corp',
+      })
       .expect(200);
 
     ownerToken = regRes.body.data.token;

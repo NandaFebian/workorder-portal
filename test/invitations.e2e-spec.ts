@@ -41,7 +41,12 @@ describe('InvitationsController (e2e)', () => {
 
     const regRes = await request(app.getHttpServer())
       .post('/auth/register-company')
-      .send({ name: 'INV Owner', email: 'inv@owner.com', password: 'password123', companyName: 'INV Corp' })
+      .send({
+        name: 'INV Owner',
+        email: 'inv@owner.com',
+        password: 'password123',
+        companyName: 'INV Corp',
+      })
       .expect(200);
 
     ownerToken = regRes.body.data.token;
@@ -50,7 +55,12 @@ describe('InvitationsController (e2e)', () => {
     // Register a staff candidate
     await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ name: 'Staff INV', email: 'staff@inv.com', password: 'password123', role: Role.UnassignedStaff })
+      .send({
+        name: 'Staff INV',
+        email: 'staff@inv.com',
+        password: 'password123',
+        role: Role.UnassignedStaff,
+      })
       .expect(200);
 
     const loginRes = await request(app.getHttpServer())
@@ -79,7 +89,9 @@ describe('InvitationsController (e2e)', () => {
         .expect(200);
 
       expect(res.body.data).toEqual(
-        expect.arrayContaining([expect.objectContaining({ _id: invitationId })]),
+        expect.arrayContaining([
+          expect.objectContaining({ _id: invitationId }),
+        ]),
       );
     });
 
@@ -105,7 +117,9 @@ describe('InvitationsController (e2e)', () => {
       expect(res.body.data.status).toBe('accepted');
 
       // Whitebox: verify staff is now associated with company
-      const user = await connection.model('User').findOne({ email: 'staff@inv.com' });
+      const user = await connection
+        .model('User')
+        .findOne({ email: 'staff@inv.com' });
       expect(user!.companyId?.toString()).toBe(companyId);
     });
 
@@ -130,7 +144,9 @@ describe('InvitationsController (e2e)', () => {
       const newInvRes = await request(app.getHttpServer())
         .post('/company/invite')
         .set('Authorization', ownerToken)
-        .send({ invites: [{ email: 'staff@inv.com', role: Role.CompanyStaff }] });
+        .send({
+          invites: [{ email: 'staff@inv.com', role: Role.CompanyStaff }],
+        });
 
       if (newInvRes.status === 201) {
         const newInvId = newInvRes.body.data[0]._id;
@@ -147,7 +163,9 @@ describe('InvitationsController (e2e)', () => {
       const newInvRes = await request(app.getHttpServer())
         .post('/company/invite')
         .set('Authorization', ownerToken)
-        .send({ invites: [{ email: 'staff@inv.com', role: Role.CompanyStaff }] });
+        .send({
+          invites: [{ email: 'staff@inv.com', role: Role.CompanyStaff }],
+        });
 
       if (newInvRes.status === 201) {
         const newInvId = newInvRes.body.data[0]._id;

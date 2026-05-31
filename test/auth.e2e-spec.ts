@@ -64,12 +64,18 @@ describe('AuthController (e2e)', () => {
       );
 
       // Whitebox check: User is in the database and password is encrypted
-      const user = await connection.model('User').findOne({ email: registerPayload.email }).select('+password');
+      const user = await connection
+        .model('User')
+        .findOne({ email: registerPayload.email })
+        .select('+password');
       expect(user).toBeDefined();
       expect(user!.name).toBe(registerPayload.name);
       expect(user!.password).not.toBe(registerPayload.password);
-      
-      const isPasswordMatched = await bcrypt.compare(registerPayload.password, user!.password);
+
+      const isPasswordMatched = await bcrypt.compare(
+        registerPayload.password,
+        user!.password,
+      );
       expect(isPasswordMatched).toBe(true);
     });
 
@@ -146,12 +152,16 @@ describe('AuthController (e2e)', () => {
       );
 
       // Whitebox check: company and owner relation in database
-      const user = await connection.model('User').findOne({ email: registerCompanyPayload.email });
+      const user = await connection
+        .model('User')
+        .findOne({ email: registerCompanyPayload.email });
       expect(user).toBeDefined();
       expect(user!.role).toBe(Role.CompanyOwner);
       expect(user!.companyId).toBeDefined();
 
-      const company = await connection.model('Company').findOne({ ownerId: user!._id });
+      const company = await connection
+        .model('Company')
+        .findOne({ ownerId: user!._id });
       expect(company).toBeDefined();
       expect(company!.name).toBe(registerCompanyPayload.companyName);
       expect(user!.companyId.toString()).toBe(company!._id.toString());

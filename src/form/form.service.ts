@@ -32,7 +32,7 @@ export class FormsService {
     @InjectModel(FormSubmission.name)
     private formSubmissionModel: Model<FormSubmissionDocument>,
     private companiesInternalService: CompaniesInternalService,
-  ) { }
+  ) {}
 
   async createTemplate(
     dto: CreateFormTemplateDto,
@@ -52,7 +52,10 @@ export class FormsService {
       __v: 0,
     });
     const saved = await newTemplate.save();
-    return saved.populate({ path: 'position', select: '-createdAt -updatedAt -deletedAt -__v' });
+    return saved.populate({
+      path: 'position',
+      select: '-createdAt -updatedAt -deletedAt -__v',
+    });
   }
 
   async findAllTemplates(
@@ -66,10 +69,7 @@ export class FormsService {
 
     const positionFilter = hasPosition
       ? {
-          $or: [
-            { position: null },
-            { position: user.position!._id },
-          ],
+          $or: [{ position: null }, { position: user.position!._id }],
         }
       : {};
 
@@ -122,7 +122,10 @@ export class FormsService {
   ): Promise<FormTemplateDocument> {
     const template = await this.formTemplateModel
       .findOne({ _id: id, deletedAt: null })
-      .populate({ path: 'position', select: '-createdAt -updatedAt -deletedAt -__v' })
+      .populate({
+        path: 'position',
+        select: '-createdAt -updatedAt -deletedAt -__v',
+      })
       .exec();
     if (!template) {
       throw new NotFoundException(`Form template with ID ${id} not found`);
@@ -130,7 +133,9 @@ export class FormsService {
     // Enforce company scope for non-admin company users
     if (user && user.role !== 'admin_app') {
       if (!user.company?._id) {
-        throw new ForbiddenException('User is not associated with any company.');
+        throw new ForbiddenException(
+          'User is not associated with any company.',
+        );
       }
       if (template.companyId.toString() !== user.company._id.toString()) {
         // Return 404 to avoid leaking existence of other company's forms
@@ -198,7 +203,10 @@ export class FormsService {
 
     const newVersion = new this.formTemplateModel(newVersionData);
     const saved = await newVersion.save();
-    return saved.populate({ path: 'position', select: '-createdAt -updatedAt -deletedAt -__v' });
+    return saved.populate({
+      path: 'position',
+      select: '-createdAt -updatedAt -deletedAt -__v',
+    });
   }
 
   async submitForm(
@@ -298,7 +306,10 @@ export class FormsService {
     const latestTemplate = await this.formTemplateModel
       .findOne({ formKey })
       .sort({ __v: -1 })
-      .populate({ path: 'position', select: '-createdAt -updatedAt -deletedAt -__v' })
+      .populate({
+        path: 'position',
+        select: '-createdAt -updatedAt -deletedAt -__v',
+      })
       .exec();
 
     if (!latestTemplate || latestTemplate.deletedAt !== null) {
@@ -341,10 +352,7 @@ export class FormsService {
     await Promise.all(updatePromises);
   }
 
-  async removeById(
-    id: string,
-    user: AuthenticatedUser,
-  ): Promise<any> {
+  async removeById(id: string, user: AuthenticatedUser): Promise<any> {
     if (!user.company?._id) {
       throw new ForbiddenException('User is not associated with any company.');
     }
@@ -377,7 +385,11 @@ export class FormsService {
 
     // Check if it is the latest version
     const latestVersion = (await this.formTemplateModel
-      .findOne({ formKey: template.formKey, companyId: user.company._id, deletedAt: null })
+      .findOne({
+        formKey: template.formKey,
+        companyId: user.company._id,
+        deletedAt: null,
+      })
       .sort({ __v: -1 })
       .exec()) as any;
 
@@ -393,8 +405,12 @@ export class FormsService {
     // Soft delete all versions with the same formKey
     const deletedAt = new Date();
     await this.formTemplateModel.updateMany(
-      { formKey: template.formKey, companyId: user.company._id, deletedAt: null },
-      { $set: { deletedAt } }
+      {
+        formKey: template.formKey,
+        companyId: user.company._id,
+        deletedAt: null,
+      },
+      { $set: { deletedAt } },
     );
 
     return { ...deletedData, deletedAt };

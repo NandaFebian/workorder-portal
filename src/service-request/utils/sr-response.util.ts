@@ -91,7 +91,8 @@ export class SrResponseUtil {
       _id: doc._id,
       code: doc.code,
       serviceRequestStatus: doc.serviceRequestStatus,
-      serviceRequestApprovalAccessType: doc.serviceRequestApprovalAccessType ?? 'auto',
+      serviceRequestApprovalAccessType:
+        doc.serviceRequestApprovalAccessType ?? 'auto',
       reviewNeed: doc.reviewNeed ?? false,
       company: buildCompany(doc.companyId),
       service: buildService(doc.serviceId),
@@ -113,6 +114,12 @@ export class SrResponseUtil {
     intakeSubmission: any,
     reviewSubmission: any,
   ) {
-    return this.formatInternal(doc, intakeForm, reviewForm, intakeSubmission, reviewSubmission);
+    return this.formatInternal(
+      doc,
+      intakeForm,
+      reviewForm,
+      intakeSubmission,
+      reviewSubmission,
+    );
   }
 }

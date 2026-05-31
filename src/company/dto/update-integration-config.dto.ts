@@ -1,4 +1,10 @@
-import { IsBoolean, IsOptional, IsString, IsUrl, ValidateIf } from 'class-validator';
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  IsUrl,
+  ValidateIf,
+} from 'class-validator';
 
 export class UpdateIntegrationConfigDto {
   @IsOptional()

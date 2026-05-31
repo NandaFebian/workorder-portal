@@ -69,7 +69,10 @@ export class InvitationsController {
     @Param('id') invitationId: string,
     @GetUser() user: AuthenticatedUser,
   ) {
-    const data = await this.invitationsService.rejectInvitation(invitationId, user);
+    const data = await this.invitationsService.rejectInvitation(
+      invitationId,
+      user,
+    );
     return ResponseUtil.success('Invitation rejected successfully', data);
   }
 

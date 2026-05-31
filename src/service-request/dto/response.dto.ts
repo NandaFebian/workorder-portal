@@ -10,7 +10,17 @@ export class ServiceSummaryDto {
 
 export class ProviderServiceRequestResponseDto {
   _id: string; // ObjectID
-  serviceRequestStatus: 'received' | 'cancelled' | 'rejected' | 'approved' | 'unprocessable' | 'on_progress' | 'partial_completed' | 'failed' | 'completed' | 'closed';
+  serviceRequestStatus:
+    | 'received'
+    | 'cancelled'
+    | 'rejected'
+    | 'approved'
+    | 'unprocessable'
+    | 'on_progress'
+    | 'partial_completed'
+    | 'failed'
+    | 'completed'
+    | 'closed';
   serviceRequestApprovalAccessType: 'auto' | 'manager';
   reviewNeed: boolean;
   service: ServiceSummaryDto;
@@ -36,7 +46,17 @@ export class ProviderServiceRequestResponseDto {
 
 export class RequesterServiceRequestResponseDto {
   _id: string; // ObjectID
-  serviceRequestStatus: 'received' | 'cancelled' | 'rejected' | 'approved' | 'unprocessable' | 'on_progress' | 'partial_completed' | 'failed' | 'completed' | 'closed';
+  serviceRequestStatus:
+    | 'received'
+    | 'cancelled'
+    | 'rejected'
+    | 'approved'
+    | 'unprocessable'
+    | 'on_progress'
+    | 'partial_completed'
+    | 'failed'
+    | 'completed'
+    | 'closed';
   company: any; // COMPANYOBJECT
   service: ServiceSummaryDto;
   requestedBy: any; // USEROBJECT

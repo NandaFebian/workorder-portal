@@ -61,7 +61,9 @@ export class InvitationsService {
       .sort({ createdAt: -1 })
       .exec();
 
-    const transformedInvitations = InvitationResource.transformInvitationList(pendingInvitationsDocs);
+    const transformedInvitations = InvitationResource.transformInvitationList(
+      pendingInvitationsDocs,
+    );
 
     // Mark invitation notifications as read when pending list is fetched
     await this.fcmService.markAsReadByType(userId, 'invitation');
@@ -139,7 +141,9 @@ export class InvitationsService {
     if (currentUserState.companyId) {
       invitation.status = 'rejected';
       await invitation.save();
-      throw new UnprocessableEntityException('You already belong to a company.');
+      throw new UnprocessableEntityException(
+        'You already belong to a company.',
+      );
     }
     if (currentUserState.role !== Role.UnassignedStaff) {
       invitation.status = 'rejected';
@@ -187,7 +191,11 @@ export class InvitationsService {
           company.ownerId.toString(),
           'Undangan Diterima',
           `${(invitation.userId as any).name} telah menerima undangan dan resmi bergabung dengan ${company.name}.`,
-          { resource: 'invitation', resourceId: (invitation as any)._id.toString(), status: 'accepted' }
+          {
+            resource: 'invitation',
+            resourceId: (invitation as any)._id.toString(),
+            status: 'accepted',
+          },
         );
       }
 
@@ -259,17 +267,18 @@ export class InvitationsService {
         company.ownerId.toString(),
         'Undangan Ditolak',
         `${(invitation.userId as any).name} telah menolak undangan untuk bergabung dengan ${company.name}.`,
-        { resource: 'invitation', resourceId: (invitation as any)._id.toString(), status: 'rejected' }
+        {
+          resource: 'invitation',
+          resourceId: (invitation as any)._id.toString(),
+          status: 'rejected',
+        },
       );
     }
 
     return InvitationResource.transformInvitation(invitation);
   }
 
-  async remove(
-    id: string,
-    user: AuthenticatedUser,
-  ): Promise<any> {
+  async remove(id: string, user: AuthenticatedUser): Promise<any> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException(`Invalid invitation ID format: ${id}`);
     }

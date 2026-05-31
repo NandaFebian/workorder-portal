@@ -39,7 +39,8 @@ export class TemplateController {
   async getServicesByCompanyType(
     @Param('companyTypeId') companyTypeId: string,
   ) {
-    const data = await this.templateService.getServicesByCompanyType(companyTypeId);
+    const data =
+      await this.templateService.getServicesByCompanyType(companyTypeId);
     return ResponseUtil.success('Load service templates success', data);
   }
 
@@ -48,7 +49,8 @@ export class TemplateController {
   async getServiceTemplatePreview(
     @Param('serviceTemplateId') serviceTemplateId: string,
   ) {
-    const data = await this.templateService.getServiceTemplatePreview(serviceTemplateId);
+    const data =
+      await this.templateService.getServiceTemplatePreview(serviceTemplateId);
     return ResponseUtil.success('Load service template preview success', data);
   }
 
@@ -63,12 +65,17 @@ export class TemplateController {
     @GetUser() user: AuthenticatedUser,
   ) {
     // Normalisasi input: dukung baik ["id1"] maupun [{ id: "id1" }] atau [{ serviceTemplateId: "id1" }]
-    const normalizedIds = (serviceTemplateIds || []).map(item => {
-      if (typeof item === 'string') return item;
-      return item.serviceTemplateId || item.id || item._id;
-    }).filter(Boolean);
+    const normalizedIds = (serviceTemplateIds || [])
+      .map((item) => {
+        if (typeof item === 'string') return item;
+        return item.serviceTemplateId || item.id || item._id;
+      })
+      .filter(Boolean);
 
-    const data = await this.templateService.generateServices(user, normalizedIds);
+    const data = await this.templateService.generateServices(
+      user,
+      normalizedIds,
+    );
     return ResponseUtil.success('Services generated successfully', data);
   }
 }

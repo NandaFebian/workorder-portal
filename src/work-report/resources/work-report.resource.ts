@@ -12,14 +12,15 @@ export class WorkReportResource {
       workReportApprovalAccessType: report.workReportApprovalAccessType,
       show_report_to_requester: report.showReportToRequester ?? false,
       status: report.status,
-      approvedBy: (report.workReportApprovalAccessType === 'manager' && report.approvedBy)
-        ? {
-            _id: report.approvedBy._id ?? report.approvedBy,
-            name: report.approvedBy.name,
-            email: report.approvedBy.email,
-            role: report.approvedBy.role,
-          }
-        : null,
+      approvedBy:
+        report.workReportApprovalAccessType === 'manager' && report.approvedBy
+          ? {
+              _id: report.approvedBy._id ?? report.approvedBy,
+              name: report.approvedBy.name,
+              email: report.approvedBy.email,
+              role: report.approvedBy.role,
+            }
+          : null,
       startedAt: report.startedAt,
       submittedAt: report.submittedAt,
       approvedAt: report.approvedAt,

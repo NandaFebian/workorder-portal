@@ -88,7 +88,10 @@ export class WorkReportController {
   @UseGuards(RolesGuard)
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
   @HttpCode(HttpStatus.OK)
-  async markAsSent(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
+  async markAsSent(
+    @Param('id') id: string,
+    @GetUser() user: AuthenticatedUser,
+  ) {
     const data = await this.workReportService.markAsSent(id, user);
     return ResponseUtil.success('Work report marked as sent', data);
   }

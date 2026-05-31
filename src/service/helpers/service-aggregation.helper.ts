@@ -49,7 +49,12 @@ export async function getServicesWithAggregation(
         from: 'serviceprices',
         let: { svcKey: '$serviceKey' },
         pipeline: [
-          { $match: { $expr: { $eq: ['$serviceKey', '$$svcKey'] }, deletedAt: null } },
+          {
+            $match: {
+              $expr: { $eq: ['$serviceKey', '$$svcKey'] },
+              deletedAt: null,
+            },
+          },
           { $limit: 1 },
         ],
         as: '_priceDoc',
@@ -77,9 +82,11 @@ export async function getServicesWithAggregation(
         try {
           let template = await formsService.findTemplateById(formId.toString());
           if (!template) return null;
-          
+
           try {
-            const latest = await formsService.findLatestTemplateByKey(template.formKey);
+            const latest = await formsService.findLatestTemplateByKey(
+              template.formKey,
+            );
             if (latest) template = latest;
           } catch {
             // fallback to isolated version if latest not found
@@ -101,9 +108,10 @@ export async function getServicesWithAggregation(
       const resolvePosition = async (positionId: any) => {
         if (!positionId) return null;
         try {
-          const pos = await serviceModel.db
-            .collection('positions')
-            .findOne({ _id: new Types.ObjectId(positionId.toString()), deletedAt: null });
+          const pos = await serviceModel.db.collection('positions').findOne({
+            _id: new Types.ObjectId(positionId.toString()),
+            deletedAt: null,
+          });
           if (!pos) return null;
           return {
             _id: pos._id,
@@ -121,7 +129,8 @@ export async function getServicesWithAggregation(
       const hydratedServiceRequestConfig = {
         intakeForm: await resolveForm(src.intakeFormId),
         reviewForm: await resolveForm(src.reviewFormId),
-        serviceRequestApprovalAccessType: src.serviceRequestApprovalAccessType ?? 'auto',
+        serviceRequestApprovalAccessType:
+          src.serviceRequestApprovalAccessType ?? 'auto',
         reviewNeed: src.reviewNeed ?? false,
       };
 
@@ -142,7 +151,11 @@ export async function getServicesWithAggregation(
         })),
       );
 
-      const { serviceRequestConfig: _src, workOrdersConfig: _woc, ...rest } = service;
+      const {
+        serviceRequestConfig: _src,
+        workOrdersConfig: _woc,
+        ...rest
+      } = service;
 
       return {
         ...rest,

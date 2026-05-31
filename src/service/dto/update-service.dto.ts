@@ -15,11 +15,14 @@ import { Type } from 'class-transformer';
 
 class UpdateServiceRequestConfigDto {
   @IsOptional()
-  @ValidateIf((o, v) => v !== "" && v !== null)
+  @ValidateIf((o, v) => v !== '' && v !== null)
   @IsMongoId()
   intakeFormId?: string;
 
-  @ValidateIf((o) => o.reviewNeed === true && o.reviewFormId !== "" && o.reviewFormId !== null)
+  @ValidateIf(
+    (o) =>
+      o.reviewNeed === true && o.reviewFormId !== '' && o.reviewFormId !== null,
+  )
   @IsNotEmpty({ message: 'reviewFormId is required when reviewNeed is true' })
   @IsMongoId({ message: 'reviewFormId must be a valid MongoDB ObjectId' })
   reviewFormId?: string | null;
@@ -47,12 +50,12 @@ class UpdateWorkOrderConfigDto {
   configId?: string;
 
   @IsOptional()
-  @ValidateIf((o, v) => v !== "" && v !== null)
+  @ValidateIf((o, v) => v !== '' && v !== null)
   @IsMongoId()
   workOrderFormId?: string | null;
 
   @IsOptional()
-  @ValidateIf((o, v) => v !== "" && v !== null)
+  @ValidateIf((o, v) => v !== '' && v !== null)
   @IsMongoId()
   workReportFormId?: string;
 

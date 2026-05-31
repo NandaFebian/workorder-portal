@@ -1,4 +1,11 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { WorkReport, WorkReportDocument } from './schemas/work-report.schema';
@@ -40,7 +47,8 @@ export class WorkReportService {
       companyId: createDto.companyId,
       reportFormId: createDto.reportFormId ?? null,
       status: createDto.status ?? WorkReportStatus.DRAFTED,
-      workReportApprovalAccessType: createDto.workReportApprovalAccessType ?? ApprovalAccessType.AUTO,
+      workReportApprovalAccessType:
+        createDto.workReportApprovalAccessType ?? ApprovalAccessType.AUTO,
       showReportToRequester: createDto.showReportToRequester ?? false,
     });
     return newReport.save();
@@ -49,26 +57,36 @@ export class WorkReportService {
   async findOne(id: string): Promise<any> {
     if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Invalid ID');
     const report = await this.workReportModel
-      .findOne({ _id: id, deletedAt: null })
+      .findOne({ _id: id })
       .populate('approvedBy', 'name email role')
       .exec();
     if (!report) throw new NotFoundException('Work Report not found');
     return this._hydrateReport(report, null);
   }
 
-  async findOneQuietlyByWorkOrderId(workOrderId: string): Promise<WorkReportDocument | null> {
+  async findOneQuietlyByWorkOrderId(
+    workOrderId: string,
+  ): Promise<WorkReportDocument | null> {
     if (!Types.ObjectId.isValid(workOrderId)) return null;
-    return this.workReportModel.findOne({ workOrderId: new Types.ObjectId(workOrderId), deletedAt: null }).exec();
+    return this.workReportModel
+      .findOne({ workOrderId: new Types.ObjectId(workOrderId) })
+      .exec();
   }
 
-  async findByWorkOrderId(workOrderId: string, user: AuthenticatedUser): Promise<any> {
-    if (!Types.ObjectId.isValid(workOrderId)) throw new NotFoundException('Invalid Work Order ID');
+  async findByWorkOrderId(
+    workOrderId: string,
+    user: AuthenticatedUser,
+  ): Promise<any> {
+    if (!Types.ObjectId.isValid(workOrderId))
+      throw new NotFoundException('Invalid Work Order ID');
 
     // Mark notifications as read when report for a WO is fetched
-    this.fcmService.markAsReadByResource(user._id.toString(), 'work_order', workOrderId).catch(() => {});
+    this.fcmService
+      .markAsReadByResource(user._id.toString(), 'work_order', workOrderId)
+      .catch(() => {});
 
     const report = await this.workReportModel
-      .findOne({ workOrderId: new Types.ObjectId(workOrderId), deletedAt: null })
+      .findOne({ workOrderId: new Types.ObjectId(workOrderId) })
       .populate('workOrderId')
       .populate('approvedBy', 'name email role')
       .exec();
@@ -77,10 +95,20 @@ export class WorkReportService {
 
     const wo = report.workOrderId as any;
     if (wo && typeof wo === 'object' && wo._id) {
-      const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
-      const isAssigned = wo.assignedStaff && wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
-      if (!isPIC && !isAssigned && user.role !== Role.CompanyOwner && user.role !== Role.CompanyManager) {
-         throw new ForbiddenException('Only assigned staff, PIC, or manager can access this report.');
+      const isPIC =
+        wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
+      const isAssigned =
+        wo.assignedStaff &&
+        wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
+      if (
+        !isPIC &&
+        !isAssigned &&
+        user.role !== Role.CompanyOwner &&
+        user.role !== Role.CompanyManager
+      ) {
+        throw new ForbiddenException(
+          'Only assigned staff, PIC, or manager can access this report.',
+        );
       }
       report.workOrderId = wo._id;
     }
@@ -88,13 +116,18 @@ export class WorkReportService {
     return this._hydrateReport(report, user);
   }
 
-  private async _hydrateReport(report: WorkReportDocument, user: AuthenticatedUser | null): Promise<any> {
+  private async _hydrateReport(
+    report: WorkReportDocument,
+    user: AuthenticatedUser | null,
+  ): Promise<any> {
     const base = WorkReportResource.transformWorkReport(report);
 
     // Parallelize form hydration and submissions fetch
     const [reportFormResult, submissions] = await Promise.all([
       report.reportFormId
-        ? this.formsService.findTemplateById(report.reportFormId.toString()).catch(() => null)
+        ? this.formsService
+            .findTemplateById(report.reportFormId.toString())
+            .catch(() => null)
         : Promise.resolve(null),
       this.formSubmissionModel
         .find({ ownerId: report._id, submissionType: SubmissionType.Report })
@@ -104,7 +137,9 @@ export class WorkReportService {
 
     let reportForm: any = null;
     if (reportFormResult) {
-      const t = (reportFormResult as any).toObject ? (reportFormResult as any).toObject() : reportFormResult;
+      const t = (reportFormResult as any).toObject
+        ? (reportFormResult as any).toObject()
+        : reportFormResult;
       reportForm = {
         _id: t._id,
         title: t.title,
@@ -131,22 +166,35 @@ export class WorkReportService {
     }
 
     const workReport = await this.workReportModel
-      .findOne({ workOrderId: new Types.ObjectId(workOrderId), deletedAt: null })
+      .findOne({ workOrderId: new Types.ObjectId(workOrderId) })
       .populate('workOrderId')
       .exec();
 
-    if (!workReport) throw new NotFoundException('Work report not found for this work order');
+    if (!workReport)
+      throw new NotFoundException('Work report not found for this work order');
 
     if (user.company?._id?.toString() !== workReport.companyId.toString()) {
-      throw new ForbiddenException('Unauthorized to submit this work report form');
+      throw new ForbiddenException(
+        'Unauthorized to submit this work report form',
+      );
     }
 
     const wo = workReport.workOrderId as any;
     if (wo && typeof wo === 'object' && wo._id) {
-      const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
-      const isAssigned = wo.assignedStaff && wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
-      if (!isPIC && !isAssigned && user.role !== Role.CompanyOwner && user.role !== Role.CompanyManager) {
-         throw new ForbiddenException('Only assigned staff, PIC, or manager can submit this report.');
+      const isPIC =
+        wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
+      const isAssigned =
+        wo.assignedStaff &&
+        wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
+      if (
+        !isPIC &&
+        !isAssigned &&
+        user.role !== Role.CompanyOwner &&
+        user.role !== Role.CompanyManager
+      ) {
+        throw new ForbiddenException(
+          'Only assigned staff, PIC, or manager can submit this report.',
+        );
       }
       workReport.workOrderId = wo._id;
     }
@@ -155,11 +203,18 @@ export class WorkReportService {
     if (formId && Types.ObjectId.isValid(formId)) {
       // Validate that this form matches the report form
       const reportFormTemplate = workReport.reportFormId
-        ? await this.formsService.findTemplateById(workReport.reportFormId.toString())
+        ? await this.formsService.findTemplateById(
+            workReport.reportFormId.toString(),
+          )
         : null;
 
-      if (!reportFormTemplate || (reportFormTemplate._id as any).toString() !== formId) {
-        throw new NotFoundException(`Form ${formId} is not the report form for this work report`);
+      if (
+        !reportFormTemplate ||
+        (reportFormTemplate._id as any).toString() !== formId
+      ) {
+        throw new NotFoundException(
+          `Form ${formId} is not the report form for this work report`,
+        );
       }
 
       validateFormSubmission(reportFormTemplate.fields, fieldsData);
@@ -197,20 +252,32 @@ export class WorkReportService {
       throw new NotFoundException('Invalid work report ID');
     }
     const workReport = await this.workReportModel
-      .findOne({ _id: workReportId, deletedAt: null })
+      .findOne({ _id: workReportId })
       .populate('workOrderId')
       .exec();
     if (!workReport) throw new NotFoundException('Work report not found');
     if (user.company?._id?.toString() !== workReport.companyId.toString()) {
-      throw new ForbiddenException('Unauthorized to submit this work report form');
+      throw new ForbiddenException(
+        'Unauthorized to submit this work report form',
+      );
     }
 
     const wo = workReport.workOrderId as any;
     if (wo && typeof wo === 'object' && wo._id) {
-      const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
-      const isAssigned = wo.assignedStaff && wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
-      if (!isPIC && !isAssigned && user.role !== Role.CompanyOwner && user.role !== Role.CompanyManager) {
-         throw new ForbiddenException('Only assigned staff, PIC, or manager can submit this report.');
+      const isPIC =
+        wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
+      const isAssigned =
+        wo.assignedStaff &&
+        wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
+      if (
+        !isPIC &&
+        !isAssigned &&
+        user.role !== Role.CompanyOwner &&
+        user.role !== Role.CompanyManager
+      ) {
+        throw new ForbiddenException(
+          'Only assigned staff, PIC, or manager can submit this report.',
+        );
       }
       workReport.workOrderId = wo._id;
     }
@@ -243,19 +310,38 @@ export class WorkReportService {
 
   async markAsSent(id: string, user: AuthenticatedUser): Promise<any> {
     if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Invalid ID');
-    const report = await this.workReportModel.findOne({ _id: id, deletedAt: null }).populate('workOrderId').exec();
+    const report = await this.workReportModel
+      .findOne({ _id: id })
+      .populate('workOrderId')
+      .exec();
     if (!report) throw new NotFoundException('Work Report not found');
 
-    if (report.status !== WorkReportStatus.ON_PROGRESS && report.status !== WorkReportStatus.DRAFTED && report.status !== WorkReportStatus.REJECTED) {
-      throw new BadRequestException('Only on_progress, drafted, or rejected report can be sent');
+    if (
+      report.status !== WorkReportStatus.ON_PROGRESS &&
+      report.status !== WorkReportStatus.DRAFTED &&
+      report.status !== WorkReportStatus.REJECTED
+    ) {
+      throw new BadRequestException(
+        'Only on_progress, drafted, or rejected report can be sent',
+      );
     }
 
     const wo = report.workOrderId as any;
     if (wo && typeof wo === 'object' && wo._id) {
-      const isPIC = wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
-      const isAssigned = wo.assignedStaff && wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
-      if (!isPIC && !isAssigned && user.role !== Role.CompanyOwner && user.role !== Role.CompanyManager) {
-         throw new ForbiddenException('Only assigned staff, PIC, or manager can send this report.');
+      const isPIC =
+        wo.staffPIC && wo.staffPIC.toString() === user._id.toString();
+      const isAssigned =
+        wo.assignedStaff &&
+        wo.assignedStaff.some((s: any) => s.toString() === user._id.toString());
+      if (
+        !isPIC &&
+        !isAssigned &&
+        user.role !== Role.CompanyOwner &&
+        user.role !== Role.CompanyManager
+      ) {
+        throw new ForbiddenException(
+          'Only assigned staff, PIC, or manager can send this report.',
+        );
       }
       report.workOrderId = wo._id;
     }
@@ -271,7 +357,12 @@ export class WorkReportService {
     await report.save();
 
     // Auto-complete the parent WO when report is auto-approved
-    if (report.status === WorkReportStatus.APPROVED && wo && typeof wo === 'object' && wo._id) {
+    if (
+      report.status === WorkReportStatus.APPROVED &&
+      wo &&
+      typeof wo === 'object' &&
+      wo._id
+    ) {
       await this.workOrderService.autoCompleteByWorkReport(wo._id.toString());
     }
 
@@ -284,30 +375,42 @@ export class WorkReportService {
           [Role.CompanyOwner, Role.CompanyManager],
         );
         for (const manager of managers) {
-          const m = manager as any;
+          const m = manager;
           const isOwner = m.role === Role.CompanyOwner;
-          const isCreator = wo.createdBy && wo.createdBy.toString() === m._id.toString();
+          const isCreator =
+            wo.createdBy && wo.createdBy.toString() === m._id.toString();
           const isSystemGenerated = !wo.createdBy;
-          const isPIC = wo.staffPIC && wo.staffPIC.toString() === m._id.toString();
+          const isPIC =
+            wo.staffPIC && wo.staffPIC.toString() === m._id.toString();
 
           if (isOwner || isCreator || isSystemGenerated || isPIC) {
             await this.fcmService.sendToUser(
               m._id.toString(),
               'Laporan Penugasan Lapangan Masuk',
               `Staf ${user.name} telah mengirimkan laporan untuk Perintah Kerja (${wo.code}).`,
-              { resource: 'work_order', resourceId: wo._id.toString(), status: 'report_submitted' }
+              {
+                resource: 'work_order',
+                resourceId: wo._id.toString(),
+                status: 'report_submitted',
+              },
             );
           }
         }
       } else if (report.status === WorkReportStatus.APPROVED) {
         // Notify PIC/Staff about auto-approval
-        const targets = wo.staffPIC ? [wo.staffPIC.toString()] : (wo.assignedStaff || []).map((s: any) => s.toString());
+        const targets = wo.staffPIC
+          ? [wo.staffPIC.toString()]
+          : (wo.assignedStaff || []).map((s: any) => s.toString());
         for (const userId of targets) {
           await this.fcmService.sendToUser(
             userId,
             'Laporan Penugasan Lapangan Disetujui (Otomatis)',
             `Laporan penugasan lapangan Anda untuk Perintah Kerja (${wo.code}) telah disetujui secara otomatis.`,
-            { resource: 'work_order', resourceId: wo._id.toString(), status: 'complete_needed' }
+            {
+              resource: 'work_order',
+              resourceId: wo._id.toString(),
+              status: 'complete_needed',
+            },
           );
         }
       }
@@ -318,18 +421,24 @@ export class WorkReportService {
 
   async approve(id: string, user: AuthenticatedUser): Promise<any> {
     if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Invalid ID');
-    const report = await this.workReportModel.findOne({ _id: id, deletedAt: null }).exec();
+    const report = await this.workReportModel.findOne({ _id: id }).exec();
     if (!report) throw new NotFoundException('Work Report not found');
 
     if (report.status !== WorkReportStatus.SUBMITTED) {
-      throw new BadRequestException('Work Report status harus SUBMITTED sebelum dapat di-approve');
+      throw new BadRequestException(
+        'Work Report status harus SUBMITTED sebelum dapat di-approve',
+      );
     }
 
     if (report.workReportApprovalAccessType === ApprovalAccessType.AUTO) {
-      throw new BadRequestException('Report is set to auto approve, manual action not allowed');
+      throw new BadRequestException(
+        'Report is set to auto approve, manual action not allowed',
+      );
     }
     if (user.role !== Role.CompanyOwner && user.role !== Role.CompanyManager) {
-      throw new ForbiddenException('Only managers can approve this work report');
+      throw new ForbiddenException(
+        'Only managers can approve this work report',
+      );
     }
 
     report.status = WorkReportStatus.APPROVED;
@@ -340,14 +449,23 @@ export class WorkReportService {
     // Populate workOrderId directly without a second DB query
     await report.populate('workOrderId', 'code staffPIC assignedStaff');
     const wo = report.workOrderId as any;
-    if (wo && (wo.staffPIC || (wo.assignedStaff && wo.assignedStaff.length > 0))) {
-      const targets = wo.staffPIC ? [wo.staffPIC.toString()] : wo.assignedStaff.map((s: any) => s.toString());
+    if (
+      wo &&
+      (wo.staffPIC || (wo.assignedStaff && wo.assignedStaff.length > 0))
+    ) {
+      const targets = wo.staffPIC
+        ? [wo.staffPIC.toString()]
+        : wo.assignedStaff.map((s: any) => s.toString());
       for (const userId of targets) {
         await this.fcmService.sendToUser(
           userId,
           'Laporan Penugasan Lapangan Disetujui',
           `Laporan penugasan lapangan Anda untuk Perintah Kerja (${wo.code}) telah disetujui.`,
-          { resource: 'work_order', resourceId: wo._id.toString(), status: WorkReportStatus.APPROVED }
+          {
+            resource: 'work_order',
+            resourceId: wo._id.toString(),
+            status: WorkReportStatus.APPROVED,
+          },
         );
       }
     }
@@ -357,7 +475,7 @@ export class WorkReportService {
 
   async reject(id: string, user: AuthenticatedUser): Promise<any> {
     if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Invalid ID');
-    const report = await this.workReportModel.findOne({ _id: id, deletedAt: null }).exec();
+    const report = await this.workReportModel.findOne({ _id: id }).exec();
     if (!report) throw new NotFoundException('Work Report not found');
 
     if (report.status !== WorkReportStatus.SUBMITTED) {
@@ -365,7 +483,9 @@ export class WorkReportService {
     }
 
     if (report.workReportApprovalAccessType === ApprovalAccessType.AUTO) {
-      throw new BadRequestException('Report is set to auto approve, manual action not allowed');
+      throw new BadRequestException(
+        'Report is set to auto approve, manual action not allowed',
+      );
     }
     if (user.role !== Role.CompanyOwner && user.role !== Role.CompanyManager) {
       throw new ForbiddenException('Only managers can reject this work report');
@@ -378,14 +498,23 @@ export class WorkReportService {
     // Populate workOrderId directly without a second DB query
     await report.populate('workOrderId', 'code staffPIC assignedStaff');
     const wo = report.workOrderId as any;
-    if (wo && (wo.staffPIC || (wo.assignedStaff && wo.assignedStaff.length > 0))) {
-      const targets = wo.staffPIC ? [wo.staffPIC.toString()] : wo.assignedStaff.map((s: any) => s.toString());
+    if (
+      wo &&
+      (wo.staffPIC || (wo.assignedStaff && wo.assignedStaff.length > 0))
+    ) {
+      const targets = wo.staffPIC
+        ? [wo.staffPIC.toString()]
+        : wo.assignedStaff.map((s: any) => s.toString());
       for (const userId of targets) {
         await this.fcmService.sendToUser(
           userId,
           'Laporan Penugasan Lapangan Ditolak',
           `Laporan penugasan lapangan Anda untuk Perintah Kerja (${wo.code}) telah ditolak. Harap periksa kembali.`,
-          { resource: 'work_order', resourceId: wo._id.toString(), status: WorkReportStatus.REJECTED }
+          {
+            resource: 'work_order',
+            resourceId: wo._id.toString(),
+            status: WorkReportStatus.REJECTED,
+          },
         );
       }
     }
@@ -395,10 +524,13 @@ export class WorkReportService {
 
   async remove(id: string, user: AuthenticatedUser): Promise<any> {
     if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Invalid ID');
-    const report = await this.workReportModel.findOne({ _id: id, deletedAt: null }).exec();
+    const report = await this.workReportModel.findOne({ _id: id }).exec();
     if (!report) throw new NotFoundException('Work Report not found');
 
-    if (!user?.company?._id || user.company._id.toString() !== report.companyId.toString()) {
+    if (
+      !user?.company?._id ||
+      user.company._id.toString() !== report.companyId.toString()
+    ) {
       throw new NotFoundException('Work Report not found');
     }
 

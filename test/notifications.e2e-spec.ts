@@ -37,7 +37,12 @@ describe('NotificationsController (e2e)', () => {
 
     const regRes = await request(app.getHttpServer())
       .post('/auth/register-company')
-      .send({ name: 'Notif Owner', email: 'notif@owner.com', password: 'password123', companyName: 'Notif Corp' })
+      .send({
+        name: 'Notif Owner',
+        email: 'notif@owner.com',
+        password: 'password123',
+        companyName: 'Notif Corp',
+      })
       .expect(200);
 
     ownerToken = regRes.body.data.token;
@@ -55,9 +60,7 @@ describe('NotificationsController (e2e)', () => {
     });
 
     it('[TC-NOTIF-02] should return 401 when accessed without JWT token (Blackbox)', async () => {
-      await request(app.getHttpServer())
-        .get('/notifications')
-        .expect(401);
+      await request(app.getHttpServer()).get('/notifications').expect(401);
     });
   });
 
@@ -81,7 +84,9 @@ describe('NotificationsController (e2e)', () => {
         .send({ token: fcmToken })
         .expect(201);
 
-      const user = await connection.model('User').findOne({ email: 'notif@owner.com' });
+      const user = await connection
+        .model('User')
+        .findOne({ email: 'notif@owner.com' });
       expect(user!.fcmTokens).toContain(fcmToken);
     });
 
@@ -100,8 +105,12 @@ describe('NotificationsController (e2e)', () => {
         .send({ token: fcmToken })
         .expect(201);
 
-      const user = await connection.model('User').findOne({ email: 'notif@owner.com' });
-      const count = user!.fcmTokens.filter((t: string) => t === fcmToken).length;
+      const user = await connection
+        .model('User')
+        .findOne({ email: 'notif@owner.com' });
+      const count = user!.fcmTokens.filter(
+        (t: string) => t === fcmToken,
+      ).length;
       expect(count).toBe(1);
     });
   });
@@ -139,7 +148,9 @@ describe('NotificationsController (e2e)', () => {
         .send({ token: fcmToken })
         .expect(200);
 
-      const user = await connection.model('User').findOne({ email: 'notif@owner.com' });
+      const user = await connection
+        .model('User')
+        .findOne({ email: 'notif@owner.com' });
       expect(user!.fcmTokens).not.toContain(fcmToken);
     });
 

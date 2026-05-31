@@ -23,14 +23,19 @@ export class ExternalAccount {
   @Prop({ type: Date, default: null })
   expiresAt: Date;
 
-  @Prop({ type: String, enum: ['external_system', 'claim_token'], default: null })
+  @Prop({
+    type: String,
+    enum: ['external_system', 'claim_token'],
+    default: null,
+  })
   integrationType: string;
 
   @Prop({ type: Date, default: null })
   deletedAt: Date;
 }
 
-export const ExternalAccountSchema = SchemaFactory.createForClass(ExternalAccount);
+export const ExternalAccountSchema =
+  SchemaFactory.createForClass(ExternalAccount);
 
 ExternalAccountSchema.index(
   { externalCustomerEmail: 1, companyId: 1 },

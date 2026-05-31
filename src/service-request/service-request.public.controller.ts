@@ -38,7 +38,11 @@ export class ServiceRequestPublicController {
     @GetUser() user: AuthenticatedUser,
     @Query('notificationId') notificationId?: string,
   ) {
-    const data = await this.csrService.getUnifiedDetail(id, user, notificationId);
+    const data = await this.csrService.getUnifiedDetail(
+      id,
+      user,
+      notificationId,
+    );
     return ResponseUtil.success('Load detail success', data);
   }
 
@@ -49,7 +53,7 @@ export class ServiceRequestPublicController {
   async submitIntake(
     @Param('serviceId') serviceId: string,
     @Body() body: any,
-    @GetUser() user: AuthenticatedUser
+    @GetUser() user: AuthenticatedUser,
   ) {
     const data = await this.csrService.submitIntake(serviceId, user, body);
     return ResponseUtil.success('Submit intake success', data);
@@ -60,7 +64,7 @@ export class ServiceRequestPublicController {
   async submitReview(
     @Param('id') id: string,
     @Body() body: any,
-    @GetUser() user: AuthenticatedUser
+    @GetUser() user: AuthenticatedUser,
   ) {
     const data = await this.csrService.submitReview(id, user, body);
     return ResponseUtil.success('Submit review success', data);
@@ -71,7 +75,11 @@ export class ServiceRequestPublicController {
   @Patch('service-requests/:id/cancel')
   @HttpCode(HttpStatus.OK)
   async cancelSr(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-    const data = await this.csrService.updateStatus(id, ServiceRequestStatus.CANCELLED, user);
+    const data = await this.csrService.updateStatus(
+      id,
+      ServiceRequestStatus.CANCELLED,
+      user,
+    );
     return ResponseUtil.success('Cancel SR success', data);
   }
 

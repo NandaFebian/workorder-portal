@@ -40,7 +40,12 @@ describe('MembershipsController (e2e)', () => {
 
     const regRes = await request(app.getHttpServer())
       .post('/auth/register-company')
-      .send({ name: 'MBR Owner', email: 'mbr@owner.com', password: 'password123', companyName: 'MBR Corp' })
+      .send({
+        name: 'MBR Owner',
+        email: 'mbr@owner.com',
+        password: 'password123',
+        companyName: 'MBR Corp',
+      })
       .expect(200);
 
     ownerToken = regRes.body.data.token;
@@ -48,7 +53,12 @@ describe('MembershipsController (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ name: 'Client User', email: 'client@mbr.com', password: 'password123', role: Role.Client })
+      .send({
+        name: 'Client User',
+        email: 'client@mbr.com',
+        password: 'password123',
+        role: Role.Client,
+      })
       .expect(200);
 
     const loginRes = await request(app.getHttpServer())
@@ -151,7 +161,9 @@ describe('MembershipsController (e2e)', () => {
         .send({ code: validCode })
         .expect(200);
 
-      const user = await connection.model('User').findOne({ email: 'client@mbr.com' });
+      const user = await connection
+        .model('User')
+        .findOne({ email: 'client@mbr.com' });
       expect(user!.companyId?.toString()).toBe(companyId);
     });
 
@@ -183,7 +195,12 @@ describe('MembershipsController (e2e)', () => {
       // Register second client
       await request(app.getHttpServer())
         .post('/auth/register')
-        .send({ name: 'Second Client', email: 'second@mbr2.com', password: 'password123', role: Role.Client })
+        .send({
+          name: 'Second Client',
+          email: 'second@mbr2.com',
+          password: 'password123',
+          role: Role.Client,
+        })
         .expect(200);
 
       const loginRes2 = await request(app.getHttpServer())

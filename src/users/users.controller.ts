@@ -1,12 +1,5 @@
 // src/users/users.controller.ts
-import {
-  Controller,
-  Get,
-  Patch,
-  Req,
-  Body,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Patch, Req, Body, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -35,4 +28,3 @@ export class UsersController {
     return this.usersService.updateProfile(req.user._id.toString(), dto);
   }
 }
-

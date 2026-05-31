@@ -60,10 +60,7 @@ export class ServicePriceController {
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
-  async remove(
-    @Param('id') id: string,
-    @GetUser() user: AuthenticatedUser,
-  ) {
+  async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const data = await this.servicePriceService.remove(id, user);
     return ResponseUtil.success('Service pricing deleted successfully', data);
   }

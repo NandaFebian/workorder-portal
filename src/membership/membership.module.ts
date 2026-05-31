@@ -1,7 +1,10 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { HttpModule } from '@nestjs/axios';
-import { MembershipController, MembershipCodeController } from './membership.controller';
+import {
+  MembershipController,
+  MembershipCodeController,
+} from './membership.controller';
 import { MembershipService } from './membership.service';
 import {
   MembershipCode,
@@ -30,4 +33,4 @@ import { Company, CompanySchema } from 'src/company/schemas/company.schemas';
   providers: [MembershipService],
   exports: [MembershipService],
 })
-export class MembershipModule { }
+export class MembershipModule {}

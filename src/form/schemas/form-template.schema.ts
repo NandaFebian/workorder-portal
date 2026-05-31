@@ -3,7 +3,6 @@ import { Document, Schema as MongooseSchema } from 'mongoose';
 import { FormField } from './form-field.schema';
 import { FormType } from '../../common/enums/form-type.enum';
 
-
 export type FormTemplateDocument = FormTemplate & Document;
 
 // Nonaktifkan versionKey otomatis dari Mongoose

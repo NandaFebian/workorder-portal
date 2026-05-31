@@ -5,10 +5,18 @@ export type ServiceDocument = Service & Document;
 
 @Schema({ _id: false })
 class ServiceRequestConfig {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormTemplate', default: null })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'FormTemplate',
+    default: null,
+  })
   intakeFormId: MongooseSchema.Types.ObjectId | null;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormTemplate', default: null })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'FormTemplate',
+    default: null,
+  })
   reviewFormId: MongooseSchema.Types.ObjectId | null;
 
   @Prop({
@@ -37,10 +45,18 @@ class WorkOrderConfig {
   })
   positionId: MongooseSchema.Types.ObjectId;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormTemplate', default: null })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'FormTemplate',
+    default: null,
+  })
   workOrderFormId: MongooseSchema.Types.ObjectId | null;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormTemplate', default: null })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'FormTemplate',
+    default: null,
+  })
   workReportFormId: MongooseSchema.Types.ObjectId | null;
 
   @Prop({
@@ -82,7 +98,12 @@ export class Service {
   @Prop({ required: true, index: true })
   serviceKey: string;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Company', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Company',
+    required: true,
+    index: true,
+  })
   companyId: MongooseSchema.Types.ObjectId;
 
   @Prop({ required: true })
@@ -113,8 +134,12 @@ export class Service {
   @Prop({ required: true, default: 0 })
   __v: number;
 
-  @Prop({ type: Date, default: null })
+  @Prop({ type: Date, default: null, index: true })
   deletedAt: Date;
 }
 
 export const ServiceSchema = SchemaFactory.createForClass(Service);
+
+ServiceSchema.index({ serviceKey: 1, deletedAt: 1 });
+ServiceSchema.index({ companyId: 1, deletedAt: 1 });
+ServiceSchema.index({ companyId: 1, isActive: 1, deletedAt: 1 });

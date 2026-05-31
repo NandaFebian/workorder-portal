@@ -34,7 +34,7 @@ export class ServiceRequestInternalController {
   async getInbox(@GetUser() user: AuthenticatedUser) {
     if (!user.company?._id)
       throw new ForbiddenException('No company associated');
-    
+
     const data = await this.csrService.findAllByCompanyId(
       user.company._id.toString(),
       user,
@@ -48,7 +48,11 @@ export class ServiceRequestInternalController {
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
   @HttpCode(HttpStatus.OK)
   async approve(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-    const data = await this.csrService.updateStatus(id, ServiceRequestStatus.APPROVED, user);
+    const data = await this.csrService.updateStatus(
+      id,
+      ServiceRequestStatus.APPROVED,
+      user,
+    );
     return ResponseUtil.success('Request approved successfully', data);
   }
 
@@ -56,7 +60,11 @@ export class ServiceRequestInternalController {
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
   @HttpCode(HttpStatus.OK)
   async reject(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
-    const data = await this.csrService.updateStatus(id, ServiceRequestStatus.REJECTED, user);
+    const data = await this.csrService.updateStatus(
+      id,
+      ServiceRequestStatus.REJECTED,
+      user,
+    );
     return ResponseUtil.success('Request rejected successfully', data);
   }
 
@@ -77,9 +85,6 @@ export class ServiceRequestInternalController {
   @HttpCode(HttpStatus.OK)
   async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const data = await this.csrService.remove(id, user);
-    return ResponseUtil.success(
-      'Service request deleted successfully',
-      data,
-    );
+    return ResponseUtil.success('Service request deleted successfully', data);
   }
 }

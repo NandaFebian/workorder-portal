@@ -37,7 +37,12 @@ describe('ServicePriceController (e2e)', () => {
 
     const regRes = await request(app.getHttpServer())
       .post('/auth/register-company')
-      .send({ name: 'SP Owner', email: 'sp@owner.com', password: 'password123', companyName: 'SP Corp' })
+      .send({
+        name: 'SP Owner',
+        email: 'sp@owner.com',
+        password: 'password123',
+        companyName: 'SP Corp',
+      })
       .expect(200);
 
     ownerToken = regRes.body.data.token;
@@ -63,7 +68,12 @@ describe('ServicePriceController (e2e)', () => {
 
       const regB = await request(app.getHttpServer())
         .post('/auth/register-company')
-        .send({ name: 'Owner B', email: 'ownerb@sp.com', password: 'password123', companyName: 'Company B SP' })
+        .send({
+          name: 'Owner B',
+          email: 'ownerb@sp.com',
+          password: 'password123',
+          companyName: 'Company B SP',
+        })
         .expect(200);
 
       const tokenB = regB.body.data.token;

@@ -2,14 +2,29 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { DashboardController } from './dashboard.controller';
 import { DashboardService } from './dashboard.service';
-import { ServiceRequest, ServiceRequestSchema } from '../service-request/schemas/service-request.schema';
-import { WorkOrder, WorkOrderSchema } from '../work-order/schemas/work-order.schema';
-import { WorkReport, WorkReportSchema } from '../work-report/schemas/work-report.schema';
-import { Notification, NotificationSchema } from '../fcm/schemas/notification.schema';
+import {
+  ServiceRequest,
+  ServiceRequestSchema,
+} from '../service-request/schemas/service-request.schema';
+import {
+  WorkOrder,
+  WorkOrderSchema,
+} from '../work-order/schemas/work-order.schema';
+import {
+  WorkReport,
+  WorkReportSchema,
+} from '../work-report/schemas/work-report.schema';
+import {
+  Notification,
+  NotificationSchema,
+} from '../fcm/schemas/notification.schema';
 import { User, UserSchema } from '../users/schemas/user.schema';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
-import { FormTemplate, FormTemplateSchema } from '../form/schemas/form-template.schema';
+import {
+  FormTemplate,
+  FormTemplateSchema,
+} from '../form/schemas/form-template.schema';
 import { Service, ServiceSchema } from '../service/schemas/service.schema';
 import { Position, PositionSchema } from '../positions/schemas/position.schema';
 
@@ -29,6 +44,6 @@ import { Position, PositionSchema } from '../positions/schemas/position.schema';
     UsersModule,
   ],
   controllers: [DashboardController],
-  providers: [DashboardService]
+  providers: [DashboardService],
 })
 export class DashboardModule {}

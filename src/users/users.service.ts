@@ -19,10 +19,7 @@ export class UsersService {
   constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
   async findOneByEmail(email: string): Promise<UserDocument | null> {
-    return this.userModel
-      .findOne({ email, deletedAt: null })
-      .select('+password')
-      .exec();
+    return this.userModel.findOne({ email }).select('+password').exec();
   }
   async create(createUserDto: CreateUserDto): Promise<UserDocument> {
     const newUser = new this.userModel(createUserDto);
@@ -39,12 +36,12 @@ export class UsersService {
     );
   }
   findById(id: any) {
-    return this.userModel.findOne({ _id: id, deletedAt: null });
+    return this.userModel.findOne({ _id: id });
   }
 
   async findByPositionId(positionId: string): Promise<any[]> {
     return this.userModel
-      .find({ positionId: new Types.ObjectId(positionId), deletedAt: null })
+      .find({ positionId: new Types.ObjectId(positionId) })
       .select('-password -__v')
       .sort({ createdAt: -1 })
       .lean()
@@ -55,7 +52,7 @@ export class UsersService {
     companyId: Types.ObjectId,
     rolesToInclude?: string[],
   ): Promise<any[]> {
-    const query: any = { companyId, deletedAt: null };
+    const query: any = { companyId };
 
     if (rolesToInclude && rolesToInclude.length > 0) {
       query.role = { $in: rolesToInclude };
@@ -72,7 +69,7 @@ export class UsersService {
 
   async getProfile(userId: string): Promise<any> {
     const user = await this.userModel
-      .findOne({ _id: userId, deletedAt: null })
+      .findOne({ _id: userId })
       .populate('companyId', 'name address description')
       .populate('positionId', 'name description')
       .select('-password')
@@ -84,7 +81,7 @@ export class UsersService {
 
   async updateProfile(userId: string, dto: UpdateProfileDto): Promise<any> {
     const user = await this.userModel
-      .findOne({ _id: userId, deletedAt: null })
+      .findOne({ _id: userId })
       .select('+password')
       .exec();
 
@@ -93,7 +90,9 @@ export class UsersService {
     // Handle password change
     if (dto.newPassword) {
       if (!dto.currentPassword) {
-        throw new BadRequestException('currentPassword diperlukan untuk mengganti password.');
+        throw new BadRequestException(
+          'currentPassword diperlukan untuk mengganti password.',
+        );
       }
       const isMatch = await bcrypt.compare(dto.currentPassword, user.password);
       if (!isMatch) {
@@ -104,9 +103,13 @@ export class UsersService {
 
     // Handle email change — check uniqueness
     if (dto.email && dto.email !== user.email) {
-      const existing = await this.userModel.findOne({ email: dto.email, deletedAt: null }).exec();
+      const existing = await this.userModel
+        .findOne({ email: dto.email })
+        .exec();
       if (existing && (existing._id as any).toString() !== userId) {
-        throw new ConflictException('Email sudah digunakan oleh pengguna lain.');
+        throw new ConflictException(
+          'Email sudah digunakan oleh pengguna lain.',
+        );
       }
       user.email = dto.email;
     }

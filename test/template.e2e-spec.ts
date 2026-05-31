@@ -40,7 +40,12 @@ describe('TemplateController (e2e)', () => {
 
     const regRes = await request(app.getHttpServer())
       .post('/auth/register-company')
-      .send({ name: 'TPL Owner', email: 'tpl@owner.com', password: 'password123', companyName: 'TPL Corp' })
+      .send({
+        name: 'TPL Owner',
+        email: 'tpl@owner.com',
+        password: 'password123',
+        companyName: 'TPL Corp',
+      })
       .expect(200);
 
     ownerToken = regRes.body.data.token;
@@ -75,7 +80,10 @@ describe('TemplateController (e2e)', () => {
       workOrdersConfig: [
         {
           configId: null,
-          positionsOnDuty: { name: 'General Services', description: 'Divisi umum' },
+          positionsOnDuty: {
+            name: 'General Services',
+            description: 'Divisi umum',
+          },
           workOrderApprovalAccessType: 'auto',
           workReportApprovalAccessType: 'auto',
           minStaff: 1,
@@ -85,7 +93,9 @@ describe('TemplateController (e2e)', () => {
             title: 'Form Report',
             description: 'Report',
             formType: 'report',
-            fields: [{ order: 1, label: 'Catatan', type: 'textarea', required: true }],
+            fields: [
+              { order: 1, label: 'Catatan', type: 'textarea', required: true },
+            ],
           },
         },
       ],
@@ -104,7 +114,9 @@ describe('TemplateController (e2e)', () => {
 
       expect(res.body.data).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ companyTypeName: 'PT (Perseroan Terbatas)' }),
+          expect.objectContaining({
+            companyTypeName: 'PT (Perseroan Terbatas)',
+          }),
         ]),
       );
     });
@@ -130,7 +142,9 @@ describe('TemplateController (e2e)', () => {
         .expect(200);
 
       expect(res.body.data).toEqual(
-        expect.arrayContaining([expect.objectContaining({ title: 'Template Test' })]),
+        expect.arrayContaining([
+          expect.objectContaining({ title: 'Template Test' }),
+        ]),
       );
     });
 
@@ -203,7 +217,9 @@ describe('TemplateController (e2e)', () => {
         .send({ serviceTemplateIds: [serviceTemplateId] })
         .expect(201);
 
-      const form = await connection.model('FormTemplate').findOne({ title: 'Form Intake' });
+      const form = await connection
+        .model('FormTemplate')
+        .findOne({ title: 'Form Intake' });
       expect(form).toBeDefined();
     });
 
@@ -214,7 +230,9 @@ describe('TemplateController (e2e)', () => {
         .send({ serviceTemplateIds: [serviceTemplateId] })
         .expect(201);
 
-      const pos = await connection.model('Position').findOne({ name: 'General Services' });
+      const pos = await connection
+        .model('Position')
+        .findOne({ name: 'General Services' });
       expect(pos).toBeDefined();
     });
 

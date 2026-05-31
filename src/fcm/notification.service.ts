@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Notification, NotificationDocument } from './schemas/notification.schema';
+import {
+  Notification,
+  NotificationDocument,
+} from './schemas/notification.schema';
 
 @Injectable()
 export class NotificationService {
@@ -19,16 +22,18 @@ export class NotificationService {
         return;
       }
 
-      await this.notificationModel.updateOne(
-        { _id: new Types.ObjectId(notificationId) },
-        { 
-          $set: { 
-            isRead: true,
-            readAt: new Date()
-          } 
-        }
-      ).exec();
-      
+      await this.notificationModel
+        .updateOne(
+          { _id: new Types.ObjectId(notificationId) },
+          {
+            $set: {
+              isRead: true,
+              readAt: new Date(),
+            },
+          },
+        )
+        .exec();
+
       this.logger.log(`Notification ${notificationId} marked as read`);
     } catch (error: any) {
       this.logger.error(`Error marking notification as read: ${error.message}`);

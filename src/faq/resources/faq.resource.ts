@@ -1,6 +1,12 @@
 // src/faq/resources/faq.resource.ts
-import { ProviderDocument, ProviderHistoryItem } from '../interfaces/faq-provider.interface';
-import { FaqDocument, FaqHistoryItem } from '../interfaces/faq-document.interface';
+import {
+  ProviderDocument,
+  ProviderHistoryItem,
+} from '../interfaces/faq-provider.interface';
+import {
+  FaqDocument,
+  FaqHistoryItem,
+} from '../interfaces/faq-document.interface';
 
 /**
  * FaqResource

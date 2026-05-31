@@ -10,17 +10,36 @@ export class ServiceRequest {
   @Prop({ type: String, unique: true, sparse: true })
   code: string;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Service', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Service',
+    required: true,
+    index: true,
+  })
   serviceId: Types.ObjectId;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true,
+  })
   requestedBy: Types.ObjectId;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Company', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Company',
+    required: true,
+    index: true,
+  })
   companyId: Types.ObjectId;
 
   // Snapshot config values from Service at time of SR creation
-  @Prop({ type: String, enum: Object.values(ApprovalAccessType), default: ApprovalAccessType.AUTO })
+  @Prop({
+    type: String,
+    enum: Object.values(ApprovalAccessType),
+    default: ApprovalAccessType.AUTO,
+  })
   serviceRequestApprovalAccessType: ApprovalAccessType;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', default: null })
@@ -36,20 +55,37 @@ export class ServiceRequest {
     required: true,
     enum: Object.values(ServiceRequestStatus),
     default: ServiceRequestStatus.RECEIVED,
+    index: true,
   })
   serviceRequestStatus: ServiceRequestStatus;
 
   // Store snapshot form IDs at time of request creation
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormTemplate', default: null })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'FormTemplate',
+    default: null,
+  })
   intakeFormId: Types.ObjectId | null;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormTemplate', default: null })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'FormTemplate',
+    default: null,
+  })
   reviewFormId: Types.ObjectId | null;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormSubmission', default: null })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'FormSubmission',
+    default: null,
+  })
   intakeSubmissionId: Types.ObjectId | null;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FormSubmission', default: null })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'FormSubmission',
+    default: null,
+  })
   reviewSubmissionId: Types.ObjectId | null;
 
   // Date tracking per status transition
@@ -86,9 +122,17 @@ export class ServiceRequest {
   @Prop({ type: Date, default: null })
   closedAt: Date | null;
 
-  @Prop({ type: Date, default: null })
+  @Prop({ type: Date, default: null, index: true })
   deletedAt: Date | null;
 }
 
 export const ServiceRequestSchema =
   SchemaFactory.createForClass(ServiceRequest);
+
+ServiceRequestSchema.index({ companyId: 1, deletedAt: 1 });
+ServiceRequestSchema.index({ requestedBy: 1, deletedAt: 1 });
+ServiceRequestSchema.index({
+  companyId: 1,
+  serviceRequestStatus: 1,
+  deletedAt: 1,
+});

@@ -15,18 +15,22 @@ export class DepartmentAuthHelper {
   /**
    * Extract position ID string from either AuthenticatedUser or raw DB user document.
    */
-  private static _extractPositionId(user: AuthenticatedUser | UserDocumentLike): string | null {
-    if ('position' in user && (user as AuthenticatedUser).position?._id) {
-      return (user as AuthenticatedUser).position!._id.toString();
+  private static _extractPositionId(
+    user: AuthenticatedUser | UserDocumentLike,
+  ): string | null {
+    if ('position' in user && user.position?._id) {
+      return user.position._id.toString();
     }
-    if ('positionId' in user && (user as UserDocumentLike).positionId) {
-      const pid = (user as UserDocumentLike).positionId;
+    if ('positionId' in user && user.positionId) {
+      const pid = user.positionId;
       return pid?._id?.toString() ?? pid?.toString() ?? null;
     }
     return null;
   }
 
-  private static _hasPosition(user: AuthenticatedUser | UserDocumentLike): boolean {
+  private static _hasPosition(
+    user: AuthenticatedUser | UserDocumentLike,
+  ): boolean {
     return !!this._extractPositionId(user);
   }
 
@@ -34,7 +38,9 @@ export class DepartmentAuthHelper {
     return user.role === Role.CompanyManager && !this._hasPosition(user);
   }
 
-  static isDepartmentManager(user: AuthenticatedUser | UserDocumentLike): boolean {
+  static isDepartmentManager(
+    user: AuthenticatedUser | UserDocumentLike,
+  ): boolean {
     return user.role === Role.CompanyManager && this._hasPosition(user);
   }
 
@@ -90,4 +96,3 @@ export class DepartmentAuthHelper {
     );
   }
 }
-

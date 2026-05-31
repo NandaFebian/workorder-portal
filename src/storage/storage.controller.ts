@@ -29,7 +29,7 @@ export class StorageController {
   ) {
     // Teruskan buffer ke Service untuk di-upload ke MinIO
     const fileUrl = await this.storageService.uploadImage(file);
-    
+
     return {
       success: true,
       message: 'File gambar berhasil diunggah',

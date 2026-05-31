@@ -12,7 +12,11 @@ export class ExternalAccountResource {
       pairedAt: obj.pairedAt,
     };
 
-    if (obj.companyId && typeof obj.companyId === 'object' && obj.companyId._id) {
+    if (
+      obj.companyId &&
+      typeof obj.companyId === 'object' &&
+      obj.companyId._id
+    ) {
       result.company = CompanyResource.transformCompanyMinimal(obj.companyId);
     } else {
       result.company = obj.companyId;

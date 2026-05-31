@@ -91,7 +91,9 @@ describe('MembershipResource', () => {
 
     it('should handle empty or invalid lists', () => {
       expect(MembershipResource.transformMembershipCodeList([])).toEqual([]);
-      expect(MembershipResource.transformMembershipCodeList(null as any)).toEqual([]);
+      expect(
+        MembershipResource.transformMembershipCodeList(null as any),
+      ).toEqual([]);
     });
   });
 });

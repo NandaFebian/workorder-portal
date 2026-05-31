@@ -7,8 +7,14 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { CompanyType, CompanyTypeDocument } from './schemas/company-type.schema';
-import { ServiceTemplate, ServiceTemplateDocument } from './schemas/service-template.schema';
+import {
+  CompanyType,
+  CompanyTypeDocument,
+} from './schemas/company-type.schema';
+import {
+  ServiceTemplate,
+  ServiceTemplateDocument,
+} from './schemas/service-template.schema';
 import { FormsService } from '../form/form.service';
 import { ServicesInternalService } from '../service/services.internal.service';
 import { PositionsService } from '../positions/positions.service';
@@ -18,8 +24,10 @@ import { ApprovalAccessType } from '../common/enums/approval-access-type.enum';
 @Injectable()
 export class TemplateService {
   constructor(
-    @InjectModel(CompanyType.name) private companyTypeModel: Model<CompanyTypeDocument>,
-    @InjectModel(ServiceTemplate.name) private serviceTemplateModel: Model<ServiceTemplateDocument>,
+    @InjectModel(CompanyType.name)
+    private companyTypeModel: Model<CompanyTypeDocument>,
+    @InjectModel(ServiceTemplate.name)
+    private serviceTemplateModel: Model<ServiceTemplateDocument>,
     private readonly formsService: FormsService,
     private readonly servicesService: ServicesInternalService,
     private readonly positionsService: PositionsService,
@@ -28,7 +36,11 @@ export class TemplateService {
   // ─── GET /template/company-type ──────────────────────────────────────────────
 
   async getCompanyTypes() {
-    const types = await this.companyTypeModel.find().select('_id name description').lean().exec();
+    const types = await this.companyTypeModel
+      .find()
+      .select('_id name description')
+      .lean()
+      .exec();
     return types.map((t) => ({
       _id: t._id,
       companyTypeName: t.name,
@@ -42,7 +54,10 @@ export class TemplateService {
     if (!Types.ObjectId.isValid(companyTypeId)) {
       throw new NotFoundException('Invalid Company Type ID');
     }
-    const companyType = await this.companyTypeModel.findById(companyTypeId).lean().exec();
+    const companyType = await this.companyTypeModel
+      .findById(companyTypeId)
+      .lean()
+      .exec();
     if (!companyType) {
       throw new NotFoundException('Company Type not found');
     }
@@ -66,7 +81,10 @@ export class TemplateService {
     if (!Types.ObjectId.isValid(serviceTemplateId)) {
       throw new NotFoundException('Invalid Service Template ID');
     }
-    const template = await this.serviceTemplateModel.findById(serviceTemplateId).lean().exec();
+    const template = await this.serviceTemplateModel
+      .findById(serviceTemplateId)
+      .lean()
+      .exec();
     if (!template) {
       throw new NotFoundException('Service Template not found');
     }
@@ -76,7 +94,8 @@ export class TemplateService {
       title: template.title,
       description: template.description,
       accessType: (template as any).accessType ?? 'internal',
-      draftingWorkOrderType: (template as any).draftingWorkOrderType ?? 'manual',
+      draftingWorkOrderType:
+        (template as any).draftingWorkOrderType ?? 'manual',
       isActive: false,
       serviceRequestConfig: {
         intakeForm: template.serviceRequestConfig?.intakeForm
@@ -96,7 +115,8 @@ export class TemplateService {
             }
           : null,
         serviceRequestApprovalAccessType:
-          template.serviceRequestConfig?.serviceRequestApprovalAccessType ?? ApprovalAccessType.AUTO,
+          template.serviceRequestConfig?.serviceRequestApprovalAccessType ??
+          ApprovalAccessType.AUTO,
         reviewNeed: template.serviceRequestConfig?.reviewNeed ?? false,
       },
       workOrdersConfig: (template.workOrdersConfig ?? []).map((cfg) => ({
@@ -117,8 +137,10 @@ export class TemplateService {
               fields: cfg.workReportForm.fields ?? [],
             }
           : null,
-        workOrderApprovalAccessType: cfg.workOrderApprovalAccessType ?? ApprovalAccessType.AUTO,
-        workReportApprovalAccessType: cfg.workReportApprovalAccessType ?? ApprovalAccessType.AUTO,
+        workOrderApprovalAccessType:
+          cfg.workOrderApprovalAccessType ?? ApprovalAccessType.AUTO,
+        workReportApprovalAccessType:
+          cfg.workReportApprovalAccessType ?? ApprovalAccessType.AUTO,
         minStaff: cfg.minStaff,
         maxStaff: cfg.maxStaff,
       })),
@@ -128,7 +150,8 @@ export class TemplateService {
     const positionsRequired = (template.workOrdersConfig ?? []).map((cfg) => ({
       _id: new Types.ObjectId().toString(),
       name: cfg.positionsOnDuty?.name || 'Generated Position',
-      description: 'Posisi yang dibutuhkan untuk mengeksekusi layanan ini (ter-generate otomatis jika belum ada).',
+      description:
+        'Posisi yang dibutuhkan untuk mengeksekusi layanan ini (ter-generate otomatis jika belum ada).',
       isActive: true,
       companyId: null,
     }));
@@ -142,18 +165,25 @@ export class TemplateService {
 
   // ─── POST /template/services/generate ────────────────────────────────────────
 
-  async generateServices(user: AuthenticatedUser, serviceTemplateIds: string[]) {
+  async generateServices(
+    user: AuthenticatedUser,
+    serviceTemplateIds: string[],
+  ) {
     if (!user.company?._id) {
       throw new ForbiddenException('User is not associated with any company.');
     }
     if (!serviceTemplateIds || serviceTemplateIds.length === 0) {
-      throw new BadRequestException('serviceTemplateIds must be a non-empty array.');
+      throw new BadRequestException(
+        'serviceTemplateIds must be a non-empty array.',
+      );
     }
 
     const generatedServices: any[] = [];
 
     // Helper: create a real Form from a blueprint embedded in the template
-    const createFormFromBlueprint = async (blueprint: any): Promise<string | null> => {
+    const createFormFromBlueprint = async (
+      blueprint: any,
+    ): Promise<string | null> => {
       if (!blueprint) return null;
       const form = await this.formsService.createTemplate(
         {
@@ -168,7 +198,9 @@ export class TemplateService {
     };
 
     // Helper: get existing position by name or create a new one
-    const getOrCreatePosition = async (positionName: string): Promise<string> => {
+    const getOrCreatePosition = async (
+      positionName: string,
+    ): Promise<string> => {
       const positions = await this.positionsService.findAll(user);
       const existing = positions.find(
         (p: any) => p.name.toLowerCase() === positionName.toLowerCase(),
@@ -187,28 +219,45 @@ export class TemplateService {
         throw new BadRequestException(`Invalid template ID: ${templateId}`);
       }
 
-      const template = await this.serviceTemplateModel.findById(templateId).lean().exec();
+      const template = await this.serviceTemplateModel
+        .findById(templateId)
+        .lean()
+        .exec();
       if (!template) {
-        throw new NotFoundException(`Service template not found: ${templateId}`);
+        throw new NotFoundException(
+          `Service template not found: ${templateId}`,
+        );
       }
 
       // Materialise SR forms from blueprints
-      const intakeFormId = await createFormFromBlueprint(template.serviceRequestConfig?.intakeForm);
-      const reviewFormId = await createFormFromBlueprint(template.serviceRequestConfig?.reviewForm);
+      const intakeFormId = await createFormFromBlueprint(
+        template.serviceRequestConfig?.intakeForm,
+      );
+      const reviewFormId = await createFormFromBlueprint(
+        template.serviceRequestConfig?.reviewForm,
+      );
 
       // Materialise WO configs
       const workOrdersConfigDto: any[] = [];
       for (const wConfig of template.workOrdersConfig ?? []) {
-        const positionId = await getOrCreatePosition(wConfig.positionsOnDuty?.name || 'Generated Position');
-        const workOrderFormId = await createFormFromBlueprint(wConfig.workOrderForm);
-        const workReportFormId = await createFormFromBlueprint(wConfig.workReportForm);
+        const positionId = await getOrCreatePosition(
+          wConfig.positionsOnDuty?.name || 'Generated Position',
+        );
+        const workOrderFormId = await createFormFromBlueprint(
+          wConfig.workOrderForm,
+        );
+        const workReportFormId = await createFormFromBlueprint(
+          wConfig.workReportForm,
+        );
 
         workOrdersConfigDto.push({
           positionId,
           workOrderFormId,
           workReportFormId,
-          workOrderApprovalAccessType: wConfig.workOrderApprovalAccessType ?? ApprovalAccessType.AUTO,
-          workReportApprovalAccessType: wConfig.workReportApprovalAccessType ?? ApprovalAccessType.AUTO,
+          workOrderApprovalAccessType:
+            wConfig.workOrderApprovalAccessType ?? ApprovalAccessType.AUTO,
+          workReportApprovalAccessType:
+            wConfig.workReportApprovalAccessType ?? ApprovalAccessType.AUTO,
           minStaff: wConfig.minStaff,
           maxStaff: wConfig.maxStaff,
         });
@@ -218,20 +267,25 @@ export class TemplateService {
         title: template.title,
         description: template.description,
         accessType: (template as any).accessType ?? 'internal',
-        draftingWorkOrderType: (template as any).draftingWorkOrderType ?? 'manual',
-        isActive: false,        // Must be inactive until owner manually activates
+        draftingWorkOrderType:
+          (template as any).draftingWorkOrderType ?? 'manual',
+        isActive: false, // Must be inactive until owner manually activates
         serviceRequestConfig: {
           intakeFormId,
           reviewFormId,
           serviceRequestApprovalAccessType:
-            template.serviceRequestConfig?.serviceRequestApprovalAccessType ?? ApprovalAccessType.AUTO,
+            template.serviceRequestConfig?.serviceRequestApprovalAccessType ??
+            ApprovalAccessType.AUTO,
           reviewNeed: template.serviceRequestConfig?.reviewNeed ?? false,
         },
         workOrdersConfig: workOrdersConfigDto,
       };
 
-      const savedService = await this.servicesService.create(createServiceDto, user);
-      
+      const savedService = await this.servicesService.create(
+        createServiceDto,
+        user,
+      );
+
       // Extract only summary fields
       const summary = {
         _id: savedService._id,

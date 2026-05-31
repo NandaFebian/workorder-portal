@@ -21,6 +21,7 @@ import {
 } from 'src/customer-pairing/schemas/external-account.schema';
 import { ExternalAccountResource } from 'src/customer-pairing/resources/external-account.resource';
 import { parse } from 'csv-parse/sync';
+import { decrypt } from 'src/common/utils/crypto.util';
 
 @Injectable()
 export class MembershipService {
@@ -62,8 +63,12 @@ export class MembershipService {
     }
 
     const firstRecordHeaders = Object.keys(records[0]);
-    const hasEmail = firstRecordHeaders.includes('external_customer_email') || firstRecordHeaders.includes('email');
-    const hasName = firstRecordHeaders.includes('external_customer_name') || firstRecordHeaders.includes('name');
+    const hasEmail =
+      firstRecordHeaders.includes('external_customer_email') ||
+      firstRecordHeaders.includes('email');
+    const hasName =
+      firstRecordHeaders.includes('external_customer_name') ||
+      firstRecordHeaders.includes('name');
     const hasToken = firstRecordHeaders.includes('token');
 
     if (!hasEmail || !hasName || !hasToken) {
@@ -93,11 +98,14 @@ export class MembershipService {
     }
 
     const tokens = docs.map((d) => d.token);
-    const existingCodes = await this.membershipCodeModel.find({
-      companyId: user.company._id,
-      token: { $in: tokens },
-      deletedAt: null,
-    }).select('token').lean();
+    const existingCodes = await this.membershipCodeModel
+      .find({
+        companyId: user.company._id,
+        token: { $in: tokens },
+        deletedAt: null,
+      })
+      .select('token')
+      .lean();
 
     if (existingCodes.length > 0) {
       const duplicates = existingCodes.map((c) => c.token);
@@ -128,10 +136,7 @@ export class MembershipService {
       .exec();
   }
 
-  async isUserSubscribed(
-    userId: string,
-    companyId: string,
-  ): Promise<boolean> {
+  async isUserSubscribed(userId: string, companyId: string): Promise<boolean> {
     if (
       !userId ||
       !companyId ||
@@ -142,33 +147,48 @@ export class MembershipService {
     }
 
     try {
-      const company = await this.companyModel.findOne({
-        _id: companyId,
-        deletedAt: null,
-      }).select('integrationConfig').lean();
+      const company = await this.companyModel
+        .findOne({
+          _id: companyId,
+          deletedAt: null,
+        })
+        .select('integrationConfig')
+        .lean();
 
       const config = company?.integrationConfig;
-      const integrationType = config?.integrationType || (config as any)?.integration_type || 'external_system';
+      const integrationType =
+        config?.integrationType ||
+        (config as any)?.integration_type ||
+        'external_system';
 
       if (integrationType === 'claim_token') {
-        const membership = await this.membershipCodeModel.findOne({
-          companyId: companyId,
-          claimedBy: userId,
-          $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
-        }).select('_id').lean();
+        const membership = await this.membershipCodeModel
+          .findOne({
+            companyId: companyId,
+            claimedBy: userId,
+            $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
+          })
+          .select('_id')
+          .lean();
         return !!membership;
       }
 
-      const isIntegrationActive = config?.isIntegrationActive || (config as any)?.is_integration_active || false;
+      const isIntegrationActive =
+        config?.isIntegrationActive ||
+        (config as any)?.is_integration_active ||
+        false;
       if (isIntegrationActive) {
         return this.checkExternalSubscription(userId, companyId, config as any);
       }
 
-      const membership = await this.membershipCodeModel.findOne({
-        companyId: companyId,
-        claimedBy: userId,
-        $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
-      }).select('_id').lean();
+      const membership = await this.membershipCodeModel
+        .findOne({
+          companyId: companyId,
+          claimedBy: userId,
+          $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
+        })
+        .select('_id')
+        .lean();
 
       return !!membership;
     } catch {
@@ -190,8 +210,10 @@ export class MembershipService {
     if (!account) return false;
 
     const cfg = integrationConfig;
-    const externalCheckMembershipsUrl = cfg?.externalCheckMembershipsUrl || cfg?.external_check_memberships_url;
-    const secretKey = cfg?.secretKey || cfg?.secret_key;
+    const externalCheckMembershipsUrl =
+      cfg?.externalCheckMembershipsUrl || cfg?.external_check_memberships_url;
+    const rawSecretKey = cfg?.secretKey || cfg?.secret_key;
+    const secretKey = rawSecretKey ? decrypt(rawSecretKey) : null;
     if (!externalCheckMembershipsUrl || !secretKey) {
       return !!account;
     }
@@ -279,11 +301,17 @@ export class MembershipService {
       if (result.has(clientId)) {
         const existing = result.get(clientId);
         existing.externalAccount = ExternalAccountResource.transform(ea);
-        
-        const m = memberships.find((x) => (x.claimedBy as any)?._id?.toString() === clientId);
+
+        const m = memberships.find(
+          (x) => (x.claimedBy as any)?._id?.toString() === clientId,
+        );
         if (m) {
-          const mTime = m.claimedAt ? new Date(m.claimedAt).getTime() : Infinity;
-          const eaTime = ea.pairedAt ? new Date(ea.pairedAt).getTime() : Infinity;
+          const mTime = m.claimedAt
+            ? new Date(m.claimedAt).getTime()
+            : Infinity;
+          const eaTime = ea.pairedAt
+            ? new Date(ea.pairedAt).getTime()
+            : Infinity;
           if (eaTime < mTime) {
             existing.integrationType = eaMethod;
           }
@@ -301,7 +329,12 @@ export class MembershipService {
   }
 
   async claimCode(
-    dto: { code?: string; token?: string; companyId?: string; company_id?: string },
+    dto: {
+      code?: string;
+      token?: string;
+      companyId?: string;
+      company_id?: string;
+    },
     user: AuthenticatedUser,
   ): Promise<any> {
     const token = dto.token || dto.code;
@@ -324,13 +357,19 @@ export class MembershipService {
       throw new NotFoundException('Invalid membership code');
     }
 
-    const company = await this.companyModel.findOne({
-      _id: codeDoc.companyId,
-      deletedAt: null,
-    }).select('integrationConfig').lean();
+    const company = await this.companyModel
+      .findOne({
+        _id: codeDoc.companyId,
+        deletedAt: null,
+      })
+      .select('integrationConfig')
+      .lean();
 
     const config = company?.integrationConfig;
-    const integrationType = config?.integrationType || (config as any)?.integration_type || 'external_system';
+    const integrationType =
+      config?.integrationType ||
+      (config as any)?.integration_type ||
+      'external_system';
     if (integrationType !== 'claim_token') {
       throw new BadRequestException(
         'This company does not use token-based membership. Please use the external account integration.',
@@ -353,19 +392,21 @@ export class MembershipService {
     }
 
     const updatedDoc = await this.membershipCodeModel.findOneAndUpdate(
-       { _id: codeDoc._id, claimedBy: null },
-       {
-         $set: {
-           claimedBy: user._id,
-           claimedAt: new Date(),
-           integrationType: 'claim_token',
-         },
-       },
-       { new: true }
-     );
+      { _id: codeDoc._id, claimedBy: null },
+      {
+        $set: {
+          claimedBy: user._id,
+          claimedAt: new Date(),
+          integrationType: 'claim_token',
+        },
+      },
+      { new: true },
+    );
 
     if (!updatedDoc) {
-      throw new ConflictException('Membership code already claimed by another concurrent request');
+      throw new ConflictException(
+        'Membership code already claimed by another concurrent request',
+      );
     }
 
     const createdEa = await this.externalAccountModel.create({

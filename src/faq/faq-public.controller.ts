@@ -29,10 +29,7 @@ export class FaqPublicController {
   @Post('ask')
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.OK)
-  async ask(
-    @GetUser() user: AuthenticatedUser,
-    @Body() dto: AskFaqDto,
-  ) {
+  async ask(@GetUser() user: AuthenticatedUser, @Body() dto: AskFaqDto) {
     const result = await this.faqService.ask(
       dto.companyId,
       dto.question,

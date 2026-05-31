@@ -15,7 +15,7 @@ export class Company {
   @Prop({ required: false, default: null })
   description: string;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', index: true })
   ownerId: MongooseSchema.Types.ObjectId;
 
   @Prop({
@@ -51,7 +51,11 @@ export class Company {
       externalCheckStatusUrl: { type: String, default: null },
       secretKey: { type: String, default: null },
       isIntegrationActive: { type: Boolean, default: false },
-      integrationType: { type: String, enum: ['external_system', 'claim_token'], default: 'external_system' },
+      integrationType: {
+        type: String,
+        enum: ['external_system', 'claim_token'],
+        default: 'external_system',
+      },
     },
     default: {},
     _id: false,
@@ -66,8 +70,11 @@ export class Company {
     integrationType: 'external_system' | 'claim_token';
   };
 
-  @Prop({ type: Date, default: null })
+  @Prop({ type: Date, default: null, index: true })
   deletedAt: Date;
 }
 
 export const CompanySchema = SchemaFactory.createForClass(Company);
+
+CompanySchema.index({ ownerId: 1, deletedAt: 1 });
+CompanySchema.index({ isActive: 1, deletedAt: 1 });

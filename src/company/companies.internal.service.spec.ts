@@ -6,7 +6,10 @@ import { Company } from './schemas/company.schemas';
 import { Invitation } from './schemas/invitation.schemas';
 import { UsersService } from '../users/users.service';
 import { PositionsService } from '../positions/positions.service';
-import { NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import {
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { Types } from 'mongoose';
 import { Role } from '../common/enums/role.enum';
 

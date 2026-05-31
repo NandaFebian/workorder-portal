@@ -12,7 +12,10 @@ export class DashboardController {
     @Req() req: any,
     @Query('period_type') periodType?: string,
   ) {
-    return this.dashboardService.getServiceRequestDashboard(req.user, periodType);
+    return this.dashboardService.getServiceRequestDashboard(
+      req.user,
+      periodType,
+    );
   }
 
   @Get('work-order')

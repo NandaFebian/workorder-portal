@@ -6,7 +6,10 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { ServicePrice, ServicePriceDocument } from './schemas/service-price.schema';
+import {
+  ServicePrice,
+  ServicePriceDocument,
+} from './schemas/service-price.schema';
 import { CreateServicePriceDto } from './dto/create-service-price.dto';
 import { UpdateServicePriceDto } from './dto/update-service-price.dto';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
@@ -18,7 +21,8 @@ import { FormsService } from 'src/form/form.service';
 @Injectable()
 export class ServicePriceService {
   constructor(
-    @InjectModel(ServicePrice.name) private priceModel: Model<ServicePriceDocument>,
+    @InjectModel(ServicePrice.name)
+    private priceModel: Model<ServicePriceDocument>,
     @InjectModel(Service.name) private serviceModel: Model<ServiceDocument>,
     private readonly formsService: FormsService,
   ) {}
@@ -27,8 +31,11 @@ export class ServicePriceService {
     if (!Types.ObjectId.isValid(serviceId)) {
       throw new NotFoundException(`Invalid service ID: ${serviceId}`);
     }
-    const svc = await this.serviceModel.findOne({ _id: new Types.ObjectId(serviceId), deletedAt: null }).exec();
-    if (!svc) throw new NotFoundException(`Service with ID ${serviceId} not found`);
+    const svc = await this.serviceModel
+      .findOne({ _id: new Types.ObjectId(serviceId), deletedAt: null })
+      .exec();
+    if (!svc)
+      throw new NotFoundException(`Service with ID ${serviceId} not found`);
 
     const latest = await this.serviceModel
       .findOne({ serviceKey: svc.serviceKey, deletedAt: null })
@@ -39,8 +46,15 @@ export class ServicePriceService {
 
   private checkDepartmentAccess(user: AuthenticatedUser, service: any) {
     if (DepartmentAuthHelper.isDepartmentManager(user)) {
-      if (!DepartmentAuthHelper.canManageService(user, service.workOrdersConfig ?? [])) {
-        throw new ForbiddenException('Department managers can only manage pricing for their services.');
+      if (
+        !DepartmentAuthHelper.canManageService(
+          user,
+          service.workOrdersConfig ?? [],
+        )
+      ) {
+        throw new ForbiddenException(
+          'Department managers can only manage pricing for their services.',
+        );
       }
     }
   }
@@ -60,7 +74,8 @@ export class ServicePriceService {
   }
 
   async findAll(user: AuthenticatedUser): Promise<any[]> {
-    if (!user.company?._id) throw new ForbiddenException('User is not associated with any company.');
+    if (!user.company?._id)
+      throw new ForbiddenException('User is not associated with any company.');
 
     const companyServices = await getServicesWithAggregation(
       this.serviceModel,
@@ -69,7 +84,10 @@ export class ServicePriceService {
       true,
     );
 
-    const filteredServices = DepartmentAuthHelper.filterServicesForUser(user, companyServices);
+    const filteredServices = DepartmentAuthHelper.filterServicesForUser(
+      user,
+      companyServices,
+    );
     const serviceKeys = filteredServices.map((s: any) => s.serviceKey);
 
     const prices = await this.priceModel
@@ -78,7 +96,9 @@ export class ServicePriceService {
       .exec();
 
     return prices.map((p: any) => {
-      const svc = filteredServices.find((s: any) => s.serviceKey === p.serviceKey);
+      const svc = filteredServices.find(
+        (s: any) => s.serviceKey === p.serviceKey,
+      );
       return {
         _id: p._id,
         service: svc || null,
@@ -87,8 +107,12 @@ export class ServicePriceService {
     });
   }
 
-  async create(dto: CreateServicePriceDto, user: AuthenticatedUser): Promise<any> {
-    if (!user.company?._id) throw new ForbiddenException('User is not associated with any company.');
+  async create(
+    dto: CreateServicePriceDto,
+    user: AuthenticatedUser,
+  ): Promise<any> {
+    if (!user.company?._id)
+      throw new ForbiddenException('User is not associated with any company.');
 
     const service = await this.resolveLatestService(dto.serviceId);
     if (service.companyId.toString() !== user.company._id.toString()) {
@@ -101,7 +125,9 @@ export class ServicePriceService {
       deletedAt: null,
     });
     if (existing) {
-      throw new ConflictException('A pricing configuration already exists for this service.');
+      throw new ConflictException(
+        'A pricing configuration already exists for this service.',
+      );
     }
 
     const created = await this.priceModel.create({
@@ -112,15 +138,27 @@ export class ServicePriceService {
     return this.hydratePriceItem(created);
   }
 
-  async update(id: string, dto: UpdateServicePriceDto, user: AuthenticatedUser): Promise<any> {
-    if (!user.company?._id) throw new ForbiddenException('User is not associated with any company.');
-    if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Invalid price config ID');
+  async update(
+    id: string,
+    dto: UpdateServicePriceDto,
+    user: AuthenticatedUser,
+  ): Promise<any> {
+    if (!user.company?._id)
+      throw new ForbiddenException('User is not associated with any company.');
+    if (!Types.ObjectId.isValid(id))
+      throw new NotFoundException('Invalid price config ID');
 
-    const price = await this.priceModel.findOne({ _id: id, deletedAt: null }).exec();
+    const price = await this.priceModel
+      .findOne({ _id: id, deletedAt: null })
+      .exec();
     if (!price) throw new NotFoundException('Service pricing config not found');
 
     const services = await this.serviceModel
-      .find({ serviceKey: price.serviceKey, companyId: user.company._id, deletedAt: null })
+      .find({
+        serviceKey: price.serviceKey,
+        companyId: user.company._id,
+        deletedAt: null,
+      })
       .exec();
     if (services.length === 0) {
       throw new ForbiddenException('Service does not belong to your company.');
@@ -135,14 +173,22 @@ export class ServicePriceService {
   }
 
   async remove(id: string, user: AuthenticatedUser): Promise<any> {
-    if (!user.company?._id) throw new ForbiddenException('User is not associated with any company.');
-    if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Invalid price config ID');
+    if (!user.company?._id)
+      throw new ForbiddenException('User is not associated with any company.');
+    if (!Types.ObjectId.isValid(id))
+      throw new NotFoundException('Invalid price config ID');
 
-    const price = await this.priceModel.findOne({ _id: id, deletedAt: null }).exec();
+    const price = await this.priceModel
+      .findOne({ _id: id, deletedAt: null })
+      .exec();
     if (!price) throw new NotFoundException('Service pricing config not found');
 
     const services = await this.serviceModel
-      .find({ serviceKey: price.serviceKey, companyId: user.company._id, deletedAt: null })
+      .find({
+        serviceKey: price.serviceKey,
+        companyId: user.company._id,
+        deletedAt: null,
+      })
       .exec();
     if (services.length === 0) {
       throw new ForbiddenException('Service does not belong to your company.');

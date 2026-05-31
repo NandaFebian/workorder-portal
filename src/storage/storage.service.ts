@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { ConfigService } from '@nestjs/config';
 import * as path from 'path';
@@ -10,15 +14,17 @@ import sharp from 'sharp';
 export class StorageService {
   private s3Client: S3Client;
   private readonly logger = new Logger(StorageService.name);
-  
+
   private bucketName: string;
 
   constructor(private configService: ConfigService) {
-    this.bucketName = this.configService.get<string>('MINIO_BUCKET_NAME') || 'workorder';
-    
-    const endpoint = this.configService.get<string>('MINIO_PRIVATE_ENDPOINT') || 
-                     this.configService.get<string>('MINIO_ENDPOINT') || 
-                     'http://localhost:9000';
+    this.bucketName =
+      this.configService.get<string>('MINIO_BUCKET_NAME') || 'workorder';
+
+    const endpoint =
+      this.configService.get<string>('MINIO_PRIVATE_ENDPOINT') ||
+      this.configService.get<string>('MINIO_ENDPOINT') ||
+      'http://localhost:9000';
 
     this.logger.log(`Initializing MinIO with endpoint: ${endpoint}`);
 
@@ -26,12 +32,14 @@ export class StorageService {
       region: 'us-east-1',
       endpoint: endpoint,
       credentials: {
-        accessKeyId: this.configService.get<string>('MINIO_ROOT_USER') || 
-                     this.configService.get<string>('MINIO_ACCESS_KEY') || 
-                     'minioadmin',
-        secretAccessKey: this.configService.get<string>('MINIO_ROOT_PASSWORD') || 
-                         this.configService.get<string>('MINIO_SECRET_KEY') || 
-                         'minioadmin',
+        accessKeyId:
+          this.configService.get<string>('MINIO_ROOT_USER') ||
+          this.configService.get<string>('MINIO_ACCESS_KEY') ||
+          'minioadmin',
+        secretAccessKey:
+          this.configService.get<string>('MINIO_ROOT_PASSWORD') ||
+          this.configService.get<string>('MINIO_SECRET_KEY') ||
+          'minioadmin',
       },
       forcePathStyle: true,
     });
@@ -40,7 +48,7 @@ export class StorageService {
   async uploadImage(file: Express.Multer.File): Promise<string> {
     // Ubah ekstensi menjadi .webp secara seragam untuk efisiensi tinggi
     const fileName = `${uuidv4()}.webp`;
-    
+
     try {
       // Proses optimasi gambar: Resize & Konversi ke WebP
       const optimizedBuffer = await sharp(file.buffer)
@@ -58,14 +66,16 @@ export class StorageService {
       await this.s3Client.send(command);
 
       // Kembalikan URL untuk bisa diakses langsung (asumsi bucket disetting Public di MinIO)
-      const publicEndpoint = this.configService.get<string>('MINIO_PUBLIC_ENDPOINT') || 
-                             this.configService.get<string>('MINIO_ENDPOINT') || 
-                             'http://localhost:9000';
+      const publicEndpoint =
+        this.configService.get<string>('MINIO_PUBLIC_ENDPOINT') ||
+        this.configService.get<string>('MINIO_ENDPOINT') ||
+        'http://localhost:9000';
       return `${publicEndpoint}/${this.bucketName}/${fileName}`;
-      
     } catch (error) {
       console.error('Error saat upload ke MinIO:', error);
-      throw new InternalServerErrorException('Gagal mengunggah file ke server MinIO');
+      throw new InternalServerErrorException(
+        'Gagal mengunggah file ke server MinIO',
+      );
     }
   }
 }

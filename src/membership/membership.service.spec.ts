@@ -1,6 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
-import { BadRequestException, ForbiddenException, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { MembershipService } from './membership.service';
 import { MembershipCode } from './schemas/membership.schema';
 import { Company } from 'src/company/schemas/company.schemas';
@@ -83,22 +88,22 @@ describe('MembershipService', () => {
       const mockFile = {
         buffer: Buffer.from('invalid,csv\n"unclosed quote'),
       } as any;
-      await expect(
-        service.importFromCsv(mockFile, mockUser),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.importFromCsv(mockFile, mockUser)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException if CSV is empty', async () => {
       const mockFile = {
         buffer: Buffer.from(''),
       } as any;
-      await expect(
-        service.importFromCsv(mockFile, mockUser),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.importFromCsv(mockFile, mockUser)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should successfully import when all required columns are present', async () => {
-      const csvContent = 
+      const csvContent =
         'external_customer_email,external_customer_name,token\n' +
         'user1@example.com,User One,TOKEN123\n' +
         'user2@example.com,User Two,TOKEN456';
@@ -107,8 +112,16 @@ describe('MembershipService', () => {
       } as any;
 
       membershipCodeModelMock.insertMany.mockResolvedValue([
-        { externalCustomerEmail: 'user1@example.com', externalCustomerName: 'User One', token: 'TOKEN123' },
-        { externalCustomerEmail: 'user2@example.com', externalCustomerName: 'User Two', token: 'TOKEN456' },
+        {
+          externalCustomerEmail: 'user1@example.com',
+          externalCustomerName: 'User One',
+          token: 'TOKEN123',
+        },
+        {
+          externalCustomerEmail: 'user2@example.com',
+          externalCustomerName: 'User Two',
+          token: 'TOKEN456',
+        },
       ]);
 
       const result = await service.importFromCsv(mockFile, mockUser);
@@ -130,15 +143,18 @@ describe('MembershipService', () => {
     });
 
     it('should support email and name aliases', async () => {
-      const csvContent = 
-        'email,name,token\n' +
-        'user1@example.com,User One,TOKEN123';
+      const csvContent =
+        'email,name,token\n' + 'user1@example.com,User One,TOKEN123';
       const mockFile = {
         buffer: Buffer.from(csvContent),
       } as any;
 
       membershipCodeModelMock.insertMany.mockResolvedValue([
-        { externalCustomerEmail: 'user1@example.com', externalCustomerName: 'User One', token: 'TOKEN123' },
+        {
+          externalCustomerEmail: 'user1@example.com',
+          externalCustomerName: 'User One',
+          token: 'TOKEN123',
+        },
       ]);
 
       await service.importFromCsv(mockFile, mockUser);
@@ -153,15 +169,18 @@ describe('MembershipService', () => {
     });
 
     it('should support any column order and spaced/capitalized headers', async () => {
-      const csvContent = 
-        ' Token , Name , email \n' +
-        'TOKEN999,User Nine,user9@example.com';
+      const csvContent =
+        ' Token , Name , email \n' + 'TOKEN999,User Nine,user9@example.com';
       const mockFile = {
         buffer: Buffer.from(csvContent),
       } as any;
 
       membershipCodeModelMock.insertMany.mockResolvedValue([
-        { externalCustomerEmail: 'user9@example.com', externalCustomerName: 'User Nine', token: 'TOKEN999' },
+        {
+          externalCustomerEmail: 'user9@example.com',
+          externalCustomerName: 'User Nine',
+          token: 'TOKEN999',
+        },
       ]);
 
       await service.importFromCsv(mockFile, mockUser);
@@ -176,35 +195,33 @@ describe('MembershipService', () => {
     });
 
     it('should throw BadRequestException if token column is missing or empty', async () => {
-      const csvContent = 
+      const csvContent =
         'external_customer_email,external_customer_name,token\n' +
         'user1@example.com,User One,\n';
       const mockFile = {
         buffer: Buffer.from(csvContent),
       } as any;
 
-      await expect(
-        service.importFromCsv(mockFile, mockUser),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.importFromCsv(mockFile, mockUser)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException if email or name columns are missing', async () => {
-      const csvContent = 
-        'external_customer_name,token\n' +
-        'User One,TOKEN123\n';
+      const csvContent =
+        'external_customer_name,token\n' + 'User One,TOKEN123\n';
       const mockFile = {
         buffer: Buffer.from(csvContent),
       } as any;
 
-      await expect(
-        service.importFromCsv(mockFile, mockUser),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.importFromCsv(mockFile, mockUser)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw ConflictException if token already exists in the database for the company', async () => {
-      const csvContent = 
-        'email,name,token\n' +
-        'user1@example.com,User One,TOKEN123';
+      const csvContent =
+        'email,name,token\n' + 'user1@example.com,User One,TOKEN123';
       const mockFile = {
         buffer: Buffer.from(csvContent),
       } as any;
@@ -215,9 +232,9 @@ describe('MembershipService', () => {
         }),
       });
 
-      await expect(
-        service.importFromCsv(mockFile, mockUser),
-      ).rejects.toThrow(ConflictException);
+      await expect(service.importFromCsv(mockFile, mockUser)).rejects.toThrow(
+        ConflictException,
+      );
     });
   });
 
@@ -355,9 +372,9 @@ describe('MembershipService', () => {
       expect(externalAccountModelMock.create).toHaveBeenCalled();
     });
     it('should throw BadRequestException if both token and code are missing', async () => {
-      await expect(
-        service.claimCode({}, mockUser),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.claimCode({}, mockUser)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 });

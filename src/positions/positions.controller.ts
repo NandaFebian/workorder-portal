@@ -37,10 +37,7 @@ export class PositionsController {
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
-  async findById(
-    @Param('id') id: string,
-    @GetUser() user: AuthenticatedUser,
-  ) {
+  async findById(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const position = await this.positionsService.findById(id, user);
     const employees = await this.usersService.findByPositionId(id);
 

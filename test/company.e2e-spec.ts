@@ -376,6 +376,16 @@ describe('CompanyController (e2e)', () => {
       );
     });
 
+    it('[TC-COMP-13] should not include inactive companies in public list (Whitebox)', async () => {
+      // Company remains inactive (isActive: false by default)
+      const res = await request(app.getHttpServer())
+        .get('/public/companies')
+        .expect(200);
+
+      const ids = res.body.data.map((c: any) => c._id);
+      expect(ids).not.toContain(companyId);
+    });
+
     it('should retrieve public company details by id (Blackbox & Whitebox)', async () => {
       // Let's activate company
       await connection.model('Company').findByIdAndUpdate(companyId, { isActive: true });
@@ -393,6 +403,13 @@ describe('CompanyController (e2e)', () => {
           }),
         }),
       );
+    });
+
+    it('[TC-COMP-15] should return 404 for non-existent public company ID (Blackbox)', async () => {
+      const fakeId = new Types.ObjectId().toString();
+      await request(app.getHttpServer())
+        .get(`/public/companies/${fakeId}`)
+        .expect(404);
     });
 
     it('should retrieve public company services list (Blackbox & Whitebox)', async () => {

@@ -108,6 +108,17 @@ describe('TemplateController (e2e)', () => {
         ]),
       );
     });
+
+    it('[TC-TPL-02] should return data from CompanyType collection in MongoDB (Whitebox)', async () => {
+      const count = await connection.model('CompanyType').countDocuments();
+      const res = await request(app.getHttpServer())
+        .get('/template/company-type')
+        .set('Authorization', ownerToken)
+        .expect(200);
+
+      expect(res.body.data.length).toBeGreaterThanOrEqual(1);
+      expect(count).toBeGreaterThanOrEqual(1);
+    });
   });
 
   // TC-TPL-02, TC-TPL-03
@@ -143,6 +154,14 @@ describe('TemplateController (e2e)', () => {
       expect(res.body.data.service).toEqual(
         expect.objectContaining({ title: 'Template Test' }),
       );
+    });
+
+    it('[TC-TPL-06] should return 404 for non-existent serviceTemplateId (Blackbox)', async () => {
+      const fakeId = new Types.ObjectId().toString();
+      await request(app.getHttpServer())
+        .get(`/template/services/${fakeId}`)
+        .set('Authorization', ownerToken)
+        .expect(404);
     });
   });
 
@@ -197,6 +216,23 @@ describe('TemplateController (e2e)', () => {
 
       const pos = await connection.model('Position').findOne({ name: 'General Services' });
       expect(pos).toBeDefined();
+    });
+
+    it('[TC-TPL-11] should return error when serviceTemplateId does not exist (Blackbox)', async () => {
+      const fakeId = new Types.ObjectId().toString();
+      const res = await request(app.getHttpServer())
+        .post('/template/services/generate')
+        .set('Authorization', ownerToken)
+        .send({ serviceTemplateIds: [fakeId] });
+
+      expect(res.status).toBeGreaterThanOrEqual(400);
+    });
+
+    it('[TC-TPL-12] should return 401 when accessing without JWT token (Blackbox)', async () => {
+      await request(app.getHttpServer())
+        .post('/template/services/generate')
+        .send({ serviceTemplateIds: [serviceTemplateId] })
+        .expect(401);
     });
   });
 });

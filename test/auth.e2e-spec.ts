@@ -247,6 +247,23 @@ describe('AuthController (e2e)', () => {
         }),
       );
     });
+
+    it('[TC-AUTH-09] should return 400 when email is not registered (Blackbox)', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({
+          email: 'notexist@example.com',
+          password: 'password123',
+        })
+        .expect(400);
+
+      expect(res.body).toEqual(
+        expect.objectContaining({
+          code: 400,
+          message: 'Invalid credentials',
+        }),
+      );
+    });
   });
 
   describe('POST /auth/logout', () => {

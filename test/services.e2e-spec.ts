@@ -135,6 +135,22 @@ describe('ServicesController (e2e)', () => {
       });
       expect(res.status).toBe(404);
     });
+
+    it('[TC-SVC-03] should persist new service record in MongoDB (Whitebox)', async () => {
+      const res = await createService();
+      expect(res.status).toBe(201);
+      const svcId = res.body.data._id;
+
+      const svc = await connection.model('Service').findById(svcId);
+      expect(svc).toBeDefined();
+      expect(svc!.title).toBe('Layanan Test');
+      expect(svc!.companyId.toString()).toBe(companyId);
+    });
+
+    it('[TC-SVC-04] should return 400 when required field title is empty (Blackbox)', async () => {
+      const res = await createService({ title: '' });
+      expect(res.status).toBe(400);
+    });
   });
 
   // TC-SVC-03, TC-SVC-04
@@ -184,6 +200,14 @@ describe('ServicesController (e2e)', () => {
 
       expect(res.body.data).toEqual(expect.objectContaining({ _id: svcId }));
     });
+
+    it('[TC-SVC-08] should return 404 for non-existent service ID (Blackbox)', async () => {
+      const fakeId = new Types.ObjectId().toString();
+      await request(app.getHttpServer())
+        .get(`/services/${fakeId}`)
+        .set('Authorization', ownerToken)
+        .expect(404);
+    });
   });
 
   // TC-SVC-13, TC-SVC-14
@@ -205,6 +229,26 @@ describe('ServicesController (e2e)', () => {
       // Whitebox: verify in DB
       const dbSvc = await connection.model('Service').findById(svcId);
       expect(dbSvc!.isActive).toBe(false);
+    });
+
+    it('[TC-SVC-10] should toggle service active status back to true (Blackbox)', async () => {
+      const created = await createService();
+      expect(created.status).toBe(201);
+      const svcId = created.body.data._id;
+
+      await request(app.getHttpServer())
+        .patch(`/services/${svcId}/toggle-active`)
+        .set('Authorization', ownerToken)
+        .send({ isActive: false })
+        .expect(200);
+
+      const resOn = await request(app.getHttpServer())
+        .patch(`/services/${svcId}/toggle-active`)
+        .set('Authorization', ownerToken)
+        .send({ isActive: true })
+        .expect(200);
+
+      expect(resOn.body.data.isActive).toBe(true);
     });
   });
 
@@ -247,6 +291,18 @@ describe('ServicesController (e2e)', () => {
       const res = await request(app.getHttpServer())
         .get(`/public/services/company/${companyId}`);
       expect(res.status).not.toBe(401);
+    });
+
+    it('[TC-SVC-14] should not return inactive services in public endpoint (Whitebox)', async () => {
+      // Create service with public accessType but do NOT activate it
+      await createService({ accessType: 'public' }).then((r) => { expect(r.status).toBe(201); });
+
+      const res = await request(app.getHttpServer())
+        .get(`/public/services/company/${companyId}`)
+        .expect(200);
+
+      const inactiveServices = (res.body.data || []).filter((s: any) => !s.isActive);
+      expect(inactiveServices.length).toBe(0);
     });
   });
 });

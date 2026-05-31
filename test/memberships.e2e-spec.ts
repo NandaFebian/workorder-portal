@@ -106,6 +106,16 @@ describe('MembershipsController (e2e)', () => {
       const doc = await connection.model('MembershipCode').findById(codeId);
       expect(doc).toBeDefined();
     });
+
+    it('[TC-MBR-05] should return 400 when role is invalid (Blackbox)', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/memberships/codes')
+        .set('Authorization', ownerToken)
+        .send({ role: 'invalid_role', maxUses: 5 })
+        .expect(400);
+
+      expect(res.body).toEqual(expect.objectContaining({ code: 400 }));
+    });
   });
 
   // TC-MBR-05, TC-MBR-06, TC-MBR-07, TC-MBR-08
@@ -134,11 +144,60 @@ describe('MembershipsController (e2e)', () => {
       expect(res.body.data).toBeDefined();
     });
 
+    it('[TC-MBR-07] should set companyId on user after successful claim (Whitebox)', async () => {
+      await request(app.getHttpServer())
+        .post('/memberships/codes/claim')
+        .set('Authorization', clientToken)
+        .send({ code: validCode })
+        .expect(200);
+
+      const user = await connection.model('User').findOne({ email: 'client@mbr.com' });
+      expect(user!.companyId?.toString()).toBe(companyId);
+    });
+
     it('[TC-MBR-07] should return 400 for invalid membership code (Blackbox)', async () => {
       await request(app.getHttpServer())
         .post('/memberships/codes/claim')
         .set('Authorization', clientToken)
         .send({ code: 'INVALID_CODE_XYZ' })
+        .expect(400);
+    });
+
+    it('[TC-MBR-09] should return 400 when code has reached maxUses limit (Blackbox)', async () => {
+      // Create a code with maxUses: 1
+      const limitedCodeRes = await request(app.getHttpServer())
+        .post('/memberships/codes')
+        .set('Authorization', ownerToken)
+        .send({ role: Role.CompanyStaff, maxUses: 1 })
+        .expect(201);
+
+      const limitedCode = limitedCodeRes.body.data.code;
+
+      // First client claims successfully
+      await request(app.getHttpServer())
+        .post('/memberships/codes/claim')
+        .set('Authorization', clientToken)
+        .send({ code: limitedCode })
+        .expect(200);
+
+      // Register second client
+      await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({ name: 'Second Client', email: 'second@mbr2.com', password: 'password123', role: Role.Client })
+        .expect(200);
+
+      const loginRes2 = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'second@mbr2.com', password: 'password123' })
+        .expect(200);
+
+      const secondToken = loginRes2.body.data.token;
+
+      // Second client tries to claim same maxed-out code
+      await request(app.getHttpServer())
+        .post('/memberships/codes/claim')
+        .set('Authorization', secondToken)
+        .send({ code: limitedCode })
         .expect(400);
     });
   });
@@ -158,6 +217,24 @@ describe('MembershipsController (e2e)', () => {
         .delete(`/memberships/codes/${codeId}`)
         .set('Authorization', ownerToken)
         .expect(200);
+    });
+
+    it('[TC-MBR-11] should deactivate code in MongoDB after delete (Whitebox)', async () => {
+      const codeRes = await request(app.getHttpServer())
+        .post('/memberships/codes')
+        .set('Authorization', ownerToken)
+        .send({ role: Role.CompanyStaff, maxUses: 5 })
+        .expect(201);
+
+      const codeId = codeRes.body.data._id;
+
+      await request(app.getHttpServer())
+        .delete(`/memberships/codes/${codeId}`)
+        .set('Authorization', ownerToken)
+        .expect(200);
+
+      const doc = await connection.model('MembershipCode').findById(codeId);
+      expect(doc === null || doc!.isActive === false).toBe(true);
     });
   });
 });

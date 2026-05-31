@@ -82,6 +82,16 @@ describe('InvitationsController (e2e)', () => {
         expect.arrayContaining([expect.objectContaining({ _id: invitationId })]),
       );
     });
+
+    it('[TC-INV-02] should only return pending invitations for the authenticated user (Whitebox)', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/invitations/pending')
+        .set('Authorization', staffToken)
+        .expect(200);
+
+      expect(res.body.data.length).toBe(1);
+      expect(res.body.data[0]._id).toBe(invitationId);
+    });
   });
 
   // TC-INV-02, TC-INV-03
@@ -97,6 +107,19 @@ describe('InvitationsController (e2e)', () => {
       // Whitebox: verify staff is now associated with company
       const user = await connection.model('User').findOne({ email: 'staff@inv.com' });
       expect(user!.companyId?.toString()).toBe(companyId);
+    });
+
+    it('[TC-INV-04] should return error when accepting an already accepted invitation (Blackbox)', async () => {
+      await request(app.getHttpServer())
+        .put(`/invitations/${invitationId}/accept`)
+        .set('Authorization', staffToken)
+        .expect(200);
+
+      const res = await request(app.getHttpServer())
+        .put(`/invitations/${invitationId}/accept`)
+        .set('Authorization', staffToken);
+
+      expect(res.status).toBeGreaterThanOrEqual(400);
     });
   });
 
@@ -119,6 +142,24 @@ describe('InvitationsController (e2e)', () => {
         expect(res.body.data.status).toBe('rejected');
       }
     });
+
+    it('[TC-INV-06] should persist rejected status in MongoDB (Whitebox)', async () => {
+      const newInvRes = await request(app.getHttpServer())
+        .post('/company/invite')
+        .set('Authorization', ownerToken)
+        .send({ invites: [{ email: 'staff@inv.com', role: Role.CompanyStaff }] });
+
+      if (newInvRes.status === 201) {
+        const newInvId = newInvRes.body.data[0]._id;
+        await request(app.getHttpServer())
+          .put(`/invitations/${newInvId}/reject`)
+          .set('Authorization', staffToken)
+          .expect(200);
+
+        const inv = await connection.model('Invitation').findById(newInvId);
+        expect(inv!.status).toBe('rejected');
+      }
+    });
   });
 
   // TC-INV-05
@@ -128,6 +169,13 @@ describe('InvitationsController (e2e)', () => {
         .delete(`/invitations/${invitationId}`)
         .set('Authorization', ownerToken)
         .expect(200);
+    });
+
+    it('[TC-INV-08] should return 403 when non-sender tries to delete invitation (Blackbox)', async () => {
+      await request(app.getHttpServer())
+        .delete(`/invitations/${invitationId}`)
+        .set('Authorization', staffToken)
+        .expect(403);
     });
   });
 });

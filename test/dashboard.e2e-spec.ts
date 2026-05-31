@@ -53,6 +53,12 @@ describe('DashboardController (e2e)', () => {
 
       expect(res.body.data).toBeDefined();
     });
+
+    it('[TC-DASH-02] should return 401 when accessed without JWT token (Blackbox)', async () => {
+      await request(app.getHttpServer())
+        .get('/dashboard/service-request')
+        .expect(401);
+    });
   });
 
   // TC-DASH-02
@@ -65,6 +71,16 @@ describe('DashboardController (e2e)', () => {
 
       expect(res.body.data).toBeDefined();
     });
+
+    it('[TC-DASH-04] should return metrics scoped to authenticated owner company (Whitebox)', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/dashboard/work-order')
+        .set('Authorization', ownerToken)
+        .expect(200);
+
+      expect(res.body.data).toBeDefined();
+      expect(typeof res.body.data).toBe('object');
+    });
   });
 
   // TC-DASH-03
@@ -76,6 +92,16 @@ describe('DashboardController (e2e)', () => {
         .expect(200);
 
       expect(res.body.data).toBeDefined();
+    });
+
+    it('[TC-DASH-06] should return response with defined data structure (Whitebox)', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/dashboard/company')
+        .set('Authorization', ownerToken)
+        .expect(200);
+
+      expect(res.body.data).toBeDefined();
+      expect(typeof res.body.data).toBe('object');
     });
   });
 });

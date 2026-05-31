@@ -76,6 +76,29 @@ describe('FormsController (e2e)', () => {
 
       expect(res.body.message).toContain('Validation failed');
     });
+
+    it('[TC-FORM-03] should persist form record in MongoDB after create (Whitebox)', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/forms')
+        .set('Authorization', ownerToken)
+        .send(intakeFormPayload)
+        .expect(201);
+
+      const formId = res.body.data._id;
+      const formInDb = await connection.model('FormTemplate').findById(formId);
+      expect(formInDb).toBeDefined();
+      expect(formInDb!.title).toBe(intakeFormPayload.title);
+    });
+
+    it('[TC-FORM-04] should return 400 when title is empty (Blackbox)', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/forms')
+        .set('Authorization', ownerToken)
+        .send({ ...intakeFormPayload, title: '' })
+        .expect(400);
+
+      expect(res.body.message).toContain('Validation failed');
+    });
   });
 
   // TC-FORM-03, TC-FORM-04
@@ -167,6 +190,24 @@ describe('FormsController (e2e)', () => {
 
       expect(res.body.data.title).toBe('Form Updated');
     });
+
+    it('[TC-FORM-10] should persist form update in MongoDB (Whitebox)', async () => {
+      const created = await request(app.getHttpServer())
+        .post('/forms')
+        .set('Authorization', ownerToken)
+        .send(intakeFormPayload)
+        .expect(201);
+
+      const formId = created.body.data._id;
+      await request(app.getHttpServer())
+        .put(`/forms/${formId}`)
+        .set('Authorization', ownerToken)
+        .send({ title: 'Form Updated WB', fields: intakeFormPayload.fields })
+        .expect(200);
+
+      const formInDb = await connection.model('FormTemplate').findById(formId);
+      expect(formInDb!.title).toBe('Form Updated WB');
+    });
   });
 
   // TC-FORM-09, TC-FORM-10, TC-FORM-11, TC-FORM-12, TC-FORM-13
@@ -211,6 +252,16 @@ describe('FormsController (e2e)', () => {
 
       expect(res.status).toBeGreaterThanOrEqual(400);
     });
+
+    it('[TC-FORM-13] should return error when formId is not registered (Blackbox)', async () => {
+      const fakeFormId = new Types.ObjectId().toString();
+      const res = await request(app.getHttpServer())
+        .post('/forms/submissions')
+        .set('Authorization', ownerToken)
+        .send({ formId: fakeFormId, answers: [] });
+
+      expect(res.status).toBeGreaterThanOrEqual(400);
+    });
   });
 
   // TC-FORM-14
@@ -227,6 +278,23 @@ describe('FormsController (e2e)', () => {
         .delete(`/forms/${formId}`)
         .set('Authorization', ownerToken)
         .expect(200);
+    });
+
+    it('[TC-FORM-15] should remove form from MongoDB after delete (Whitebox)', async () => {
+      const created = await request(app.getHttpServer())
+        .post('/forms')
+        .set('Authorization', ownerToken)
+        .send(intakeFormPayload)
+        .expect(201);
+
+      const formId = created.body.data._id;
+      await request(app.getHttpServer())
+        .delete(`/forms/${formId}`)
+        .set('Authorization', ownerToken)
+        .expect(200);
+
+      const formInDb = await connection.model('FormTemplate').findById(formId);
+      expect(formInDb).toBeNull();
     });
   });
 });

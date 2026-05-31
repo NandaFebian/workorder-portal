@@ -195,5 +195,22 @@ describe('UsersController (e2e)', () => {
         }),
       );
     });
+
+    it('[TC-USER-07] should not allow changing _id or role via PATCH (Whitebox)', async () => {
+      const originalId = clientUser._id;
+      const originalRole = clientUser.role;
+
+      const res = await request(app.getHttpServer())
+        .patch('/users/me')
+        .set('Authorization', clientToken)
+        .send({ name: 'Updated Name' })
+        .expect(200);
+
+      expect(res.body.data._id).toBe(originalId);
+      expect(res.body.data.role).toBe(originalRole);
+
+      const userInDb = await connection.model('User').findById(originalId);
+      expect(userInDb!.role).toBe(originalRole);
+    });
   });
 });

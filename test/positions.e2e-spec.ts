@@ -100,6 +100,18 @@ describe('PositionsController (e2e)', () => {
       expect(pos).toBeDefined();
       expect(pos!.name).toBe('Admin Gudang');
     });
+
+    it('[TC-POS-08] should return 400 when name is empty (Blackbox)', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/positions')
+        .set('Authorization', ownerToken)
+        .send({ name: '', description: '' })
+        .expect(400);
+
+      expect(res.body).toEqual(
+        expect.objectContaining({ code: 400 }),
+      );
+    });
   });
 
   // TC-POS-01, TC-POS-02
@@ -172,6 +184,19 @@ describe('PositionsController (e2e)', () => {
         .set('Authorization', ownerToken)
         .expect(404);
     });
+
+    it('[TC-POS-05] should return 401 when accessed without JWT token (Blackbox)', async () => {
+      const created = await request(app.getHttpServer())
+        .post('/positions')
+        .set('Authorization', ownerToken)
+        .send({ name: 'Test Pos', description: 'Test' })
+        .expect(201);
+
+      const posId = created.body.data._id;
+      await request(app.getHttpServer())
+        .get(`/positions/${posId}`)
+        .expect(401);
+    });
   });
 
   // TC-POS-10, TC-POS-11
@@ -196,6 +221,15 @@ describe('PositionsController (e2e)', () => {
       const dbPos = await connection.model('Position').findById(posId);
       expect(dbPos!.name).toBe('New Name');
     });
+
+    it('[TC-POS-11] should return 404 when updating a non-existent position (Blackbox)', async () => {
+      const fakeId = new Types.ObjectId().toString();
+      await request(app.getHttpServer())
+        .put(`/positions/${fakeId}`)
+        .set('Authorization', ownerToken)
+        .send({ name: 'Updated', description: 'Updated desc' })
+        .expect(404);
+    });
   });
 
   // TC-POS-12
@@ -212,6 +246,23 @@ describe('PositionsController (e2e)', () => {
         .delete(`/positions/${posId}`)
         .set('Authorization', ownerToken)
         .expect(200);
+    });
+
+    it('[TC-POS-13] should remove position from MongoDB after delete (Whitebox)', async () => {
+      const created = await request(app.getHttpServer())
+        .post('/positions')
+        .set('Authorization', ownerToken)
+        .send({ name: 'To Delete WB', description: 'Will be deleted whitebox' })
+        .expect(201);
+
+      const posId = created.body.data._id;
+      await request(app.getHttpServer())
+        .delete(`/positions/${posId}`)
+        .set('Authorization', ownerToken)
+        .expect(200);
+
+      const pos = await connection.model('Position').findById(posId);
+      expect(pos).toBeNull();
     });
   });
 });

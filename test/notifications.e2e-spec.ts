@@ -53,6 +53,12 @@ describe('NotificationsController (e2e)', () => {
 
       expect(Array.isArray(res.body.data)).toBe(true);
     });
+
+    it('[TC-NOTIF-02] should return 401 when accessed without JWT token (Blackbox)', async () => {
+      await request(app.getHttpServer())
+        .get('/notifications')
+        .expect(401);
+    });
   });
 
   // TC-NOTIF-02, TC-NOTIF-03
@@ -77,6 +83,26 @@ describe('NotificationsController (e2e)', () => {
 
       const user = await connection.model('User').findOne({ email: 'notif@owner.com' });
       expect(user!.fcmTokens).toContain(fcmToken);
+    });
+
+    it('[TC-NOTIF-05] should not duplicate FCM token if registered twice (Whitebox)', async () => {
+      const fcmToken = 'duplicate-fcm-token-test';
+
+      await request(app.getHttpServer())
+        .post('/notifications/fcm-token')
+        .set('Authorization', ownerToken)
+        .send({ token: fcmToken })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post('/notifications/fcm-token')
+        .set('Authorization', ownerToken)
+        .send({ token: fcmToken })
+        .expect(201);
+
+      const user = await connection.model('User').findOne({ email: 'notif@owner.com' });
+      const count = user!.fcmTokens.filter((t: string) => t === fcmToken).length;
+      expect(count).toBe(1);
     });
   });
 
@@ -115,6 +141,14 @@ describe('NotificationsController (e2e)', () => {
 
       const user = await connection.model('User').findOne({ email: 'notif@owner.com' });
       expect(user!.fcmTokens).not.toContain(fcmToken);
+    });
+
+    it('[TC-NOTIF-08] should return 200 when deleting a non-existent FCM token (Blackbox)', async () => {
+      await request(app.getHttpServer())
+        .delete('/notifications/fcm-token')
+        .set('Authorization', ownerToken)
+        .send({ token: 'non-existent-token-xyz' })
+        .expect(200);
     });
   });
 });

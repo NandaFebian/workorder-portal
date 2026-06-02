@@ -40,16 +40,14 @@ export class DatabaseSeederService {
   }
 
   private async seedServiceTemplates() {
-    for (const data of serviceTemplatesData) {
-      // Update jika ada, atau buat baru jika belum ada
-      await this.serviceTemplateModel
-        .findOneAndUpdate(
-          { title: data.title, companyTypeId: data.companyTypeId },
-          { $set: data },
-          { upsert: true, new: true },
-        )
-        .exec();
-      this.logger.log(`[ServiceTemplate] Berhasil di-upsert: ${data.title}`);
-    }
+    const deletedCount = await this.serviceTemplateModel.deleteMany({});
+    this.logger.log(
+      `[ServiceTemplate] ${deletedCount.deletedCount} data lama dihapus.`,
+    );
+
+    await this.serviceTemplateModel.insertMany(serviceTemplatesData);
+    this.logger.log(
+      `[ServiceTemplate] ${serviceTemplatesData.length} data baru berhasil di-insert.`,
+    );
   }
 }

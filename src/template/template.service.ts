@@ -141,6 +141,7 @@ export class TemplateService {
           cfg.workOrderApprovalAccessType ?? ApprovalAccessType.AUTO,
         workReportApprovalAccessType:
           cfg.workReportApprovalAccessType ?? ApprovalAccessType.AUTO,
+        showReportToRequester: cfg.showReportToRequester ?? false,
         minStaff: cfg.minStaff,
         maxStaff: cfg.maxStaff,
       })),
@@ -258,6 +259,7 @@ export class TemplateService {
             wConfig.workOrderApprovalAccessType ?? ApprovalAccessType.AUTO,
           workReportApprovalAccessType:
             wConfig.workReportApprovalAccessType ?? ApprovalAccessType.AUTO,
+          showReportToRequester: wConfig.showReportToRequester ?? false,
           minStaff: wConfig.minStaff,
           maxStaff: wConfig.maxStaff,
         });

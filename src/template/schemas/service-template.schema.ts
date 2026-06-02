@@ -78,6 +78,9 @@ export class WorkOrderTemplateConfig {
 
   @Prop({ required: true, min: 1 })
   maxStaff: number;
+
+  @Prop({ type: Boolean, default: false })
+  showReportToRequester: boolean;
 }
 const WorkOrderTemplateConfigSchema = SchemaFactory.createForClass(
   WorkOrderTemplateConfig,

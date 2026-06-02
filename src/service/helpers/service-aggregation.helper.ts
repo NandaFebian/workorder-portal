@@ -1,10 +1,9 @@
 import { Model, PipelineStage, Types } from 'mongoose';
 import { ServiceDocument } from '../schemas/service.schema';
-import { FormsService } from 'src/form/form.service';
 
 export async function getServicesWithAggregation(
   serviceModel: Model<ServiceDocument>,
-  formsService: FormsService,
+  _formsService: any,
   matchQuery: any,
   includeForms: boolean = false,
 ): Promise<any[]> {
@@ -80,25 +79,30 @@ export async function getServicesWithAggregation(
       const resolveForm = async (formId: any) => {
         if (!formId) return null;
         try {
-          let template = await formsService.findTemplateById(formId.toString());
-          if (!template) return null;
+          // Query directly without deletedAt filter — service may reference an
+          // older version that was soft-deleted after a form update.
+          const formCol = serviceModel.db.collection('formtemplates');
+          const doc = await formCol.findOne({
+            _id: new Types.ObjectId(formId.toString()),
+          });
+          if (!doc) return null;
 
-          try {
-            const latest = await formsService.findLatestTemplateByKey(
-              template.formKey,
+          // Try to resolve the latest non-deleted version via formKey
+          let resolved = doc;
+          if (doc.formKey) {
+            const latest = await formCol.findOne(
+              { formKey: doc.formKey, deletedAt: null },
+              { sort: { __v: -1 } },
             );
-            if (latest) template = latest;
-          } catch {
-            // fallback to isolated version if latest not found
+            if (latest) resolved = latest;
           }
 
-          const t = template.toObject ? template.toObject() : template;
           return {
-            _id: t._id,
-            title: t.title,
-            description: t.description,
-            formType: t.formType,
-            fields: t.fields,
+            _id: resolved._id,
+            title: resolved.title,
+            description: resolved.description,
+            formType: resolved.formType,
+            fields: resolved.fields ?? [],
           };
         } catch {
           return null;
@@ -110,7 +114,6 @@ export async function getServicesWithAggregation(
         try {
           const pos = await serviceModel.db.collection('positions').findOne({
             _id: new Types.ObjectId(positionId.toString()),
-            deletedAt: null,
           });
           if (!pos) return null;
           return {
@@ -118,6 +121,8 @@ export async function getServicesWithAggregation(
             name: pos.name,
             description: pos.description,
             companyId: pos.companyId,
+            isActive: pos.isActive ?? true,
+            deletedAt: pos.deletedAt ?? null,
           };
         } catch {
           return null;

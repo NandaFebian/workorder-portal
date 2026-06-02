@@ -37,166 +37,561 @@ export const companyTypesData = [
   },
 ];
 
-function generateTemplates() {
-  const templates: any[] = [];
-  const accessTypes = ['public', 'member_only', 'internal'];
-  const woTypes = ['auto', 'manual'];
-  const reviewNeeds = [false, true];
+export const serviceTemplatesData = [
+  // ── PT (Perseroan Terbatas) ──────────────────────────────────────────────
+  {
+    title: 'Perbaikan & Pemeliharaan Fasilitas Kantor',
+    description:
+      'Layanan penanganan kerusakan dan pemeliharaan rutin aset fisik kantor, meliputi AC, plumbing, kelistrikan, dan furnitur.',
+    companyTypeId: COMPANY_TYPE_IDS.PT,
+    accessType: 'internal',
+    draftingWorkOrderType: 'manual',
+    serviceRequestConfig: {
+      serviceRequestApprovalAccessType: ApprovalAccessType.MANAGER,
+      reviewNeed: true,
+      intakeForm: {
+        title: 'Formulir Permintaan Perbaikan Fasilitas',
+        description: 'Ajukan permintaan perbaikan atau pemeliharaan fasilitas kantor.',
+        formType: SubmissionType.Intake,
+        fields: [
+          { order: 1, label: 'Lokasi Kerusakan', type: FieldType.Text, required: true, placeholder: 'contoh: Lantai 3, Ruang Meeting A' },
+          { order: 2, label: 'Jenis Kerusakan', type: FieldType.SingleSelect, required: true, options: [{ key: 'ac', value: 'AC / Pendingin Ruangan' }, { key: 'listrik', value: 'Instalasi Listrik' }, { key: 'plumbing', value: 'Pipa / Saluran Air' }, { key: 'furnitur', value: 'Furnitur & Perabot' }, { key: 'lainnya', value: 'Lainnya' }] },
+          { order: 3, label: 'Deskripsi Kerusakan', type: FieldType.Textarea, required: true, placeholder: 'Jelaskan kondisi kerusakan secara detail...' },
+          { order: 4, label: 'Foto Kerusakan', type: FieldType.Image, required: false },
+          { order: 5, label: 'Tingkat Urgensi', type: FieldType.SingleSelect, required: true, options: [{ key: 'rendah', value: 'Rendah' }, { key: 'sedang', value: 'Sedang' }, { key: 'tinggi', value: 'Tinggi (Menghambat Operasional)' }] },
+        ],
+      },
+      reviewForm: {
+        title: 'Evaluasi Perbaikan Fasilitas',
+        description: 'Penilaian kepuasan terhadap hasil perbaikan yang telah dilakukan.',
+        formType: SubmissionType.Review,
+        fields: [
+          { order: 1, label: 'Hasil Perbaikan Sesuai Harapan?', type: FieldType.SingleSelect, required: true, options: [{ key: 'ya', value: 'Ya, sudah sesuai' }, { key: 'belum', value: 'Belum sepenuhnya' }, { key: 'tidak', value: 'Tidak sesuai' }] },
+          { order: 2, label: 'Penilaian Kecepatan Respons', type: FieldType.SingleSelect, required: true, options: [{ key: 'cepat', value: 'Cepat' }, { key: 'sedang', value: 'Cukup' }, { key: 'lambat', value: 'Lambat' }] },
+          { order: 3, label: 'Catatan Tambahan', type: FieldType.Textarea, required: false, placeholder: 'Masukan atau saran untuk tim teknisi...' },
+        ],
+      },
+    },
+    workOrdersConfig: [
+      {
+        configId: null,
+        positionsOnDuty: { name: 'Teknisi Fasilitas', description: 'Tim teknisi internal yang menangani perbaikan dan pemeliharaan gedung.' },
+        workOrderApprovalAccessType: ApprovalAccessType.AUTO,
+        workReportApprovalAccessType: ApprovalAccessType.MANAGER,
+        showReportToRequester: false,
+        minStaff: 1,
+        maxStaff: 3,
+        workOrderForm: {
+          title: 'Formulir Instruksi Kerja Perbaikan',
+          description: 'Panduan teknis untuk pelaksanaan perbaikan fasilitas.',
+          formType: SubmissionType.WorkOrder,
+          fields: [
+            { order: 1, label: 'Langkah Pengerjaan', type: FieldType.Textarea, required: true, placeholder: 'Uraikan langkah-langkah perbaikan...' },
+            { order: 2, label: 'Alat & Material Dibutuhkan', type: FieldType.Textarea, required: true, placeholder: 'Daftar alat dan bahan...' },
+            { order: 3, label: 'Estimasi Waktu Penyelesaian (jam)', type: FieldType.Text, required: true, placeholder: 'contoh: 2' },
+          ],
+        },
+        workReportForm: {
+          title: 'Laporan Penyelesaian Perbaikan Fasilitas',
+          description: 'Dokumentasi hasil perbaikan yang telah dilakukan oleh teknisi.',
+          formType: SubmissionType.Report,
+          fields: [
+            { order: 1, label: 'Tindakan yang Dilakukan', type: FieldType.Textarea, required: true, placeholder: 'Jelaskan pekerjaan yang telah diselesaikan...' },
+            { order: 2, label: 'Kondisi Setelah Perbaikan', type: FieldType.SingleSelect, required: true, options: [{ key: 'normal', value: 'Normal / Berfungsi penuh' }, { key: 'partial', value: 'Sebagian teratasi' }, { key: 'perlu_lanjutan', value: 'Perlu tindak lanjut' }] },
+            { order: 3, label: 'Foto Hasil Perbaikan', type: FieldType.Image, required: true },
+            { order: 4, label: 'Material yang Digunakan', type: FieldType.Textarea, required: false, placeholder: 'Daftar material yang terpakai...' },
+          ],
+        },
+      },
+    ],
+  },
+  {
+    title: 'Pengadaan & Peminjaman Inventaris IT',
+    description:
+      'Layanan permintaan perangkat IT (laptop, monitor, aksesoris) untuk kebutuhan kerja karyawan, baik peminjaman sementara maupun pengadaan tetap.',
+    companyTypeId: COMPANY_TYPE_IDS.PT,
+    accessType: 'internal',
+    draftingWorkOrderType: 'auto',
+    serviceRequestConfig: {
+      serviceRequestApprovalAccessType: ApprovalAccessType.MANAGER,
+      reviewNeed: false,
+      intakeForm: {
+        title: 'Formulir Permintaan Inventaris IT',
+        description: 'Ajukan kebutuhan perangkat IT untuk keperluan kerja.',
+        formType: SubmissionType.Intake,
+        fields: [
+          { order: 1, label: 'Jenis Perangkat', type: FieldType.SingleSelect, required: true, options: [{ key: 'laptop', value: 'Laptop' }, { key: 'monitor', value: 'Monitor' }, { key: 'keyboard', value: 'Keyboard & Mouse' }, { key: 'headset', value: 'Headset' }, { key: 'lainnya', value: 'Lainnya' }] },
+          { order: 2, label: 'Jumlah Unit', type: FieldType.Text, required: true, placeholder: 'contoh: 2' },
+          { order: 3, label: 'Tujuan Penggunaan', type: FieldType.Textarea, required: true, placeholder: 'Jelaskan untuk keperluan apa perangkat ini dibutuhkan...' },
+          { order: 4, label: 'Durasi Peminjaman', type: FieldType.SingleSelect, required: true, options: [{ key: 'permanen', value: 'Permanen (Pengadaan)' }, { key: '1_minggu', value: '1 Minggu' }, { key: '1_bulan', value: '1 Bulan' }, { key: 'lainnya', value: 'Lainnya' }] },
+        ],
+      },
+      reviewForm: null,
+    },
+    workOrdersConfig: [
+      {
+        configId: null,
+        positionsOnDuty: { name: 'Tim IT Support', description: 'Tim IT yang mengelola inventaris dan distribusi perangkat teknologi.' },
+        workOrderApprovalAccessType: ApprovalAccessType.AUTO,
+        workReportApprovalAccessType: ApprovalAccessType.AUTO,
+        showReportToRequester: false,
+        minStaff: 1,
+        maxStaff: 2,
+        workOrderForm: null,
+        workReportForm: {
+          title: 'Laporan Serah Terima Perangkat IT',
+          description: 'Dokumentasi serah terima perangkat IT kepada pemohon.',
+          formType: SubmissionType.Report,
+          fields: [
+            { order: 1, label: 'Perangkat yang Diserahkan', type: FieldType.Textarea, required: true, placeholder: 'Nama perangkat, nomor seri, kondisi...' },
+            { order: 2, label: 'Kondisi Perangkat', type: FieldType.SingleSelect, required: true, options: [{ key: 'baru', value: 'Baru' }, { key: 'baik', value: 'Bekas - Kondisi Baik' }, { key: 'cukup', value: 'Bekas - Kondisi Cukup' }] },
+            { order: 3, label: 'Foto Serah Terima', type: FieldType.Image, required: true },
+          ],
+        },
+      },
+    ],
+  },
+  {
+    title: 'Layanan Sertifikasi & Legalisasi Dokumen Perusahaan',
+    description:
+      'Pengurusan legalisasi, apostille, dan sertifikasi dokumen resmi perusahaan seperti akta, NPWP, NIB, dan dokumen hukum lainnya.',
+    companyTypeId: COMPANY_TYPE_IDS.PT,
+    accessType: 'member_only',
+    draftingWorkOrderType: 'manual',
+    serviceRequestConfig: {
+      serviceRequestApprovalAccessType: ApprovalAccessType.MANAGER,
+      reviewNeed: true,
+      intakeForm: {
+        title: 'Formulir Permintaan Legalisasi Dokumen',
+        description: 'Ajukan dokumen yang memerlukan proses legalisasi atau sertifikasi resmi.',
+        formType: SubmissionType.Intake,
+        fields: [
+          { order: 1, label: 'Jenis Dokumen', type: FieldType.SingleSelect, required: true, options: [{ key: 'akta', value: 'Akta Pendirian / Perubahan' }, { key: 'npwp', value: 'NPWP Perusahaan' }, { key: 'nib', value: 'NIB (Nomor Induk Berusaha)' }, { key: 'sk', value: 'SK Kemenkumham' }, { key: 'lainnya', value: 'Lainnya' }] },
+          { order: 2, label: 'Tujuan Legalisasi', type: FieldType.Textarea, required: true, placeholder: 'Jelaskan tujuan penggunaan dokumen yang dilegalisasi...' },
+          { order: 3, label: 'Upload Dokumen Asli', type: FieldType.Image, required: true },
+          { order: 4, label: 'Deadline yang Diharapkan', type: FieldType.Text, required: false, placeholder: 'contoh: 15 Januari 2025' },
+        ],
+      },
+      reviewForm: {
+        title: 'Evaluasi Layanan Legalisasi Dokumen',
+        description: 'Penilaian atas proses dan hasil legalisasi dokumen yang diterima.',
+        formType: SubmissionType.Review,
+        fields: [
+          { order: 1, label: 'Dokumen Sesuai Kebutuhan?', type: FieldType.SingleSelect, required: true, options: [{ key: 'ya', value: 'Ya, lengkap dan sesuai' }, { key: 'sebagian', value: 'Sebagian sesuai' }, { key: 'tidak', value: 'Tidak sesuai' }] },
+          { order: 2, label: 'Kepuasan Keseluruhan', type: FieldType.SingleSelect, required: true, options: [{ key: 'puas', value: 'Sangat Puas' }, { key: 'cukup', value: 'Cukup Puas' }, { key: 'kurang', value: 'Kurang Puas' }] },
+          { order: 3, label: 'Masukan', type: FieldType.Textarea, required: false },
+        ],
+      },
+    },
+    workOrdersConfig: [
+      {
+        configId: null,
+        positionsOnDuty: { name: 'Tim Legal & Compliance', description: 'Tim hukum yang menangani dokumen legal dan perizinan perusahaan.' },
+        workOrderApprovalAccessType: ApprovalAccessType.AUTO,
+        workReportApprovalAccessType: ApprovalAccessType.MANAGER,
+        showReportToRequester: false,
+        minStaff: 1,
+        maxStaff: 2,
+        workOrderForm: {
+          title: 'Instruksi Kerja Pengurusan Legalisasi',
+          description: 'Panduan langkah pengurusan legalisasi dokumen resmi.',
+          formType: SubmissionType.WorkOrder,
+          fields: [
+            { order: 1, label: 'Instansi yang Dituju', type: FieldType.Text, required: true, placeholder: 'contoh: Kemenkumham, Notaris, Dinas Perdagangan' },
+            { order: 2, label: 'Dokumen Persyaratan yang Disiapkan', type: FieldType.Textarea, required: true, placeholder: 'Daftar dokumen pendukung yang perlu disiapkan...' },
+            { order: 3, label: 'Catatan Khusus', type: FieldType.Textarea, required: false },
+          ],
+        },
+        workReportForm: {
+          title: 'Laporan Hasil Legalisasi Dokumen',
+          description: 'Dokumentasi hasil pengurusan legalisasi dokumen.',
+          formType: SubmissionType.Report,
+          fields: [
+            { order: 1, label: 'Status Penyelesaian', type: FieldType.SingleSelect, required: true, options: [{ key: 'selesai', value: 'Selesai & Dokumen Diserahkan' }, { key: 'proses', value: 'Masih Dalam Proses' }, { key: 'kendala', value: 'Terdapat Kendala' }] },
+            { order: 2, label: 'Nomor Referensi / Tracking', type: FieldType.Text, required: false, placeholder: 'Nomor tracking atau referensi dari instansi...' },
+            { order: 3, label: 'Foto / Scan Dokumen Hasil', type: FieldType.Image, required: true },
+            { order: 4, label: 'Catatan Penyelesaian', type: FieldType.Textarea, required: true },
+          ],
+        },
+      },
+    ],
+  },
 
-  const companyTypeEntries = [
-    { id: COMPANY_TYPE_IDS.PT, name: 'PT' },
-    { id: COMPANY_TYPE_IDS.CV, name: 'CV' },
-    { id: COMPANY_TYPE_IDS.Koperasi, name: 'Koperasi' },
-    { id: COMPANY_TYPE_IDS.Yayasan, name: 'Yayasan' },
-  ];
+  // ── CV (Commanditaire Vennootschap) ─────────────────────────────────────
+  {
+    title: 'Jasa Instalasi & Renovasi Ringan',
+    description:
+      'Layanan pemasangan, renovasi, dan pengerjaan konstruksi ringan untuk kebutuhan klien, mencakup pemasangan partisi, instalasi listrik ringan, dan cat dinding.',
+    companyTypeId: COMPANY_TYPE_IDS.CV,
+    accessType: 'public',
+    draftingWorkOrderType: 'manual',
+    serviceRequestConfig: {
+      serviceRequestApprovalAccessType: ApprovalAccessType.AUTO,
+      reviewNeed: true,
+      intakeForm: {
+        title: 'Formulir Permintaan Jasa Instalasi & Renovasi',
+        description: 'Sampaikan kebutuhan renovasi atau instalasi Anda kepada tim kami.',
+        formType: SubmissionType.Intake,
+        fields: [
+          { order: 1, label: 'Nama Pemohon / Klien', type: FieldType.Text, required: true, placeholder: 'Nama lengkap...' },
+          { order: 2, label: 'Nomor Telepon', type: FieldType.Text, required: true, placeholder: '08xxxxxxxxxx' },
+          { order: 3, label: 'Alamat Lokasi Pengerjaan', type: FieldType.Textarea, required: true, placeholder: 'Alamat lengkap lokasi...' },
+          { order: 4, label: 'Jenis Pekerjaan', type: FieldType.SingleSelect, required: true, options: [{ key: 'partisi', value: 'Pemasangan Partisi / Sekat' }, { key: 'listrik', value: 'Instalasi Listrik' }, { key: 'cat', value: 'Pengecatan Dinding' }, { key: 'plafon', value: 'Pemasangan Plafon' }, { key: 'lainnya', value: 'Lainnya' }] },
+          { order: 5, label: 'Deskripsi Detail Pekerjaan', type: FieldType.Textarea, required: true, placeholder: 'Jelaskan detail kebutuhan renovasi...' },
+          { order: 6, label: 'Foto Kondisi Saat Ini', type: FieldType.Image, required: false },
+        ],
+      },
+      reviewForm: {
+        title: 'Ulasan Jasa Renovasi',
+        description: 'Berikan ulasan atas hasil pengerjaan tim kami.',
+        formType: SubmissionType.Review,
+        fields: [
+          { order: 1, label: 'Kualitas Hasil Pengerjaan', type: FieldType.SingleSelect, required: true, options: [{ key: 'sangat_baik', value: 'Sangat Baik' }, { key: 'baik', value: 'Baik' }, { key: 'cukup', value: 'Cukup' }, { key: 'kurang', value: 'Kurang Memuaskan' }] },
+          { order: 2, label: 'Ketepatan Waktu', type: FieldType.SingleSelect, required: true, options: [{ key: 'tepat', value: 'Tepat Waktu' }, { key: 'terlambat_sedikit', value: 'Sedikit Terlambat' }, { key: 'terlambat', value: 'Terlambat' }] },
+          { order: 3, label: 'Rekomendasi ke Rekan?', type: FieldType.SingleSelect, required: true, options: [{ key: 'ya', value: 'Ya, akan merekomendasikan' }, { key: 'mungkin', value: 'Mungkin' }, { key: 'tidak', value: 'Tidak' }] },
+          { order: 4, label: 'Komentar / Saran', type: FieldType.Textarea, required: false },
+        ],
+      },
+    },
+    workOrdersConfig: [
+      {
+        configId: null,
+        positionsOnDuty: { name: 'Tim Lapangan & Teknisi', description: 'Pekerja lapangan yang mengeksekusi pekerjaan instalasi dan renovasi.' },
+        workOrderApprovalAccessType: ApprovalAccessType.AUTO,
+        workReportApprovalAccessType: ApprovalAccessType.MANAGER,
+        showReportToRequester: false,
+        minStaff: 2,
+        maxStaff: 5,
+        workOrderForm: {
+          title: 'Instruksi Kerja Lapangan - Renovasi',
+          description: 'Detail teknis pekerjaan yang harus dilaksanakan tim lapangan.',
+          formType: SubmissionType.WorkOrder,
+          fields: [
+            { order: 1, label: 'Spesifikasi Material yang Digunakan', type: FieldType.Textarea, required: true, placeholder: 'Daftar material beserta spesifikasinya...' },
+            { order: 2, label: 'Metode Pengerjaan', type: FieldType.Textarea, required: true, placeholder: 'Uraikan metode dan urutan pengerjaan...' },
+            { order: 3, label: 'Target Penyelesaian (hari)', type: FieldType.Text, required: true, placeholder: 'contoh: 3' },
+            { order: 4, label: 'Catatan Keselamatan Kerja', type: FieldType.Textarea, required: false },
+          ],
+        },
+        workReportForm: {
+          title: 'Laporan Penyelesaian Pekerjaan Lapangan',
+          description: 'Laporan hasil akhir pengerjaan dari tim lapangan.',
+          formType: SubmissionType.Report,
+          fields: [
+            { order: 1, label: 'Status Pekerjaan', type: FieldType.SingleSelect, required: true, options: [{ key: 'selesai', value: 'Selesai 100%' }, { key: 'sebagian', value: 'Selesai Sebagian' }, { key: 'kendala', value: 'Terkendala' }] },
+            { order: 2, label: 'Foto Hasil Akhir', type: FieldType.Image, required: true },
+            { order: 3, label: 'Material Terpakai', type: FieldType.Textarea, required: true, placeholder: 'Detail material yang digunakan beserta jumlahnya...' },
+            { order: 4, label: 'Kendala & Solusi', type: FieldType.Textarea, required: false },
+          ],
+        },
+      },
+    ],
+  },
+  {
+    title: 'Jasa Pengiriman & Logistik Barang',
+    description:
+      'Layanan pengiriman barang, distribusi produk, dan jasa kurir untuk kebutuhan bisnis dan perorangan dalam kota maupun antar kota.',
+    companyTypeId: COMPANY_TYPE_IDS.CV,
+    accessType: 'public',
+    draftingWorkOrderType: 'auto',
+    serviceRequestConfig: {
+      serviceRequestApprovalAccessType: ApprovalAccessType.AUTO,
+      reviewNeed: true,
+      intakeForm: {
+        title: 'Formulir Order Pengiriman',
+        description: 'Isi detail pengiriman barang Anda.',
+        formType: SubmissionType.Intake,
+        fields: [
+          { order: 1, label: 'Nama Pengirim', type: FieldType.Text, required: true, placeholder: 'Nama lengkap pengirim...' },
+          { order: 2, label: 'Nomor Telepon Pengirim', type: FieldType.Text, required: true, placeholder: '08xxxxxxxxxx' },
+          { order: 3, label: 'Alamat Pengambilan', type: FieldType.Textarea, required: true, placeholder: 'Alamat lengkap pick-up...' },
+          { order: 4, label: 'Nama Penerima', type: FieldType.Text, required: true, placeholder: 'Nama lengkap penerima...' },
+          { order: 5, label: 'Alamat Tujuan', type: FieldType.Textarea, required: true, placeholder: 'Alamat lengkap tujuan pengiriman...' },
+          { order: 6, label: 'Deskripsi Barang', type: FieldType.Textarea, required: true, placeholder: 'Jenis barang, berat estimasi, dimensi...' },
+          { order: 7, label: 'Jenis Pengiriman', type: FieldType.SingleSelect, required: true, options: [{ key: 'same_day', value: 'Same Day' }, { key: 'next_day', value: 'Next Day' }, { key: 'reguler', value: 'Reguler (2-3 hari)' }] },
+        ],
+      },
+      reviewForm: {
+        title: 'Ulasan Layanan Pengiriman',
+        description: 'Berikan penilaian atas layanan pengiriman yang Anda terima.',
+        formType: SubmissionType.Review,
+        fields: [
+          { order: 1, label: 'Kondisi Barang Saat Diterima', type: FieldType.SingleSelect, required: true, options: [{ key: 'sempurna', value: 'Sempurna / Tidak ada kerusakan' }, { key: 'baik', value: 'Baik' }, { key: 'rusak', value: 'Ada Kerusakan' }] },
+          { order: 2, label: 'Ketepatan Waktu Pengiriman', type: FieldType.SingleSelect, required: true, options: [{ key: 'tepat', value: 'Tepat Waktu' }, { key: 'terlambat_sedikit', value: 'Sedikit Terlambat' }, { key: 'terlambat', value: 'Terlambat' }] },
+          { order: 3, label: 'Penilaian Kurir', type: FieldType.SingleSelect, required: true, options: [{ key: 'sangat_baik', value: 'Sangat Ramah & Profesional' }, { key: 'baik', value: 'Baik' }, { key: 'cukup', value: 'Cukup' }] },
+          { order: 4, label: 'Komentar', type: FieldType.Textarea, required: false },
+        ],
+      },
+    },
+    workOrdersConfig: [
+      {
+        configId: null,
+        positionsOnDuty: { name: 'Kurir & Driver', description: 'Tim kurir dan pengemudi yang menangani pengambilan dan pengiriman barang.' },
+        workOrderApprovalAccessType: ApprovalAccessType.AUTO,
+        workReportApprovalAccessType: ApprovalAccessType.AUTO,
+        showReportToRequester: false,
+        minStaff: 1,
+        maxStaff: 2,
+        workOrderForm: null,
+        workReportForm: {
+          title: 'Laporan Penyelesaian Pengiriman',
+          description: 'Konfirmasi bahwa barang telah berhasil diantarkan.',
+          formType: SubmissionType.Report,
+          fields: [
+            { order: 1, label: 'Status Pengiriman', type: FieldType.SingleSelect, required: true, options: [{ key: 'terkirim', value: 'Terkirim & Diterima Langsung' }, { key: 'titip', value: 'Dititipkan ke Penjaga / Satpam' }, { key: 'gagal', value: 'Gagal Terkirim' }] },
+            { order: 2, label: 'Foto Bukti Pengiriman', type: FieldType.Image, required: true },
+            { order: 3, label: 'Catatan', type: FieldType.Textarea, required: false, placeholder: 'Keterangan tambahan jika ada...' },
+          ],
+        },
+      },
+    ],
+  },
 
-  for (const company of companyTypeEntries) {
-    for (const access of accessTypes) {
-      for (const wo of woTypes) {
-        for (const review of reviewNeeds) {
-          // If WO is auto, report approval access type is forced to 'auto'.
-          // If WO is manual, we can have both 'auto' and 'manager' for report.
-          const reports = wo === 'auto' ? ['auto'] : ['auto', 'manager'];
+  // ── Koperasi ─────────────────────────────────────────────────────────────
+  {
+    title: 'Pengajuan Pinjaman Anggota',
+    description:
+      'Layanan pengajuan pinjaman modal usaha dan konsumtif bagi anggota koperasi yang aktif, dengan proses persetujuan bertahap sesuai aturan koperasi.',
+    companyTypeId: COMPANY_TYPE_IDS.Koperasi,
+    accessType: 'member_only',
+    draftingWorkOrderType: 'manual',
+    serviceRequestConfig: {
+      serviceRequestApprovalAccessType: ApprovalAccessType.MANAGER,
+      reviewNeed: true,
+      intakeForm: {
+        title: 'Formulir Pengajuan Pinjaman',
+        description: 'Isi data lengkap untuk pengajuan pinjaman kepada koperasi.',
+        formType: SubmissionType.Intake,
+        fields: [
+          { order: 1, label: 'Nama Lengkap Anggota', type: FieldType.Text, required: true, placeholder: 'Sesuai KTP...' },
+          { order: 2, label: 'Nomor Anggota', type: FieldType.Text, required: true, placeholder: 'Nomor ID keanggotaan...' },
+          { order: 3, label: 'Jumlah Pinjaman yang Diajukan (Rp)', type: FieldType.Text, required: true, placeholder: 'contoh: 5000000' },
+          { order: 4, label: 'Jangka Waktu Angsuran (bulan)', type: FieldType.SingleSelect, required: true, options: [{ key: '6', value: '6 Bulan' }, { key: '12', value: '12 Bulan' }, { key: '24', value: '24 Bulan' }, { key: '36', value: '36 Bulan' }] },
+          { order: 5, label: 'Tujuan Penggunaan Dana', type: FieldType.SingleSelect, required: true, options: [{ key: 'modal_usaha', value: 'Modal Usaha' }, { key: 'pendidikan', value: 'Biaya Pendidikan' }, { key: 'kesehatan', value: 'Kesehatan' }, { key: 'konsumtif', value: 'Kebutuhan Konsumtif' }, { key: 'lainnya', value: 'Lainnya' }] },
+          { order: 6, label: 'Uraian Penggunaan Dana', type: FieldType.Textarea, required: true, placeholder: 'Jelaskan secara detail rencana penggunaan dana...' },
+          { order: 7, label: 'Upload KTP', type: FieldType.Image, required: true },
+        ],
+      },
+      reviewForm: {
+        title: 'Evaluasi Layanan Pinjaman',
+        description: 'Berikan penilaian atas proses pengajuan pinjaman yang telah dilalui.',
+        formType: SubmissionType.Review,
+        fields: [
+          { order: 1, label: 'Kemudahan Proses Pengajuan', type: FieldType.SingleSelect, required: true, options: [{ key: 'mudah', value: 'Sangat Mudah' }, { key: 'cukup', value: 'Cukup Mudah' }, { key: 'sulit', value: 'Perlu Disederhanakan' }] },
+          { order: 2, label: 'Kecepatan Pencairan Dana', type: FieldType.SingleSelect, required: true, options: [{ key: 'cepat', value: 'Cepat' }, { key: 'normal', value: 'Normal' }, { key: 'lambat', value: 'Lambat' }] },
+          { order: 3, label: 'Kepuasan Pelayanan', type: FieldType.SingleSelect, required: true, options: [{ key: 'puas', value: 'Puas' }, { key: 'cukup', value: 'Cukup Puas' }, { key: 'kurang', value: 'Kurang Puas' }] },
+          { order: 4, label: 'Saran Perbaikan', type: FieldType.Textarea, required: false },
+        ],
+      },
+    },
+    workOrdersConfig: [
+      {
+        configId: null,
+        positionsOnDuty: { name: 'Petugas Kredit & Keuangan', description: 'Petugas yang memverifikasi kelayakan dan memproses pencairan pinjaman anggota.' },
+        workOrderApprovalAccessType: ApprovalAccessType.AUTO,
+        workReportApprovalAccessType: ApprovalAccessType.MANAGER,
+        showReportToRequester: false,
+        minStaff: 1,
+        maxStaff: 2,
+        workOrderForm: {
+          title: 'Instruksi Verifikasi & Pencairan Pinjaman',
+          description: 'Panduan kerja petugas dalam memproses pengajuan pinjaman anggota.',
+          formType: SubmissionType.WorkOrder,
+          fields: [
+            { order: 1, label: 'Hasil Verifikasi Kelayakan', type: FieldType.SingleSelect, required: true, options: [{ key: 'layak', value: 'Layak Disetujui' }, { key: 'perlu_revisi', value: 'Perlu Revisi / Pengurangan Jumlah' }, { key: 'ditolak', value: 'Ditolak' }] },
+            { order: 2, label: 'Jumlah Disetujui (Rp)', type: FieldType.Text, required: true, placeholder: 'Jumlah final yang disetujui...' },
+            { order: 3, label: 'Catatan Hasil Verifikasi', type: FieldType.Textarea, required: true, placeholder: 'Alasan dan pertimbangan keputusan...' },
+          ],
+        },
+        workReportForm: {
+          title: 'Laporan Pencairan Pinjaman',
+          description: 'Bukti dan dokumentasi pencairan pinjaman kepada anggota.',
+          formType: SubmissionType.Report,
+          fields: [
+            { order: 1, label: 'Status Pencairan', type: FieldType.SingleSelect, required: true, options: [{ key: 'cair', value: 'Dana Sudah Dicairkan' }, { key: 'ditunda', value: 'Ditunda' }, { key: 'batal', value: 'Dibatalkan' }] },
+            { order: 2, label: 'Tanggal Pencairan', type: FieldType.Text, required: true, placeholder: 'DD/MM/YYYY' },
+            { order: 3, label: 'Bukti Transfer / Kwitansi', type: FieldType.Image, required: true },
+            { order: 4, label: 'Catatan Tambahan', type: FieldType.Textarea, required: false },
+          ],
+        },
+      },
+    ],
+  },
+  {
+    title: 'Simpanan Sukarela Anggota',
+    description:
+      'Layanan penyetoran simpanan sukarela bagi anggota koperasi yang ingin menambah saldo tabungan sewaktu-waktu di luar simpanan wajib dan pokok.',
+    companyTypeId: COMPANY_TYPE_IDS.Koperasi,
+    accessType: 'member_only',
+    draftingWorkOrderType: 'auto',
+    serviceRequestConfig: {
+      serviceRequestApprovalAccessType: ApprovalAccessType.AUTO,
+      reviewNeed: false,
+      intakeForm: {
+        title: 'Formulir Setoran Simpanan Sukarela',
+        description: 'Isi data penyetoran simpanan sukarela Anda.',
+        formType: SubmissionType.Intake,
+        fields: [
+          { order: 1, label: 'Nama Anggota', type: FieldType.Text, required: true, placeholder: 'Nama lengkap...' },
+          { order: 2, label: 'Nomor Anggota', type: FieldType.Text, required: true, placeholder: 'Nomor ID keanggotaan...' },
+          { order: 3, label: 'Jumlah Setoran (Rp)', type: FieldType.Text, required: true, placeholder: 'Minimum Rp 50.000' },
+          { order: 4, label: 'Metode Pembayaran', type: FieldType.SingleSelect, required: true, options: [{ key: 'tunai', value: 'Tunai di Kantor' }, { key: 'transfer', value: 'Transfer Bank' }] },
+          { order: 5, label: 'Bukti Transfer (jika via transfer)', type: FieldType.Image, required: false },
+        ],
+      },
+      reviewForm: null,
+    },
+    workOrdersConfig: [
+      {
+        configId: null,
+        positionsOnDuty: { name: 'Kasir & Teller Koperasi', description: 'Petugas yang memproses transaksi setoran dan penarikan simpanan anggota.' },
+        workOrderApprovalAccessType: ApprovalAccessType.AUTO,
+        workReportApprovalAccessType: ApprovalAccessType.AUTO,
+        showReportToRequester: false,
+        minStaff: 1,
+        maxStaff: 1,
+        workOrderForm: null,
+        workReportForm: {
+          title: 'Konfirmasi Penerimaan Setoran',
+          description: 'Dokumentasi konfirmasi setoran simpanan sukarela anggota.',
+          formType: SubmissionType.Report,
+          fields: [
+            { order: 1, label: 'Status Penerimaan', type: FieldType.SingleSelect, required: true, options: [{ key: 'diterima', value: 'Dana Diterima & Dibukukan' }, { key: 'pending', value: 'Menunggu Konfirmasi' }] },
+            { order: 2, label: 'Nomor Bukti Transaksi', type: FieldType.Text, required: true, placeholder: 'Nomor kwitansi atau referensi transaksi...' },
+            { order: 3, label: 'Foto / Scan Kwitansi', type: FieldType.Image, required: true },
+          ],
+        },
+      },
+    ],
+  },
 
-          for (const report of reports) {
-            const displayAccess =
-              access === 'public'
-                ? 'Public'
-                : access === 'member_only'
-                  ? 'Member'
-                  : 'Internal';
-            const displayWO = wo === 'auto' ? 'WO Auto' : 'WO Manual';
-            const displayReport =
-              report === 'auto' ? 'Report Auto' : 'Report Manual';
-            const displayReview = review ? 'Review Manual' : 'Review Auto';
-
-            const title = `${displayAccess} - ${displayWO} - ${displayReport} - ${displayReview} (${company.name})`;
-            const description = `Template layanan dengan tipe akses ${displayAccess}, ${displayWO}, persetujuan report ${displayReport}, dan verifikasi review ${displayReview} untuk ${company.name}.`;
-
-            // Prepare Work Order form blueprint
-            // For WO Auto, workOrderForm must be null
-            const workOrderFormBlueprint =
-              wo === 'auto'
-                ? null
-                : {
-                    title: `Formulir Kerja - ${title}`,
-                    description: 'Formulir untuk memandu eksekusi kerja staff.',
-                    formType: SubmissionType.WorkOrder,
-                    fields: [
-                      {
-                        order: 1,
-                        label: 'Laporan Pekerjaan',
-                        type: FieldType.Textarea,
-                        required: true,
-                        placeholder: 'detail kerja...',
-                      },
-                    ],
-                  };
-
-            const template = {
-              title,
-              description,
-              companyTypeId: company.id,
-              accessType: access,
-              draftingWorkOrderType: wo,
-              serviceRequestConfig: {
-                serviceRequestApprovalAccessType:
-                  wo === 'auto'
-                    ? ApprovalAccessType.AUTO
-                    : ApprovalAccessType.MANAGER,
-                reviewNeed: review,
-                intakeForm: {
-                  title: `Formulir Permintaan - ${title}`,
-                  description:
-                    'Formulir awal untuk mengajukan request layanan ini.',
-                  formType: SubmissionType.Intake,
-                  fields: [
-                    {
-                      order: 1,
-                      label: 'Nama Pemohon',
-                      type: FieldType.Text,
-                      required: true,
-                      placeholder: 'nama...',
-                    },
-                    {
-                      order: 2,
-                      label: 'Keterangan Kebutuhan',
-                      type: FieldType.Textarea,
-                      required: true,
-                      placeholder: 'detail...',
-                    },
-                  ],
-                },
-                reviewForm: review
-                  ? {
-                      title: `Formulir Evaluasi - ${title}`,
-                      description:
-                        'Formulir evaluasi setelah pengerjaan selesai.',
-                      formType: SubmissionType.Review,
-                      fields: [
-                        {
-                          order: 1,
-                          label: 'Tingkat Kepuasan',
-                          type: FieldType.SingleSelect,
-                          required: true,
-                          options: [
-                            { key: 'opt1', value: 'Sangat Puas' },
-                            { key: 'opt2', value: 'Cukup Puas' },
-                            { key: 'opt3', value: 'Kurang Puas' },
-                          ],
-                        },
-                      ],
-                    }
-                  : null,
-              },
-              workOrdersConfig: [
-                {
-                  configId: null,
-                  positionsOnDuty: {
-                    _id: '665000000000000000000005',
-                    name: 'General Services',
-                    description:
-                      'Divisi umum untuk penanganan operasional layanan.',
-                  },
-                  workOrderApprovalAccessType: ApprovalAccessType.AUTO,
-                  workReportApprovalAccessType:
-                    report === 'auto'
-                      ? ApprovalAccessType.AUTO
-                      : ApprovalAccessType.MANAGER,
-                  minStaff: 1,
-                  maxStaff: 2,
-                  workOrderForm: workOrderFormBlueprint,
-                  workReportForm: {
-                    title: `Formulir Laporan Kerja - ${title}`,
-                    description: 'Laporan penyelesaian pekerjaan dari staff.',
-                    formType: SubmissionType.Report,
-                    fields: [
-                      {
-                        order: 1,
-                        label: 'Catatan Penyelesaian',
-                        type: FieldType.Textarea,
-                        required: true,
-                        placeholder: 'pekerjaan selesai...',
-                      },
-                      {
-                        order: 2,
-                        label: 'Bukti Foto',
-                        type: FieldType.Image,
-                        required: false,
-                      },
-                    ],
-                  },
-                },
-              ],
-            };
-
-            templates.push(template);
-          }
-        }
-      }
-    }
-  }
-  return templates;
-}
-
-export const serviceTemplatesData = generateTemplates();
+  // ── Yayasan ──────────────────────────────────────────────────────────────
+  {
+    title: 'Permohonan Bantuan Beasiswa Pendidikan',
+    description:
+      'Layanan pengajuan beasiswa bagi pelajar dan mahasiswa berprestasi yang membutuhkan dukungan finansial untuk melanjutkan pendidikan.',
+    companyTypeId: COMPANY_TYPE_IDS.Yayasan,
+    accessType: 'public',
+    draftingWorkOrderType: 'manual',
+    serviceRequestConfig: {
+      serviceRequestApprovalAccessType: ApprovalAccessType.MANAGER,
+      reviewNeed: true,
+      intakeForm: {
+        title: 'Formulir Permohonan Beasiswa',
+        description: 'Lengkapi data diri dan dokumen pendukung untuk permohonan beasiswa.',
+        formType: SubmissionType.Intake,
+        fields: [
+          { order: 1, label: 'Nama Lengkap Pemohon', type: FieldType.Text, required: true, placeholder: 'Sesuai KTP/Kartu Pelajar...' },
+          { order: 2, label: 'Jenjang Pendidikan', type: FieldType.SingleSelect, required: true, options: [{ key: 'sma', value: 'SMA / SMK / Sederajat' }, { key: 'd3', value: 'D3 (Diploma)' }, { key: 's1', value: 'S1 (Sarjana)' }, { key: 's2', value: 'S2 (Magister)' }] },
+          { order: 3, label: 'Nama Institusi Pendidikan', type: FieldType.Text, required: true, placeholder: 'Nama sekolah / universitas...' },
+          { order: 4, label: 'IPK / Nilai Rata-Rata', type: FieldType.Text, required: true, placeholder: 'contoh: 3.75 atau 88.5' },
+          { order: 5, label: 'Penghasilan Orang Tua / Wali per Bulan (Rp)', type: FieldType.Text, required: true, placeholder: 'contoh: 3000000' },
+          { order: 6, label: 'Essay: Mengapa Anda Layak Mendapatkan Beasiswa', type: FieldType.Textarea, required: true, placeholder: 'Minimal 150 kata...' },
+          { order: 7, label: 'Upload Kartu Keluarga', type: FieldType.Image, required: true },
+          { order: 8, label: 'Upload Transkrip Nilai / Rapor', type: FieldType.Image, required: true },
+        ],
+      },
+      reviewForm: {
+        title: 'Evaluasi Program Beasiswa',
+        description: 'Penilaian dari penerima beasiswa terhadap program yang dijalankan yayasan.',
+        formType: SubmissionType.Review,
+        fields: [
+          { order: 1, label: 'Program Beasiswa Membantu Pendidikan Anda?', type: FieldType.SingleSelect, required: true, options: [{ key: 'sangat', value: 'Sangat Membantu' }, { key: 'cukup', value: 'Cukup Membantu' }, { key: 'kurang', value: 'Kurang Membantu' }] },
+          { order: 2, label: 'Kepuasan atas Proses Seleksi', type: FieldType.SingleSelect, required: true, options: [{ key: 'transparan', value: 'Transparan & Adil' }, { key: 'cukup', value: 'Cukup Baik' }, { order: 3, key: 'perlu_perbaikan', value: 'Perlu Perbaikan' }] },
+          { order: 3, label: 'Saran untuk Program Beasiswa', type: FieldType.Textarea, required: false },
+        ],
+      },
+    },
+    workOrdersConfig: [
+      {
+        configId: null,
+        positionsOnDuty: { name: 'Tim Seleksi Beasiswa', description: 'Tim yang mengevaluasi kelayakan dan memproses permohonan beasiswa.' },
+        workOrderApprovalAccessType: ApprovalAccessType.AUTO,
+        workReportApprovalAccessType: ApprovalAccessType.MANAGER,
+        showReportToRequester: false,
+        minStaff: 2,
+        maxStaff: 4,
+        workOrderForm: {
+          title: 'Instruksi Seleksi & Verifikasi Beasiswa',
+          description: 'Panduan proses seleksi dan verifikasi dokumen pemohon beasiswa.',
+          formType: SubmissionType.WorkOrder,
+          fields: [
+            { order: 1, label: 'Aspek yang Dievaluasi', type: FieldType.Textarea, required: true, placeholder: 'Prestasi akademik, kondisi ekonomi, essay...' },
+            { order: 2, label: 'Jadwal Wawancara (jika diperlukan)', type: FieldType.Text, required: false, placeholder: 'Tanggal dan waktu wawancara...' },
+            { order: 3, label: 'Catatan Khusus Seleksi', type: FieldType.Textarea, required: false },
+          ],
+        },
+        workReportForm: {
+          title: 'Laporan Hasil Seleksi Beasiswa',
+          description: 'Dokumentasi keputusan akhir seleksi beasiswa.',
+          formType: SubmissionType.Report,
+          fields: [
+            { order: 1, label: 'Keputusan Akhir', type: FieldType.SingleSelect, required: true, options: [{ key: 'diterima', value: 'Diterima sebagai Penerima Beasiswa' }, { key: 'cadangan', value: 'Masuk Daftar Cadangan' }, { key: 'ditolak', value: 'Tidak Memenuhi Kriteria' }] },
+            { order: 2, label: 'Nilai / Skor Akhir Seleksi', type: FieldType.Text, required: true, placeholder: 'Total skor atau nilai agregat...' },
+            { order: 3, label: 'Catatan Keputusan', type: FieldType.Textarea, required: true, placeholder: 'Alasan dan pertimbangan keputusan...' },
+            { order: 4, label: 'Dokumen Keputusan', type: FieldType.Image, required: false },
+          ],
+        },
+      },
+    ],
+  },
+  {
+    title: 'Program Pelatihan Keterampilan Masyarakat',
+    description:
+      'Layanan pendaftaran program pelatihan vokasional dan pengembangan keterampilan yang diselenggarakan yayasan untuk memberdayakan masyarakat.',
+    companyTypeId: COMPANY_TYPE_IDS.Yayasan,
+    accessType: 'public',
+    draftingWorkOrderType: 'auto',
+    serviceRequestConfig: {
+      serviceRequestApprovalAccessType: ApprovalAccessType.AUTO,
+      reviewNeed: true,
+      intakeForm: {
+        title: 'Formulir Pendaftaran Pelatihan',
+        description: 'Daftarkan diri Anda pada program pelatihan keterampilan yang tersedia.',
+        formType: SubmissionType.Intake,
+        fields: [
+          { order: 1, label: 'Nama Lengkap', type: FieldType.Text, required: true, placeholder: 'Nama lengkap peserta...' },
+          { order: 2, label: 'Usia', type: FieldType.Text, required: true, placeholder: 'contoh: 25' },
+          { order: 3, label: 'Program Pelatihan yang Diminati', type: FieldType.SingleSelect, required: true, options: [{ key: 'menjahit', value: 'Menjahit & Desain Busana' }, { key: 'kuliner', value: 'Pengolahan Kuliner & Pastry' }, { key: 'digital', value: 'Literasi Digital & Komputer' }, { key: 'las', value: 'Pengelasan & Fabrikasi Logam' }, { key: 'tata_rias', value: 'Tata Rias & Kecantikan' }] },
+          { order: 4, label: 'Pendidikan Terakhir', type: FieldType.SingleSelect, required: true, options: [{ key: 'sd', value: 'SD / Sederajat' }, { key: 'smp', value: 'SMP / Sederajat' }, { key: 'sma', value: 'SMA / SMK / Sederajat' }, { key: 'pt', value: 'Perguruan Tinggi' }] },
+          { order: 5, label: 'Motivasi Mengikuti Pelatihan', type: FieldType.Textarea, required: true, placeholder: 'Ceritakan alasan dan harapan Anda...' },
+        ],
+      },
+      reviewForm: {
+        title: 'Evaluasi Program Pelatihan',
+        description: 'Isi kuesioner evaluasi setelah mengikuti program pelatihan.',
+        formType: SubmissionType.Review,
+        fields: [
+          { order: 1, label: 'Kualitas Materi Pelatihan', type: FieldType.SingleSelect, required: true, options: [{ key: 'sangat_baik', value: 'Sangat Baik & Relevan' }, { key: 'baik', value: 'Baik' }, { key: 'cukup', value: 'Cukup' }, { key: 'kurang', value: 'Perlu Ditingkatkan' }] },
+          { order: 2, label: 'Kualitas Instruktur / Fasilitator', type: FieldType.SingleSelect, required: true, options: [{ key: 'sangat_baik', value: 'Sangat Kompeten' }, { key: 'baik', value: 'Baik' }, { key: 'cukup', value: 'Cukup' }] },
+          { order: 3, label: 'Apakah Pelatihan Meningkatkan Keterampilan Anda?', type: FieldType.SingleSelect, required: true, options: [{ key: 'sangat', value: 'Sangat Meningkatkan' }, { key: 'cukup', value: 'Cukup Meningkatkan' }, { key: 'sedikit', value: 'Sedikit' }] },
+          { order: 4, label: 'Saran Pengembangan Program', type: FieldType.Textarea, required: false },
+        ],
+      },
+    },
+    workOrdersConfig: [
+      {
+        configId: null,
+        positionsOnDuty: { name: 'Instruktur & Fasilitator', description: 'Tenaga pengajar yang memfasilitasi pelaksanaan program pelatihan keterampilan.' },
+        workOrderApprovalAccessType: ApprovalAccessType.AUTO,
+        workReportApprovalAccessType: ApprovalAccessType.AUTO,
+        showReportToRequester: false,
+        minStaff: 1,
+        maxStaff: 3,
+        workOrderForm: null,
+        workReportForm: {
+          title: 'Laporan Pelaksanaan Pelatihan',
+          description: 'Dokumentasi kegiatan dan hasil pelaksanaan sesi pelatihan.',
+          formType: SubmissionType.Report,
+          fields: [
+            { order: 1, label: 'Jumlah Peserta yang Hadir', type: FieldType.Text, required: true, placeholder: 'contoh: 18' },
+            { order: 2, label: 'Materi yang Disampaikan', type: FieldType.Textarea, required: true, placeholder: 'Ringkasan topik dan materi yang diajarkan...' },
+            { order: 3, label: 'Tingkat Pemahaman Peserta', type: FieldType.SingleSelect, required: true, options: [{ key: 'tinggi', value: 'Tinggi (>80% memahami)' }, { key: 'sedang', value: 'Sedang (50-80%)' }, { key: 'rendah', value: 'Perlu Pengulangan (<50%)' }] },
+            { order: 4, label: 'Foto Dokumentasi Kegiatan', type: FieldType.Image, required: true },
+            { order: 5, label: 'Catatan & Tindak Lanjut', type: FieldType.Textarea, required: false },
+          ],
+        },
+      },
+    ],
+  },
+];

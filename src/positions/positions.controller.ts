@@ -40,6 +40,7 @@ export class PositionsController {
   async findById(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const position = await this.positionsService.findById(id, user);
     const employees = await this.usersService.findByPositionId(id);
+    const canDelete = await this.positionsService.canDelete(id, user);
 
     const positionData = position.toObject ? position.toObject() : position;
 
@@ -48,6 +49,9 @@ export class PositionsController {
       data: {
         ...positionData,
         employee: employees,
+      },
+      meta: {
+        canDelete,
       },
     };
   }

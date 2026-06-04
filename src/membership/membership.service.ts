@@ -249,7 +249,7 @@ export class MembershipService {
         return false;
       }
     } catch {
-      return !!account;
+      return false;
     }
   }
 

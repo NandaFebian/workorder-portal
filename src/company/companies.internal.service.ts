@@ -394,4 +394,196 @@ export class CompaniesInternalService {
 
     return this.getIntegrationConfig(companyId);
   }
+
+  /**
+   * Check if a user can be kicked based on WO assignments and role permissions.
+   */
+  private async _canKickEmployee(
+    target: any,
+    user: AuthenticatedUser,
+  ): Promise<boolean> {
+    // Cannot kick an Owner
+    if (target.role === Role.CompanyOwner) return false;
+
+    // Role-based permission check
+    if (target.role === Role.CompanyManager) {
+      // Only Owner can kick a Manager
+      if (user.role !== Role.CompanyOwner) return false;
+    } else if (target.role === Role.CompanyStaff) {
+      // Owner, General Manager, or Department Manager (same position) can kick Staff
+      if (user.role === Role.CompanyOwner) {
+        // OK
+      } else if (user.role === Role.CompanyManager) {
+        if (DepartmentAuthHelper.isDepartmentManager(user)) {
+          const targetPositionId = target.positionId?.toString();
+          const managerPositionId = user.position?._id?.toString();
+          if (targetPositionId !== managerPositionId) return false;
+        }
+        // General Manager can kick any staff
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+
+    // Check WO assignments — blocked if assigned to any active WO
+    const activeWoCount = await this.companyModel.db
+      .collection('workorders')
+      .countDocuments({
+        assignedStaff: new Types.ObjectId(target._id.toString()),
+        deletedAt: null,
+        status: {
+          $in: ['drafted', 'sent', 'approved', 'on_progress'],
+        },
+      });
+
+    return activeWoCount === 0;
+  }
+
+  async getEmployeeDetail(
+    employeeId: string,
+    user: AuthenticatedUser,
+  ): Promise<any> {
+    if (!user.company?._id) {
+      throw new ForbiddenException('User is not associated with any company.');
+    }
+
+    if (!Types.ObjectId.isValid(employeeId)) {
+      throw new NotFoundException('Invalid employee ID');
+    }
+
+    const employee = await this.companyModel.db
+      .collection('users')
+      .findOne({
+        _id: new Types.ObjectId(employeeId),
+        companyId: user.company._id,
+        deletedAt: null,
+      });
+
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+
+    // Owner can see managers + staff; Manager can only see staff
+    if (user.role === Role.CompanyManager) {
+      if (employee.role !== Role.CompanyStaff) {
+        throw new NotFoundException('Employee not found');
+      }
+    }
+
+    // Populate position
+    let position: any = null;
+    if (employee.positionId) {
+      position = await this.companyModel.db
+        .collection('positions')
+        .findOne({ _id: employee.positionId });
+    }
+
+    const { password, fcmTokens, ...safeEmployee } = employee;
+    const result: any = { ...safeEmployee };
+    if (position) {
+      result.position = {
+        _id: position._id,
+        name: position.name,
+        description: position.description,
+      };
+      delete result.positionId;
+    }
+
+    const canKick = await this._canKickEmployee(employee, user);
+
+    return { data: result, meta: { canKick } };
+  }
+
+  async kickEmployee(
+    employeeId: string,
+    user: AuthenticatedUser,
+  ): Promise<any> {
+    if (!user.company?._id) {
+      throw new ForbiddenException('User is not associated with any company.');
+    }
+
+    if (!Types.ObjectId.isValid(employeeId)) {
+      throw new NotFoundException('Invalid employee ID');
+    }
+
+    const employee = await this.companyModel.db
+      .collection('users')
+      .findOne({
+        _id: new Types.ObjectId(employeeId),
+        companyId: user.company._id,
+        deletedAt: null,
+      });
+
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+
+    // Cannot kick yourself
+    if (employee._id.toString() === user._id.toString()) {
+      throw new ForbiddenException('Anda tidak dapat mengeluarkan diri sendiri.');
+    }
+
+    // Cannot kick owner
+    if (employee.role === Role.CompanyOwner) {
+      throw new ForbiddenException('Tidak dapat mengeluarkan Owner perusahaan.');
+    }
+
+    // Role-based authorization
+    if (employee.role === Role.CompanyManager) {
+      if (user.role !== Role.CompanyOwner) {
+        throw new ForbiddenException(
+          'Hanya Owner yang dapat mengeluarkan Manager.',
+        );
+      }
+    } else if (employee.role === Role.CompanyStaff) {
+      if (
+        user.role !== Role.CompanyOwner &&
+        user.role !== Role.CompanyManager
+      ) {
+        throw new ForbiddenException(
+          'Anda tidak memiliki izin untuk mengeluarkan karyawan ini.',
+        );
+      }
+      // Department Manager: only staff with matching position
+      if (DepartmentAuthHelper.isDepartmentManager(user)) {
+        const targetPositionId = employee.positionId?.toString();
+        const managerPositionId = user.position?._id?.toString();
+        if (targetPositionId !== managerPositionId) {
+          throw new ForbiddenException(
+            'Department Manager hanya dapat mengeluarkan staf di departemennya sendiri.',
+          );
+        }
+      }
+    }
+
+    // Check WO assignments
+    const activeWoCount = await this.companyModel.db
+      .collection('workorders')
+      .countDocuments({
+        assignedStaff: new Types.ObjectId(employeeId),
+        deletedAt: null,
+        status: {
+          $in: ['drafted', 'sent', 'approved', 'on_progress'],
+        },
+      });
+
+    if (activeWoCount > 0) {
+      throw new UnprocessableEntityException(
+        `Karyawan tidak dapat dikeluarkan karena masih ditugaskan pada ${activeWoCount} Perintah Kerja yang aktif.`,
+      );
+    }
+
+    // Soft delete the user
+    const deletedAt = new Date();
+    await this.companyModel.db
+      .collection('users')
+      .updateOne(
+        { _id: new Types.ObjectId(employeeId) },
+        { $set: { deletedAt } },
+      );
+
+    return { deletedAt };
+  }
 }

@@ -980,58 +980,98 @@ export class ServiceRequestService {
     }
 
     if (status === ServiceRequestStatus.APPROVED) {
-      const serviceData = await this.servicesInternalService.findByVersionId(
-        sr.serviceId.toString(),
-        user,
-      );
+      // Query the service version that was active when the SR was created.
+      // Do NOT filter by deletedAt — old versions may have been soft-deleted
+      // after a service update, but the SR must still reference them.
+      const serviceRaw = await this.serviceModel
+        .findOne({ _id: sr.serviceId })
+        .exec();
 
-      const batchId = new Types.ObjectId().toString();
-      const configs = serviceData.workOrdersConfig || [];
-      const createdWorkOrdersRaw = await Promise.all(
-        configs.map(async (config: any) => {
-          const workOrderFormId =
-            config.workOrderForm?._id ?? config.workOrderFormId ?? null;
-          const reportFormId =
-            config.workReportForm?._id ?? config.workReportFormId ?? null;
-          const positionId =
-            config.positionsOnDuty?._id ?? config.positionId ?? null;
+      if (!serviceRaw) {
+        // Rollback: revert SR status before throwing
+        sr.serviceRequestStatus = ServiceRequestStatus.RECEIVED;
+        sr.approvedBy = null as any;
+        sr.approvedAt = null as any;
+        await sr.save();
+        throw new NotFoundException(
+          `Service with ID ${sr.serviceId} not found`,
+        );
+      }
 
-          return this.workOrderService.createInternal({
-            companyId: sr.companyId,
-            serviceId: sr.serviceId,
-            serviceRequestId: sr._id,
-            batchId,
-            positionId,
-            configId: config.configId ?? config._id?.toString() ?? null,
-            workOrderFormId,
-            reportFormId,
-            workOrderApprovalAccessType:
-              config.workOrderApprovalAccessType ?? 'auto',
-            workReportApprovalAccessType:
-              config.workReportApprovalAccessType ?? 'auto',
-            minStaff: config.minStaff ?? 0,
-            maxStaff: config.maxStaff ?? 1,
-            createdBy: user._id,
-            draftingWorkOrderType:
-              serviceData.draftingWorkOrderType ?? 'manual',
-            showReportToRequester: config.showReportToRequester ?? false,
-          });
+      const serviceObj = serviceRaw.toObject();
+
+      // Hydrate workOrdersConfig positions and forms from raw DB data
+      const rawConfigs: any[] = serviceObj.workOrdersConfig || [];
+      const hydratedConfigs = await Promise.all(
+        rawConfigs.map(async (cfg: any) => {
+          const posDoc = cfg.positionId
+            ? await this.serviceModel.db
+                .collection('positions')
+                .findOne({ _id: new Types.ObjectId(cfg.positionId.toString()) })
+            : null;
+          return {
+            ...cfg,
+            positionsOnDuty: posDoc ? { _id: posDoc._id, name: posDoc.name } : null,
+          };
         }),
       );
 
-      // Update sr workOrderCreatedAt timestamp
-      sr.workOrderCreatedAt = now;
-      await sr.save();
+      try {
+        const batchId = new Types.ObjectId().toString();
+        const createdWorkOrdersRaw = await Promise.all(
+          hydratedConfigs.map(async (config: any) => {
+            const workOrderFormId =
+              config.workOrderForm?._id ?? config.workOrderFormId ?? null;
+            const reportFormId =
+              config.workReportForm?._id ?? config.workReportFormId ?? null;
+            const positionId =
+              config.positionsOnDuty?._id ?? config.positionId ?? null;
 
-      const workOrders = await Promise.all(
-        createdWorkOrdersRaw.map(async (wo: any) => {
-          const woRes = await this.workOrderService.findOneInternal(
-            wo._id.toString(),
-            user,
-          );
-          return woRes.data;
-        }),
-      );
+            return this.workOrderService.createInternal({
+              companyId: sr.companyId,
+              serviceId: sr.serviceId,
+              serviceRequestId: sr._id,
+              batchId,
+              positionId,
+              configId: config.configId ?? config._id?.toString() ?? null,
+              workOrderFormId,
+              reportFormId,
+              workOrderApprovalAccessType:
+                config.workOrderApprovalAccessType ?? 'auto',
+              workReportApprovalAccessType:
+                config.workReportApprovalAccessType ?? 'auto',
+              minStaff: config.minStaff ?? 0,
+              maxStaff: config.maxStaff ?? 1,
+              createdBy: user._id,
+              draftingWorkOrderType:
+                serviceObj.draftingWorkOrderType ?? 'manual',
+              showReportToRequester: config.showReportToRequester ?? false,
+            });
+          }),
+        );
+
+        // Update sr workOrderCreatedAt timestamp
+        sr.workOrderCreatedAt = now;
+        await sr.save();
+
+        const workOrders = await Promise.all(
+          createdWorkOrdersRaw.map(async (wo: any) => {
+            const woRes = await this.workOrderService.findOneInternal(
+              wo._id.toString(),
+              user,
+            );
+            return woRes.data;
+          }),
+        );
+      } catch (error) {
+        // Rollback SR status if WO creation fails
+        sr.serviceRequestStatus = ServiceRequestStatus.RECEIVED;
+        sr.approvedBy = null as any;
+        sr.approvedAt = null as any;
+        sr.workOrderCreatedAt = null as any;
+        await sr.save();
+        throw error;
+      }
 
       const serviceRequest = await this.findOneInternal(id, user);
 

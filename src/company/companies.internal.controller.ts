@@ -226,4 +226,36 @@ export class CompaniesInternalController {
       data,
     );
   }
+
+  @Get('employees/:id')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @HttpCode(HttpStatus.OK)
+  async getEmployeeDetail(
+    @Param('id') id: string,
+    @GetUser() user: AuthenticatedUser,
+  ) {
+    const result = await this.companiesInternalService.getEmployeeDetail(
+      id,
+      user,
+    );
+    return ResponseUtil.success(
+      'Employee retrieved successfully',
+      result.data,
+      result.meta,
+    );
+  }
+
+  @Delete('employees/:id')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @HttpCode(HttpStatus.OK)
+  async kickEmployee(
+    @Param('id') id: string,
+    @GetUser() user: AuthenticatedUser,
+  ) {
+    const data = await this.companiesInternalService.kickEmployee(id, user);
+    return ResponseUtil.success('Employee removed successfully', data);
+  }
 }
+

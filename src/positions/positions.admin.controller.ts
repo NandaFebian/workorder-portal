@@ -63,6 +63,7 @@ export class PositionsAdminController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
+  @Roles(Role.AppAdmin, Role.CompanyOwner)
   async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const data = await this.positionsService.remove(id, user);
     return ResponseUtil.success('Position deleted successfully', data);

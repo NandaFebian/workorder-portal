@@ -57,9 +57,11 @@ export class FormsController {
     @GetUser() user: AuthenticatedUser,
   ) {
     const template = await this.formsService.findTemplateById(id, user);
+    const canDelete = await this.formsService.canDelete(id, user);
     return ResponseUtil.success(
       'Form template retrieved successfully',
       template,
+      { canDelete },
     );
   }
 

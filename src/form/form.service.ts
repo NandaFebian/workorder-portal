@@ -352,6 +352,87 @@ export class FormsService {
     await Promise.all(updatePromises);
   }
 
+  /**
+   * Check if any active service references any version of this form.
+   * Returns error message if used, null otherwise.
+   */
+  private async _validateFormNotUsedByService(
+    formKey: string,
+    companyId: Types.ObjectId,
+  ): Promise<string | null> {
+    // Get all version IDs for this formKey
+    const allVersions = await this.formTemplateModel
+      .find({ formKey, companyId, deletedAt: null })
+      .select('_id')
+      .lean()
+      .exec();
+
+    if (allVersions.length === 0) return null;
+
+    const versionIds = allVersions.map((v) => v._id);
+
+    const db = this.formTemplateModel.db;
+    const serviceCount = await db.collection('services').countDocuments({
+      deletedAt: null,
+      $or: [
+        { 'serviceRequestConfig.intakeFormId': { $in: versionIds } },
+        { 'serviceRequestConfig.reviewFormId': { $in: versionIds } },
+        { 'workOrdersConfig.workOrderFormId': { $in: versionIds } },
+        { 'workOrdersConfig.workReportFormId': { $in: versionIds } },
+      ],
+    });
+
+    if (serviceCount > 0) {
+      return 'Formulir tidak dapat dihapus karena masih digunakan oleh layanan yang aktif.';
+    }
+
+    return null;
+  }
+
+  /**
+   * Check if a form can be deleted by the given user.
+   */
+  async canDelete(id: string, user: AuthenticatedUser): Promise<boolean> {
+    if (!user.company?._id) return false;
+    if (!Types.ObjectId.isValid(id)) return false;
+
+    const template = await this.formTemplateModel
+      .findOne({
+        _id: new Types.ObjectId(id),
+        companyId: user.company._id,
+        deletedAt: null,
+      })
+      .exec();
+
+    if (!template) return false;
+
+    // Department Manager: can only delete forms matching their position
+    if (user.position?._id) {
+      const formPositionId = template.position?.toString() ?? null;
+      if (formPositionId !== user.position._id.toString()) return false;
+    }
+
+    // Check latest version
+    const latestVersion = await this.formTemplateModel
+      .findOne({
+        formKey: template.formKey,
+        companyId: user.company._id,
+        deletedAt: null,
+      })
+      .sort({ __v: -1 })
+      .exec();
+
+    if (latestVersion && (latestVersion._id as any).toString() !== id) {
+      return false;
+    }
+
+    const error = await this._validateFormNotUsedByService(
+      template.formKey,
+      user.company._id,
+    );
+    return error === null;
+  }
+
   async removeById(id: string, user: AuthenticatedUser): Promise<any> {
     if (!user.company?._id) {
       throw new ForbiddenException('User is not associated with any company.');
@@ -399,6 +480,15 @@ export class FormsService {
       );
     }
 
+    // Validate form is not used by any service
+    const validationError = await this._validateFormNotUsedByService(
+      template.formKey,
+      user.company._id,
+    );
+    if (validationError) {
+      throw new UnprocessableEntityException(validationError);
+    }
+
     // Capture data before deleting
     const deletedData = template.toObject();
 
@@ -416,3 +506,4 @@ export class FormsService {
     return { ...deletedData, deletedAt };
   }
 }
+

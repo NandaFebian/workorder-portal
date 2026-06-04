@@ -486,11 +486,14 @@ export class WorkOrderService {
         ],
       };
     } else if (user.role === Role.CompanyManager) {
-      const managerId = new Types.ObjectId(user._id.toString());
-      query.$or = [
-        { createdBy: managerId },
-        { createdBy: null }, // System generated (Service Request flow)
-      ];
+      if (DepartmentAuthHelper.isDepartmentManager(user)) {
+        const managerPositionId = new Types.ObjectId(user.position!._id.toString());
+        const managerId = new Types.ObjectId(user._id.toString());
+        query.$or = [
+          { createdBy: managerId },
+          { positionId: managerPositionId },
+        ];
+      }
       if (filterDto.status) query.status = filterDto.status;
       if (filterDto.assignedStaffId) {
         query.assignedStaff = new Types.ObjectId(filterDto.assignedStaffId);
@@ -550,6 +553,13 @@ export class WorkOrderService {
     };
     if (user.role === Role.CompanyStaff) {
       query.assignedStaff = user._id;
+    } else if (user.role === Role.CompanyManager && DepartmentAuthHelper.isDepartmentManager(user)) {
+      const managerPositionId = new Types.ObjectId(user.position!._id.toString());
+      const managerId = new Types.ObjectId(user._id.toString());
+      query.$or = [
+        { createdBy: managerId },
+        { positionId: managerPositionId },
+      ];
     }
 
     const wo = await this.workOrderModel

@@ -4,46 +4,366 @@ import { ApprovalAccessType } from '../common/enums/approval-access-type.enum';
 import { FieldType } from '../common/enums/field-type.enum';
 
 export const COMPANY_TYPE_IDS = {
-  PT: new Types.ObjectId('665000000000000000000001'),
-  CV: new Types.ObjectId('665000000000000000000002'),
-  Koperasi: new Types.ObjectId('665000000000000000000003'),
-  Yayasan: new Types.ObjectId('665000000000000000000004'),
+  Telekomunikasi: new Types.ObjectId('665000000000000000000001'),
+  Logistik: new Types.ObjectId('665000000000000000000002'),
+  Kontruksi: new Types.ObjectId('665000000000000000000003'),
+  Otomotif: new Types.ObjectId('665000000000000000000004'),
 };
 
 export const companyTypesData = [
   {
-    _id: COMPANY_TYPE_IDS.PT,
-    name: 'PT (Perseroan Terbatas)',
+    _id: COMPANY_TYPE_IDS.Telekomunikasi,
+    name: 'Telekomunikasi',
     description:
-      'Badan usaha berbadan hukum yang modalnya terkumpul dari berbagai saham. Cocok untuk bisnis skala menengah hingga besar.',
+      'Perusahaan yang bergerak dibidang jasa telekomunikasi.',
   },
   {
-    _id: COMPANY_TYPE_IDS.CV,
-    name: 'CV (Commanditaire Vennootschap)',
+    _id: COMPANY_TYPE_IDS.Logistik,
+    name: 'Logistik',
     description:
-      'Persekutuan komanditer, badan usaha yang terdiri dari sekutu aktif dan sekutu pasif. Umum digunakan oleh UMKM.',
+      'Perusahaan yang bergerak dibidang jasa logistik.',
   },
   {
-    _id: COMPANY_TYPE_IDS.Koperasi,
-    name: 'Koperasi',
+    _id: COMPANY_TYPE_IDS.Kontruksi,
+    name: 'Kontruksi',
     description:
-      'Badan usaha yang beranggotakan orang-seorang atau badan hukum koperasi dengan melandaskan kegiatannya berdasarkan prinsip koperasi.',
+      'Perusahaan yang bergerak dibidang jasa kontruksi.',
   },
   {
-    _id: COMPANY_TYPE_IDS.Yayasan,
-    name: 'Yayasan',
+    _id: COMPANY_TYPE_IDS.Otomotif,
+    name: 'Otomotif',
     description:
-      'Badan hukum yang terdiri atas kekayaan yang dipisahkan dan diperuntukkan untuk mencapai tujuan tertentu di bidang sosial, keagamaan, dan kemanusiaan.',
+      'Perusahaan yang bergerak dibidang jasa otomotif.',
   },
 ];
 
 export const serviceTemplatesData = [
-  // ── PT (Perseroan Terbatas) ──────────────────────────────────────────────
+  // ── Telekomunikasi ──────────────────────────────────────
+  {
+    title: 'Pemasangan Koneksi Internet',
+    description: 'Instalasi koneksi internet untuk pelanggan publik.',
+    companyTypeId: COMPANY_TYPE_IDS.Telekomunikasi,
+    accessType: 'public',
+    draftingWorkOrderType: 'manual',
+    serviceRequestConfig: {
+      serviceRequestApprovalAccessType: ApprovalAccessType.MANAGER,
+      reviewNeed: true,
+      intakeForm: {
+        title: 'Formulir Permintaan Pemasangan Internet',
+        description: 'Ajukan pemasangan jaringan internet baru untuk lokasi Anda.',
+        formType: SubmissionType.Intake,
+        fields: [
+          { order: 1, label: 'Alamat Pemasangan', type: FieldType.Textarea, required: true, placeholder: 'Alamat lengkap lokasi pemasangan...' },
+          { order: 2, label: 'Paket Kecepatan', type: FieldType.SingleSelect, required: true, options: [{ key: '50mbps', value: '50 Mbps' }, { key: '100mbps', value: '100 Mbps' }, { key: '200mbps', value: '200 Mbps' }] },
+          { order: 3, label: 'Metode Pembayaran', type: FieldType.SingleSelect, required: true, options: [{ key: 'transfer', value: 'Transfer Bank' }, { key: 'cc', value: 'Kartu Kredit' }] }
+        ]
+      },
+      reviewForm: {
+        title: 'Ulasan Pemasangan Internet',
+        description: 'Berikan ulasan Anda setelah proses instalasi internet selesai.',
+        formType: SubmissionType.Review,
+        fields: [
+          { order: 1, label: 'Kualitas Koneksi', type: FieldType.SingleSelect, required: true, options: [{ key: 'stabil', value: 'Stabil & Cepat' }, { key: 'cukup', value: 'Cukup Stabil' }, { key: 'lambat', value: 'Lambat / Sering Terputus' }] },
+          { order: 2, label: 'Komentar & Saran', type: FieldType.Textarea, required: false }
+        ]
+      }
+    },
+    workOrdersConfig: [
+      {
+        configId: null,
+        positionsOnDuty: { name: 'Teknisi Jaringan', description: 'Tim teknisi yang melakukan instalasi perkabelan dan konfigurasi modem.' },
+        workOrderApprovalAccessType: ApprovalAccessType.AUTO,
+        workReportApprovalAccessType: ApprovalAccessType.MANAGER,
+        showReportToRequester: false,
+        minStaff: 1,
+        maxStaff: 2,
+        workOrderForm: {
+          title: 'Instruksi Kerja Instalasi Jaringan',
+          description: 'Panduan konfigurasi port dan penarikan kabel modem.',
+          formType: SubmissionType.WorkOrder,
+          fields: [
+            { order: 1, label: 'Port ODP yang Digunakan', type: FieldType.Text, required: true },
+            { order: 2, label: 'Panjang Kabel (meter)', type: FieldType.Text, required: true }
+          ]
+        },
+        workReportForm: {
+          title: 'Laporan Hasil Instalasi Internet',
+          description: 'Laporan teknis penyelesaian pemasangan internet.',
+          formType: SubmissionType.Report,
+          fields: [
+            { order: 1, label: 'Status Pemasangan', type: FieldType.SingleSelect, required: true, options: [{ key: 'sukses', value: 'Sukses Terkoneksi' }, { key: 'kendala', value: 'Ada Kendala Redaman Tinggi' }] },
+            { order: 2, label: 'Foto Redaman OPM', type: FieldType.Image, required: true }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    title: 'Pemeriksaan Billing',
+    description: 'Pemeriksaan tagihan internet bagi pelanggan publik.',
+    companyTypeId: COMPANY_TYPE_IDS.Telekomunikasi,
+    accessType: 'public',
+    draftingWorkOrderType: 'auto',
+    serviceRequestConfig: {
+      serviceRequestApprovalAccessType: ApprovalAccessType.MANAGER,
+      reviewNeed: true,
+      intakeForm: {
+        title: 'Formulir Pengaduan Billing',
+        description: 'Laporkan ketidaksesuaian tagihan internet Anda.',
+        formType: SubmissionType.Intake,
+        fields: [
+          { order: 1, label: 'Nomor Pelanggan', type: FieldType.Text, required: true },
+          { order: 2, label: 'Bulan Tagihan', type: FieldType.SingleSelect, required: true, options: [{ key: 'jan', value: 'Januari' }, { key: 'feb', value: 'Februari' }, { key: 'mar', value: 'Maret' }] },
+          { order: 3, label: 'Detail Keluhan', type: FieldType.Textarea, required: true }
+        ]
+      },
+      reviewForm: {
+        title: 'Ulasan Pengaduan Billing',
+        description: 'Penilaian atas respons penyelesaian keluhan tagihan.',
+        formType: SubmissionType.Review,
+        fields: [
+          { order: 1, label: 'Kesesuaian Solusi', type: FieldType.SingleSelect, required: true, options: [{ key: 'sesuai', value: 'Sesuai, tagihan telah dikoreksi' }, { key: 'tidak', value: 'Tidak Sesuai' }] }
+        ]
+      }
+    },
+    workOrdersConfig: [
+      {
+        configId: null,
+        positionsOnDuty: { name: 'Staf Billing & Keuangan', description: 'Staf yang memverifikasi mutasi dan data billing pelanggan.' },
+        workOrderApprovalAccessType: ApprovalAccessType.AUTO,
+        workReportApprovalAccessType: ApprovalAccessType.AUTO,
+        showReportToRequester: false,
+        minStaff: 1,
+        maxStaff: 1,
+
+        workReportForm: {
+          title: 'Laporan Verifikasi Billing',
+          description: 'Hasil investigasi atas keluhan tagihan.',
+          formType: SubmissionType.Report,
+          fields: [
+            { order: 1, label: 'Hasil Koreksi Tagihan', type: FieldType.SingleSelect, required: true, options: [{ key: 'koreksi', value: 'Kredit Tagihan Diberikan' }, { key: 'sesuai', value: 'Tagihan Asli Sudah Benar' }] },
+            { order: 2, label: 'Bukti Screen Billing System', type: FieldType.Image, required: true }
+          ]
+        }
+      }
+    ]
+  },
+  // ── Logistik ──────────────────────────────────────
+  {
+    title: 'Pengiriman Barang',
+    description: 'Layanan pengiriman barang untuk anggota.',
+    companyTypeId: COMPANY_TYPE_IDS.Logistik,
+    accessType: 'member_only',
+    draftingWorkOrderType: 'manual',
+    serviceRequestConfig: {
+      serviceRequestApprovalAccessType: ApprovalAccessType.MANAGER,
+      reviewNeed: true,
+      intakeForm: {
+        title: 'Formulir Permintaan Pengiriman Barang',
+        description: 'Ajukan pengiriman paket/barang khusus anggota.',
+        formType: SubmissionType.Intake,
+        fields: [
+          { order: 1, label: 'Nama Barang & Deskripsi', type: FieldType.Textarea, required: true },
+          { order: 2, label: 'Berat Barang (kg)', type: FieldType.Text, required: true },
+          { order: 3, label: 'Alamat Penerima', type: FieldType.Textarea, required: true }
+        ]
+      },
+      reviewForm: {
+        title: 'Ulasan Layanan Pengiriman',
+        description: 'Penilaian ketepatan waktu dan kondisi barang saat diterima.',
+        formType: SubmissionType.Review,
+        fields: [
+          { order: 1, label: 'Kondisi Paket', type: FieldType.SingleSelect, required: true, options: [{ key: 'aman', value: 'Sempurna / Tidak Rusak' }, { key: 'rusak', value: 'Ada Kerusakan' }] }
+        ]
+      }
+    },
+    workOrdersConfig: [
+      {
+        configId: null,
+        positionsOnDuty: { name: 'Kurir Lapangan', description: 'Kurir internal yang melakukan penjemputan dan pengantaran barang.' },
+        workOrderApprovalAccessType: ApprovalAccessType.AUTO,
+        workReportApprovalAccessType: ApprovalAccessType.MANAGER,
+        showReportToRequester: false,
+        minStaff: 1,
+        maxStaff: 1,
+        workOrderForm: {
+          title: 'Instruksi Pengantaran Paket',
+          description: 'Rute penjemputan dan pengantaran paket.',
+          formType: SubmissionType.WorkOrder,
+          fields: [
+            { order: 1, label: 'Rute Prioritas', type: FieldType.Textarea, required: true }
+          ]
+        },
+        workReportForm: {
+          title: 'Laporan Kurir Selesai Kirim',
+          description: 'Bukti serah terima barang kepada penerima.',
+          formType: SubmissionType.Report,
+          fields: [
+            { order: 1, label: 'Diterima Oleh', type: FieldType.Text, required: true },
+            { order: 2, label: 'Foto Serah Terima Paket', type: FieldType.Image, required: true }
+          ]
+        }
+      }
+    ]
+  },
+  // ── Kontruksi ──────────────────────────────────────
+  {
+    title: 'Perbaikan Ruangan',
+    description: 'Perbaikan ruangan untuk anggota.',
+    companyTypeId: COMPANY_TYPE_IDS.Kontruksi,
+    accessType: 'member_only',
+    draftingWorkOrderType: 'auto',
+    serviceRequestConfig: {
+      serviceRequestApprovalAccessType: ApprovalAccessType.MANAGER,
+      reviewNeed: true,
+      intakeForm: {
+        title: 'Formulir Request Perbaikan Ruangan',
+        description: 'Ajukan perbaikan fisik ruangan kantor/toko.',
+        formType: SubmissionType.Intake,
+        fields: [
+          { order: 1, label: 'Ruangan & Area', type: FieldType.Text, required: true, placeholder: 'contoh: Ruang Meeting / Pantry' },
+          { order: 2, label: 'Jenis Perbaikan', type: FieldType.SingleSelect, required: true, options: [{ key: 'dinding', value: 'Cat / Retak Dinding' }, { key: 'pintu', value: 'Pintu / Engsel' }, { key: 'atap', value: 'Kebocoran Atap / Plafon' }] },
+          { order: 3, label: 'Deskripsi Detail', type: FieldType.Textarea, required: true }
+        ]
+      },
+      reviewForm: {
+        title: 'Ulasan Hasil Perbaikan Ruangan',
+        description: 'Penilaian kerapian dan kebersihan hasil pengerjaan.',
+        formType: SubmissionType.Review,
+        fields: [
+          { order: 1, label: 'Kerapian Hasil', type: FieldType.SingleSelect, required: true, options: [{ key: 'rapi', value: 'Rapi & Bersih' }, { key: 'kurang', value: 'Kurang Rapi / Kotor' }] }
+        ]
+      }
+    },
+    workOrdersConfig: [
+      {
+        configId: null,
+        positionsOnDuty: { name: 'Teknisi Sipil & Bangunan', description: 'Teknisi yang menangani renovasi interior, pengecatan, dan kebocoran gedung.' },
+        workOrderApprovalAccessType: ApprovalAccessType.AUTO,
+        workReportApprovalAccessType: ApprovalAccessType.MANAGER,
+        showReportToRequester: false,
+        minStaff: 1,
+        maxStaff: 3,
+
+        workReportForm: {
+          title: 'Laporan Pekerjaan Sipil Selesai',
+          description: 'Dokumentasi foto sebelum dan sesudah renovasi.',
+          formType: SubmissionType.Report,
+          fields: [
+            { order: 1, label: 'Hasil Pekerjaan', type: FieldType.Textarea, required: true },
+            { order: 2, label: 'Foto After Perbaikan', type: FieldType.Image, required: true }
+          ]
+        }
+      }
+    ]
+  },
+  // ── Otomotif ──────────────────────────────────────
+  {
+    title: 'Perbaikan Kendaraan Roda Dua',
+    description: 'Perbaikan kendaraan roda dua untuk publik.',
+    companyTypeId: COMPANY_TYPE_IDS.Otomotif,
+    accessType: 'public',
+    draftingWorkOrderType: 'auto',
+    serviceRequestConfig: {
+      serviceRequestApprovalAccessType: ApprovalAccessType.MANAGER,
+      reviewNeed: true,
+      intakeForm: {
+        title: 'Formulir Pendaftaran Servis Motor',
+        description: 'Daftarkan servis rutin atau perbaikan sepeda motor Anda.',
+        formType: SubmissionType.Intake,
+        fields: [
+          { order: 1, label: 'Merk & Model Motor', type: FieldType.Text, required: true },
+          { order: 2, label: 'Nomor Polisi', type: FieldType.Text, required: true },
+          { order: 3, label: 'Keluhan Servis', type: FieldType.Textarea, required: true }
+        ]
+      },
+      reviewForm: {
+        title: 'Ulasan Servis Motor',
+        description: 'Penilaian performa motor setelah dilakukan servis.',
+        formType: SubmissionType.Review,
+        fields: [
+          { order: 1, label: 'Kondisi Mesin', type: FieldType.SingleSelect, required: true, options: [{ key: 'halus', value: 'Lebih Halus & Bertenaga' }, { key: 'sama', value: 'Sama Saja' }, { key: 'masalah', value: 'Masih Bermasalah' }] }
+        ]
+      }
+    },
+    workOrdersConfig: [
+      {
+        configId: null,
+        positionsOnDuty: { name: 'Mekanik Sepeda Motor', description: 'Mekanik spesialis sepeda motor roda dua.' },
+        workOrderApprovalAccessType: ApprovalAccessType.AUTO,
+        workReportApprovalAccessType: ApprovalAccessType.AUTO,
+        showReportToRequester: false,
+        minStaff: 1,
+        maxStaff: 1,
+
+        workReportForm: {
+          title: 'Laporan Pekerjaan Servis Motor',
+          description: 'Detail penggantian suku cadang dan penyetelan motor.',
+          formType: SubmissionType.Report,
+          fields: [
+            { order: 1, label: 'Suku Cadang Yang Diganti', type: FieldType.Textarea, required: true },
+            { order: 2, label: 'Foto Kwitansi & Motor Selesai', type: FieldType.Image, required: true }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    title: 'Perbaikan Kendaraan Roda Empat',
+    description: 'Perbaikan kendaraan roda empat untuk publik.',
+    companyTypeId: COMPANY_TYPE_IDS.Otomotif,
+    accessType: 'public',
+    draftingWorkOrderType: 'auto',
+    serviceRequestConfig: {
+      serviceRequestApprovalAccessType: ApprovalAccessType.MANAGER,
+      reviewNeed: true,
+      intakeForm: {
+        title: 'Formulir Pendaftaran Servis Mobil',
+        description: 'Daftarkan servis rutin atau perbaikan mobil Anda.',
+        formType: SubmissionType.Intake,
+        fields: [
+          { order: 1, label: 'Merk & Model Mobil', type: FieldType.Text, required: true },
+          { order: 2, label: 'Nomor Polisi', type: FieldType.Text, required: true },
+          { order: 3, label: 'Keluhan / Permintaan Servis', type: FieldType.Textarea, required: true }
+        ]
+      },
+      reviewForm: {
+        title: 'Ulasan Servis Mobil',
+        description: 'Penilaian kenyamanan berkendara setelah servis.',
+        formType: SubmissionType.Review,
+        fields: [
+          { order: 1, label: 'Kenyamanan Mobil', type: FieldType.SingleSelect, required: true, options: [{ key: 'sangat_nyaman', value: 'Sangat Nyaman / Responsif' }, { key: 'cukup', value: 'Cukup Nyaman' }] }
+        ]
+      }
+    },
+    workOrdersConfig: [
+      {
+        configId: null,
+        positionsOnDuty: { name: 'Mekanik Mobil', description: 'Mekanik senior spesialis mobil roda empat.' },
+        workOrderApprovalAccessType: ApprovalAccessType.AUTO,
+        workReportApprovalAccessType: ApprovalAccessType.MANAGER,
+        showReportToRequester: false,
+        minStaff: 1,
+        maxStaff: 2,
+
+        workReportForm: {
+          title: 'Laporan Pekerjaan Servis Mobil',
+          description: 'Detail pengerjaan mekanik untuk mobil roda empat.',
+          formType: SubmissionType.Report,
+          fields: [
+            { order: 1, label: 'Daftar Pekerjaan & Suku Cadang', type: FieldType.Textarea, required: true },
+            { order: 2, label: 'Foto Pekerjaan di Kolong / Mesin', type: FieldType.Image, required: true }
+          ]
+        }
+      }
+    ]
+  },
+  // ── Telekomunikasi (Perseroan Terbatas) ──────────────────────────────────────────────
   {
     title: 'Perbaikan & Pemeliharaan Fasilitas Kantor',
     description:
       'Layanan penanganan kerusakan dan pemeliharaan rutin aset fisik kantor, meliputi AC, plumbing, kelistrikan, dan furnitur.',
-    companyTypeId: COMPANY_TYPE_IDS.PT,
+    companyTypeId: COMPANY_TYPE_IDS.Telekomunikasi,
     accessType: 'internal',
     draftingWorkOrderType: 'manual',
     serviceRequestConfig: {
@@ -109,7 +429,7 @@ export const serviceTemplatesData = [
     title: 'Pengadaan & Peminjaman Inventaris IT',
     description:
       'Layanan permintaan perangkat IT (laptop, monitor, aksesoris) untuk kebutuhan kerja karyawan, baik peminjaman sementara maupun pengadaan tetap.',
-    companyTypeId: COMPANY_TYPE_IDS.PT,
+    companyTypeId: COMPANY_TYPE_IDS.Telekomunikasi,
     accessType: 'internal',
     draftingWorkOrderType: 'auto',
     serviceRequestConfig: {
@@ -126,7 +446,16 @@ export const serviceTemplatesData = [
           { order: 4, label: 'Durasi Peminjaman', type: FieldType.SingleSelect, required: true, options: [{ key: 'permanen', value: 'Permanen (Pengadaan)' }, { key: '1_minggu', value: '1 Minggu' }, { key: '1_bulan', value: '1 Bulan' }, { key: 'lainnya', value: 'Lainnya' }] },
         ],
       },
-      reviewForm: null,
+      reviewForm: {
+        title: 'Evaluasi Program Beasiswa',
+        description: 'Penilaian dari penerima beasiswa terhadap program yang dijalankan Otomotif.',
+        formType: SubmissionType.Review,
+        fields: [
+          { order: 1, label: 'Program Beasiswa Membantu Pendidikan Anda?', type: FieldType.SingleSelect, required: true, options: [{ key: 'sangat', value: 'Sangat Membantu' }, { key: 'cukup', value: 'Cukup Membantu' }, { key: 'kurang', value: 'Kurang Membantu' }] },
+          { order: 2, label: 'Kepuasan atas Proses Seleksi', type: FieldType.SingleSelect, required: true, options: [{ key: 'transparan', value: 'Transparan & Adil' }, { key: 'cukup', value: 'Cukup Baik' }, { order: 3, key: 'perlu_perbaikan', value: 'Perlu Perbaikan' }] },
+          { order: 3, label: 'Saran untuk Program Beasiswa', type: FieldType.Textarea, required: false },
+        ],
+      },
     },
     workOrdersConfig: [
       {
@@ -137,7 +466,7 @@ export const serviceTemplatesData = [
         showReportToRequester: false,
         minStaff: 1,
         maxStaff: 2,
-        workOrderForm: null,
+
         workReportForm: {
           title: 'Laporan Serah Terima Perangkat IT',
           description: 'Dokumentasi serah terima perangkat IT kepada pemohon.',
@@ -155,7 +484,7 @@ export const serviceTemplatesData = [
     title: 'Layanan Sertifikasi & Legalisasi Dokumen Perusahaan',
     description:
       'Pengurusan legalisasi, apostille, dan sertifikasi dokumen resmi perusahaan seperti akta, NPWP, NIB, dan dokumen hukum lainnya.',
-    companyTypeId: COMPANY_TYPE_IDS.PT,
+    companyTypeId: COMPANY_TYPE_IDS.Telekomunikasi,
     accessType: 'member_only',
     draftingWorkOrderType: 'manual',
     serviceRequestConfig: {
@@ -216,13 +545,12 @@ export const serviceTemplatesData = [
       },
     ],
   },
-
-  // ── CV (Commanditaire Vennootschap) ─────────────────────────────────────
+  // ── Kontruksi (Commanditaire Vennootschap) ─────────────────────────────────────
   {
     title: 'Jasa Instalasi & Renovasi Ringan',
     description:
       'Layanan pemasangan, renovasi, dan pengerjaan konstruksi ringan untuk kebutuhan klien, mencakup pemasangan partisi, instalasi listrik ringan, dan cat dinding.',
-    companyTypeId: COMPANY_TYPE_IDS.CV,
+    companyTypeId: COMPANY_TYPE_IDS.Kontruksi,
     accessType: 'public',
     draftingWorkOrderType: 'manual',
     serviceRequestConfig: {
@@ -291,7 +619,7 @@ export const serviceTemplatesData = [
     title: 'Jasa Pengiriman & Logistik Barang',
     description:
       'Layanan pengiriman barang, distribusi produk, dan jasa kurir untuk kebutuhan bisnis dan perorangan dalam kota maupun antar kota.',
-    companyTypeId: COMPANY_TYPE_IDS.CV,
+    companyTypeId: COMPANY_TYPE_IDS.Kontruksi,
     accessType: 'public',
     draftingWorkOrderType: 'auto',
     serviceRequestConfig: {
@@ -332,7 +660,7 @@ export const serviceTemplatesData = [
         showReportToRequester: false,
         minStaff: 1,
         maxStaff: 2,
-        workOrderForm: null,
+
         workReportForm: {
           title: 'Laporan Penyelesaian Pengiriman',
           description: 'Konfirmasi bahwa barang telah berhasil diantarkan.',
@@ -346,13 +674,12 @@ export const serviceTemplatesData = [
       },
     ],
   },
-
-  // ── Koperasi ─────────────────────────────────────────────────────────────
+  // ── Logistik ─────────────────────────────────────────────────────────────
   {
     title: 'Pengajuan Pinjaman Anggota',
     description:
-      'Layanan pengajuan pinjaman modal usaha dan konsumtif bagi anggota koperasi yang aktif, dengan proses persetujuan bertahap sesuai aturan koperasi.',
-    companyTypeId: COMPANY_TYPE_IDS.Koperasi,
+      'Layanan pengajuan pinjaman modal usaha dan konsumtif bagi anggota Logistik yang aktif, dengan proses persetujuan bertahap sesuai aturan Logistik.',
+    companyTypeId: COMPANY_TYPE_IDS.Logistik,
     accessType: 'member_only',
     draftingWorkOrderType: 'manual',
     serviceRequestConfig: {
@@ -360,7 +687,7 @@ export const serviceTemplatesData = [
       reviewNeed: true,
       intakeForm: {
         title: 'Formulir Pengajuan Pinjaman',
-        description: 'Isi data lengkap untuk pengajuan pinjaman kepada koperasi.',
+        description: 'Isi data lengkap untuk pengajuan pinjaman kepada Logistik.',
         formType: SubmissionType.Intake,
         fields: [
           { order: 1, label: 'Nama Lengkap Anggota', type: FieldType.Text, required: true, placeholder: 'Sesuai KTP...' },
@@ -420,8 +747,8 @@ export const serviceTemplatesData = [
   {
     title: 'Simpanan Sukarela Anggota',
     description:
-      'Layanan penyetoran simpanan sukarela bagi anggota koperasi yang ingin menambah saldo tabungan sewaktu-waktu di luar simpanan wajib dan pokok.',
-    companyTypeId: COMPANY_TYPE_IDS.Koperasi,
+      'Layanan penyetoran simpanan sukarela bagi anggota Logistik yang ingin menambah saldo tabungan sewaktu-waktu di luar simpanan wajib dan pokok.',
+    companyTypeId: COMPANY_TYPE_IDS.Logistik,
     accessType: 'member_only',
     draftingWorkOrderType: 'auto',
     serviceRequestConfig: {
@@ -439,18 +766,27 @@ export const serviceTemplatesData = [
           { order: 5, label: 'Bukti Transfer (jika via transfer)', type: FieldType.Image, required: false },
         ],
       },
-      reviewForm: null,
+      reviewForm: {
+        title: 'Evaluasi Program Beasiswa',
+        description: 'Penilaian dari penerima beasiswa terhadap program yang dijalankan Otomotif.',
+        formType: SubmissionType.Review,
+        fields: [
+          { order: 1, label: 'Program Beasiswa Membantu Pendidikan Anda?', type: FieldType.SingleSelect, required: true, options: [{ key: 'sangat', value: 'Sangat Membantu' }, { key: 'cukup', value: 'Cukup Membantu' }, { key: 'kurang', value: 'Kurang Membantu' }] },
+          { order: 2, label: 'Kepuasan atas Proses Seleksi', type: FieldType.SingleSelect, required: true, options: [{ key: 'transparan', value: 'Transparan & Adil' }, { key: 'cukup', value: 'Cukup Baik' }, { order: 3, key: 'perlu_perbaikan', value: 'Perlu Perbaikan' }] },
+          { order: 3, label: 'Saran untuk Program Beasiswa', type: FieldType.Textarea, required: false },
+        ],
+      },
     },
     workOrdersConfig: [
       {
         configId: null,
-        positionsOnDuty: { name: 'Kasir & Teller Koperasi', description: 'Petugas yang memproses transaksi setoran dan penarikan simpanan anggota.' },
+        positionsOnDuty: { name: 'Kasir & Teller Logistik', description: 'Petugas yang memproses transaksi setoran dan penarikan simpanan anggota.' },
         workOrderApprovalAccessType: ApprovalAccessType.AUTO,
         workReportApprovalAccessType: ApprovalAccessType.AUTO,
         showReportToRequester: false,
         minStaff: 1,
         maxStaff: 1,
-        workOrderForm: null,
+
         workReportForm: {
           title: 'Konfirmasi Penerimaan Setoran',
           description: 'Dokumentasi konfirmasi setoran simpanan sukarela anggota.',
@@ -464,13 +800,12 @@ export const serviceTemplatesData = [
       },
     ],
   },
-
-  // ── Yayasan ──────────────────────────────────────────────────────────────
+  // ── Otomotif ──────────────────────────────────────────────────────────────
   {
     title: 'Permohonan Bantuan Beasiswa Pendidikan',
     description:
       'Layanan pengajuan beasiswa bagi pelajar dan mahasiswa berprestasi yang membutuhkan dukungan finansial untuk melanjutkan pendidikan.',
-    companyTypeId: COMPANY_TYPE_IDS.Yayasan,
+    companyTypeId: COMPANY_TYPE_IDS.Otomotif,
     accessType: 'public',
     draftingWorkOrderType: 'manual',
     serviceRequestConfig: {
@@ -493,7 +828,7 @@ export const serviceTemplatesData = [
       },
       reviewForm: {
         title: 'Evaluasi Program Beasiswa',
-        description: 'Penilaian dari penerima beasiswa terhadap program yang dijalankan yayasan.',
+        description: 'Penilaian dari penerima beasiswa terhadap program yang dijalankan Otomotif.',
         formType: SubmissionType.Review,
         fields: [
           { order: 1, label: 'Program Beasiswa Membantu Pendidikan Anda?', type: FieldType.SingleSelect, required: true, options: [{ key: 'sangat', value: 'Sangat Membantu' }, { key: 'cukup', value: 'Cukup Membantu' }, { key: 'kurang', value: 'Kurang Membantu' }] },
@@ -538,8 +873,8 @@ export const serviceTemplatesData = [
   {
     title: 'Program Pelatihan Keterampilan Masyarakat',
     description:
-      'Layanan pendaftaran program pelatihan vokasional dan pengembangan keterampilan yang diselenggarakan yayasan untuk memberdayakan masyarakat.',
-    companyTypeId: COMPANY_TYPE_IDS.Yayasan,
+      'Layanan pendaftaran program pelatihan vokasional dan pengembangan keterampilan yang diselenggarakan Otomotif untuk memberdayakan masyarakat.',
+    companyTypeId: COMPANY_TYPE_IDS.Otomotif,
     accessType: 'public',
     draftingWorkOrderType: 'auto',
     serviceRequestConfig: {
@@ -578,7 +913,7 @@ export const serviceTemplatesData = [
         showReportToRequester: false,
         minStaff: 1,
         maxStaff: 3,
-        workOrderForm: null,
+
         workReportForm: {
           title: 'Laporan Pelaksanaan Pelatihan',
           description: 'Dokumentasi kegiatan dan hasil pelaksanaan sesi pelatihan.',

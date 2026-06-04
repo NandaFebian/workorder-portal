@@ -26,17 +26,15 @@ export class DatabaseSeederService {
   }
 
   private async seedCompanyTypes() {
-    for (const data of companyTypesData) {
-      // Update jika ada, atau buat baru jika belum ada
-      await this.companyTypeModel
-        .findOneAndUpdate(
-          { name: data.name },
-          { $set: data },
-          { upsert: true, new: true },
-        )
-        .exec();
-      this.logger.log(`[CompanyType] Berhasil di-upsert: ${data.name}`);
-    }
+    const deletedCount = await this.companyTypeModel.deleteMany({});
+    this.logger.log(
+      `[CompanyType] ${deletedCount.deletedCount} data lama dihapus.`,
+    );
+
+    await this.companyTypeModel.insertMany(companyTypesData);
+    this.logger.log(
+      `[CompanyType] ${companyTypesData.length} data baru berhasil di-insert.`,
+    );
   }
 
   private async seedServiceTemplates() {

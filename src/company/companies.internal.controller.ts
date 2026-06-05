@@ -26,6 +26,7 @@ import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.i
 import { Role } from 'src/common/enums/role.enum';
 import { ResponseUtil } from 'src/common/utils/response.util';
 import { CompanyResource } from './resources/company.resource';
+import { DepartmentAuthHelper } from 'src/common/helpers/department-auth.helper';
 
 @Controller('company')
 export class CompaniesInternalController {
@@ -119,10 +120,19 @@ export class CompaniesInternalController {
     }
 
     // Panggil service dengan menyertakan filter roles
-    const employees = await this.usersService.findAllByCompanyId(
+    let employees = await this.usersService.findAllByCompanyId(
       user.company._id,
       allowedRoles, // Teruskan filter peran
     );
+
+    // Department Manager: hanya melihat pegawai dengan posisi yang sama
+    if (DepartmentAuthHelper.isDepartmentManager(user)) {
+      const managerPositionId = user.position?._id?.toString();
+      employees = employees.filter(
+        (emp) => emp.positionId?.toString() === managerPositionId ||
+                 emp.positionId?._id?.toString() === managerPositionId,
+      );
+    }
 
     // Transformasi data menggunakan resource
     const transformedEmployees = employees.map((emp) =>

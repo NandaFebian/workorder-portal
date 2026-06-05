@@ -180,7 +180,7 @@ export class PositionsService {
   async remove(
     id: string,
     user?: AuthenticatedUser,
-  ): Promise<{ deletedAt: Date }> {
+  ): Promise<PositionDocument> {
     const existingPosition = await this.findById(id);
 
     // Check if user has permission to delete this position
@@ -209,9 +209,7 @@ export class PositionsService {
     // Soft delete: set deletedAt to current timestamp
     const deletedAt = new Date();
     existingPosition.deletedAt = deletedAt;
-    await existingPosition.save();
-
-    return { deletedAt };
+    return existingPosition.save();
   }
 }
 

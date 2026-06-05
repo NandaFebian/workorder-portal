@@ -575,15 +575,40 @@ export class CompaniesInternalService {
       );
     }
 
-    // Soft delete the user
-    const deletedAt = new Date();
+    // Detach from company (not soft delete)
     await this.companyModel.db
       .collection('users')
       .updateOne(
         { _id: new Types.ObjectId(employeeId) },
-        { $set: { deletedAt } },
+        {
+          $set: { role: Role.UnassignedStaff },
+          $unset: { companyId: '', positionId: '' },
+        },
       );
 
-    return { deletedAt };
+    let position: any = null;
+    if (employee.positionId) {
+      position = await this.companyModel.db
+        .collection('positions')
+        .findOne({ _id: employee.positionId });
+    }
+
+    const { password, fcmTokens, ...safeEmployee } = employee;
+    const result: any = {
+      ...safeEmployee,
+      role: Role.UnassignedStaff,
+      companyId: null,
+      positionId: null,
+    };
+    if (position) {
+      result.position = {
+        _id: position._id,
+        name: position.name,
+        description: position.description,
+      };
+      delete result.positionId;
+    }
+
+    return result;
   }
 }

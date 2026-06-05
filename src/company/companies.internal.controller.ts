@@ -37,7 +37,7 @@ export class CompaniesInternalController {
 
   @Get()
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.AppAdmin, Role.CompanyOwner)
+  @Roles(Role.AppAdmin, Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
   @HttpCode(HttpStatus.OK)
   async findAll(@GetUser() user: AuthenticatedUser) {
     if (user.role === 'admin_app') {
@@ -49,24 +49,23 @@ export class CompaniesInternalController {
         'Companies retrieved successfully',
         transformedCompanies,
       );
-    } else if (user.role === 'owner_company') {
-      if (!user.company?._id) {
-        // Should not happen for a valid owner, but good to handle
-        return ResponseUtil.success(
-          'No company associated with this owner',
-          null,
-        );
-      }
-      const company = await this.companiesInternalService.findInternalById(
-        user.company._id.toString(),
-      );
-      const transformedCompany = CompanyResource.transformCompany(company);
+    }
 
+    if (!user.company?._id) {
       return ResponseUtil.success(
-        'Company retrieved successfully',
-        transformedCompany,
+        'No company associated with this user',
+        null,
       );
     }
+    const company = await this.companiesInternalService.findInternalById(
+      user.company._id.toString(),
+    );
+    const transformedCompany = CompanyResource.transformCompany(company);
+
+    return ResponseUtil.success(
+      'Company retrieved successfully',
+      transformedCompany,
+    );
   }
 
   @Post('invite')
@@ -115,14 +114,19 @@ export class CompaniesInternalController {
       // Owner bisa melihat Manager dan Staff
       allowedRoles = [Role.CompanyManager, Role.CompanyStaff];
     } else if (user.role === Role.CompanyManager) {
-      // Manager hanya bisa melihat Staff
-      allowedRoles = [Role.CompanyStaff];
+      if (DepartmentAuthHelper.isDepartmentManager(user)) {
+        // Department Manager: hanya melihat staff dengan posisi yang sama
+        allowedRoles = [Role.CompanyStaff];
+      } else {
+        // General Manager: melihat department manager dan staff
+        allowedRoles = [Role.CompanyManager, Role.CompanyStaff];
+      }
     }
 
     // Panggil service dengan menyertakan filter roles
     let employees = await this.usersService.findAllByCompanyId(
       user.company._id,
-      allowedRoles, // Teruskan filter peran
+      allowedRoles,
     );
 
     // Department Manager: hanya melihat pegawai dengan posisi yang sama
@@ -131,6 +135,11 @@ export class CompaniesInternalController {
       employees = employees.filter(
         (emp) => emp.positionId?.toString() === managerPositionId ||
                  emp.positionId?._id?.toString() === managerPositionId,
+      );
+    } else if (DepartmentAuthHelper.isGeneralManager(user)) {
+      // General Manager: filter out other general managers, hanya lihat dept managers & staff
+      employees = employees.filter(
+        (emp) => emp._id.toString() !== user._id.toString(),
       );
     }
 

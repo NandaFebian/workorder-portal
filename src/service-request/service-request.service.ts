@@ -506,7 +506,7 @@ export class ServiceRequestService {
     );
 
     const svc = await this.serviceModel
-      .findOne({ _id: sr.serviceId, deletedAt: null })
+      .findOne({ _id: sr.serviceId, deletedAt: { $exists: true } })
       .exec();
 
     for (const manager of providerManagers) {
@@ -542,7 +542,11 @@ export class ServiceRequestService {
     const requests = await this.srModel
       .find({ requestedBy: new Types.ObjectId(userId), deletedAt: null })
       .populate('companyId', 'name address description isActive')
-      .populate('serviceId', 'title description accessType isActive')
+      .populate({
+        path: 'serviceId',
+        select: 'title description accessType isActive',
+        match: { deletedAt: { $exists: true } },
+      })
       .populate('requestedBy', 'name email role')
       .populate('approvedBy', 'name email role')
       .populate('staffPIC', 'name email role')
@@ -560,7 +564,11 @@ export class ServiceRequestService {
     const sr = await this.srModel
       .findOne({ _id: id, deletedAt: null })
       .populate('companyId', 'name address description isActive')
-      .populate('serviceId', 'companyId title description accessType isActive')
+      .populate({
+        path: 'serviceId',
+        select: 'companyId title description accessType isActive',
+        match: { deletedAt: { $exists: true } },
+      })
       .populate('requestedBy', 'name email role')
       .populate('approvedBy', 'name email role')
       .populate('staffPIC', 'name email role')
@@ -587,7 +595,11 @@ export class ServiceRequestService {
     const requests = await this.srModel
       .find({ companyId: new Types.ObjectId(companyId), deletedAt: null })
       .populate('companyId', 'name address description isActive')
-      .populate('serviceId', 'title description accessType isActive')
+      .populate({
+        path: 'serviceId',
+        select: 'title description accessType isActive',
+        match: { deletedAt: { $exists: true } },
+      })
       .populate('requestedBy', 'name email role')
       .populate('approvedBy', 'name email role')
       .populate('staffPIC', 'name email role')
@@ -605,7 +617,7 @@ export class ServiceRequestService {
         if (!svcId) continue;
         if (!serviceCache.has(svcId)) {
           const svc = await this.serviceModel
-            .findOne({ _id: svcId, deletedAt: null })
+            .findOne({ _id: svcId, deletedAt: { $exists: true } })
             .exec();
           serviceCache.set(svcId, svc);
         }
@@ -632,7 +644,11 @@ export class ServiceRequestService {
     const sr = await this.srModel
       .findOne({ _id: id, deletedAt: null })
       .populate('companyId', 'name address description isActive')
-      .populate('serviceId', 'companyId title description accessType isActive')
+      .populate({
+        path: 'serviceId',
+        select: 'companyId title description accessType isActive',
+        match: { deletedAt: { $exists: true } },
+      })
       .populate('requestedBy', 'name email role')
       .populate('approvedBy', 'name email role')
       .populate('staffPIC', 'name email role')
@@ -699,7 +715,7 @@ export class ServiceRequestService {
     let intakeForm: any = null;
     if (doc.intakeFormId) {
       try {
-        const template = await this.formsService.findTemplateById(
+        const template = await this.formsService.findTemplateByIdIncludeDeleted(
           doc.intakeFormId.toString(),
         );
         if (template) {
@@ -719,7 +735,7 @@ export class ServiceRequestService {
     let reviewForm: any = null;
     if (doc.reviewFormId) {
       try {
-        const template = await this.formsService.findTemplateById(
+        const template = await this.formsService.findTemplateByIdIncludeDeleted(
           doc.reviewFormId.toString(),
         );
         if (template) {
@@ -878,7 +894,7 @@ export class ServiceRequestService {
       // Department Manager: can only approve/reject SRs whose service configs match their position
       if (DepartmentAuthHelper.isDepartmentManager(user)) {
         const svc = await this.serviceModel
-          .findOne({ _id: sr.serviceId, deletedAt: null })
+          .findOne({ _id: sr.serviceId, deletedAt: { $exists: true } })
           .exec();
         if (
           !svc ||
@@ -984,7 +1000,7 @@ export class ServiceRequestService {
       // Do NOT filter by deletedAt — old versions may have been soft-deleted
       // after a service update, but the SR must still reference them.
       const serviceRaw = await this.serviceModel
-        .findOne({ _id: sr.serviceId })
+        .findOne({ _id: sr.serviceId, deletedAt: { $exists: true } })
         .exec();
 
       if (!serviceRaw) {
@@ -1270,7 +1286,7 @@ export class ServiceRequestService {
 
       if (report.reportFormId) {
         try {
-          const form = await this.formsService.findTemplateById(
+          const form = await this.formsService.findTemplateByIdIncludeDeleted(
             report.reportFormId.toString(),
           );
           if (form) {

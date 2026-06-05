@@ -145,6 +145,19 @@ export class FormsService {
     return template;
   }
 
+  async findTemplateByIdIncludeDeleted(
+    id: string,
+  ): Promise<FormTemplateDocument | null> {
+    const template = await this.formTemplateModel
+      .findOne({ _id: id, deletedAt: { $exists: true } })
+      .populate({
+        path: 'position',
+        select: '-createdAt -updatedAt -deletedAt -__v',
+      })
+      .exec();
+    return template ?? null;
+  }
+
   async updateTemplate(
     formId: string,
     dto: UpdateFormTemplateDto,

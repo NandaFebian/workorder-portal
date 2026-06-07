@@ -497,21 +497,17 @@ export class CompaniesInternalService {
   }
 
   async kickEmployee(
-    employeeId: string,
+    email: string,
     user: AuthenticatedUser,
   ): Promise<any> {
     if (!user.company?._id) {
       throw new ForbiddenException('User is not associated with any company.');
     }
 
-    if (!Types.ObjectId.isValid(employeeId)) {
-      throw new NotFoundException('Invalid employee ID');
-    }
-
     const employee = await this.companyModel.db
       .collection('users')
       .findOne({
-        _id: new Types.ObjectId(employeeId),
+        email: email,
         companyId: user.company._id,
         deletedAt: null,
       });
@@ -562,7 +558,7 @@ export class CompaniesInternalService {
     const activeWoCount = await this.companyModel.db
       .collection('workorders')
       .countDocuments({
-        assignedStaff: new Types.ObjectId(employeeId),
+        assignedStaff: employee._id,
         deletedAt: null,
         status: {
           $in: ['drafted', 'sent', 'approved', 'on_progress'],
@@ -579,7 +575,7 @@ export class CompaniesInternalService {
     await this.companyModel.db
       .collection('users')
       .updateOne(
-        { _id: new Types.ObjectId(employeeId) },
+        { _id: employee._id },
         {
           $set: { role: Role.UnassignedStaff },
           $unset: { companyId: '', positionId: '' },

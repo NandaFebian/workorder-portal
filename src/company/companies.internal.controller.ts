@@ -17,6 +17,7 @@ import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { UpdateCompanyDto } from './dto/update-company.dto';
 import { UpdateIntegrationConfigDto } from './dto/update-integration-config.dto';
 import { InviteEmployeesDto } from './dto/invite-employees.dto';
+import { KickEmployeeDto } from './dto/kick-employee.dto';
 import { InviteEmployeesResponse } from './interfaces/invitation.interface';
 import { GetUser } from '../common/decorators/get-user.decorator';
 import { Roles } from 'src/common/decorators/roles.decorator';
@@ -265,15 +266,15 @@ export class CompaniesInternalController {
     );
   }
 
-  @Delete('employees/:id')
+  @Delete('employees')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
   @HttpCode(HttpStatus.OK)
   async kickEmployee(
-    @Param('id') id: string,
+    @Body() kickEmployeeDto: KickEmployeeDto,
     @GetUser() user: AuthenticatedUser,
   ) {
-    const data = await this.companiesInternalService.kickEmployee(id, user);
+    const data = await this.companiesInternalService.kickEmployee(kickEmployeeDto.email, user);
     return ResponseUtil.success('Employee removed successfully', data);
   }
 }

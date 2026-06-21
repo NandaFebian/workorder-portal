@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { Role } from '../common/enums/role.enum';
+import { FcmService } from '../fcm/fcm.service';
 
 describe('InvitationsService', () => {
   let service: InvitationsService;
@@ -44,6 +45,7 @@ describe('InvitationsService', () => {
             findByIdAndUpdate: jest.fn(),
           },
         },
+        { provide: FcmService, useValue: { sendToUser: jest.fn() } },
       ],
     }).compile();
 
@@ -57,24 +59,30 @@ describe('InvitationsService', () => {
   });
 
   describe('acceptInvitation()', () => {
-    const mockInvitation = {
-      _id: '507f1f77bcf86cd799439020',
-      userId: new Types.ObjectId('507f1f77bcf86cd799439011'),
-      companyId: new Types.ObjectId('507f1f77bcf86cd799439012'),
-      positionId: new Types.ObjectId('507f1f77bcf86cd799439013'),
-      role: Role.CompanyStaff,
-      status: 'pending',
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
-      save: jest.fn().mockResolvedValue(true),
-    };
+    let mockInvitation: any;
+    let mockUserDocument: any;
 
-    const mockUserDocument = {
-      _id: '507f1f77bcf86cd799439011',
-      email: 'user@test.com',
-      name: 'Test User',
-      role: Role.UnassignedStaff,
-      companyId: null,
-    };
+    beforeEach(() => {
+      mockInvitation = {
+        _id: '507f1f77bcf86cd799439020',
+        userId: new Types.ObjectId('507f1f77bcf86cd799439011'),
+        companyId: new Types.ObjectId('507f1f77bcf86cd799439012'),
+        positionId: new Types.ObjectId('507f1f77bcf86cd799439013'),
+        role: Role.CompanyStaff,
+        status: 'pending',
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        save: jest.fn().mockResolvedValue(true),
+        populate: jest.fn().mockReturnThis(),
+      };
+
+      mockUserDocument = {
+        _id: '507f1f77bcf86cd799439011',
+        email: 'user@test.com',
+        name: 'Test User',
+        role: Role.UnassignedStaff,
+        companyId: null,
+      };
+    });
 
     it('UT-INV-001: should accept invitation successfully', async () => {
       // Arrange

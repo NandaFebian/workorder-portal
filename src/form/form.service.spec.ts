@@ -40,10 +40,12 @@ describe('FormsService', () => {
         },
         {
           provide: getModelToken(FormSubmission.name),
-          useValue: jest.fn().mockImplementation((data) => ({
-            ...data,
-            save: jest.fn().mockResolvedValue(data),
-          })),
+          useValue: jest.fn().mockImplementation((data) => {
+            const saveMock = jest.fn().mockImplementation(() =>
+              Promise.resolve({ ...data, save: saveMock }),
+            );
+            return { ...data, save: saveMock };
+          }),
         },
         {
           provide: CompaniesInternalService,

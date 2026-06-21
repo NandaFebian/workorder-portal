@@ -7,23 +7,19 @@ import {
 } from 'class-validator';
 
 export class UpdateIntegrationConfigDto {
-  @IsOptional()
-  @ValidateIf((o) => o.integration_type !== 'claim_token')
+  @ValidateIf((o) => o.integration_type !== 'claim_token' && o.external_login_url !== undefined)
   @IsUrl({ require_tld: false })
   external_login_url?: string | null;
 
-  @IsOptional()
-  @ValidateIf((o) => o.integration_type !== 'claim_token')
+  @ValidateIf((o) => o.integration_type !== 'claim_token' && o.external_verify_url !== undefined)
   @IsUrl({ require_tld: false })
   external_verify_url?: string | null;
 
-  @IsOptional()
-  @ValidateIf((o) => o.integration_type !== 'claim_token')
+  @ValidateIf((o) => o.integration_type !== 'claim_token' && o.external_check_memberships_url !== undefined)
   @IsUrl({ require_tld: false })
   external_check_memberships_url?: string | null;
 
-  @IsOptional()
-  @ValidateIf((o) => o.integration_type !== 'claim_token')
+  @ValidateIf((o) => o.integration_type !== 'claim_token' && o.external_check_status_url !== undefined)
   @IsUrl({ require_tld: false })
   external_check_status_url?: string | null;
 

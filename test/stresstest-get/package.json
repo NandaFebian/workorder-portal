@@ -1,0 +1,16 @@
+{
+  "name": "workorder-stresstest-get",
+  "version": "1.0.0",
+  "description": "K6 stress testing scripts for GET endpoints - Work Order Portal",
+  "scripts": {
+    "generate-users": "node data/generate-users.js",
+    "scenario:public": "k6 run --out json=reports/01-public.json scenarios/01-public.js",
+    "scenario:client": "k6 run --out json=reports/02-client.json scenarios/02-client.js",
+    "scenario:operations": "k6 run --out json=reports/03-operations.json scenarios/03-operations.js",
+    "scenario:company": "k6 run --out json=reports/04-company.json scenarios/04-company.js",
+    "scenario:config": "k6 run --out json=reports/05-services-config.json scenarios/05-services-config.js",
+    "scenario:dashboard": "k6 run --out json=reports/06-dashboard.json scenarios/06-dashboard.js",
+    "all": "powershell -ExecutionPolicy Bypass -File run-all.ps1"
+  },
+  "devDependencies": {}
+}

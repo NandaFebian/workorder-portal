@@ -1,0 +1,16 @@
+# Skenario Pengujian Graybox Modul Work Reports
+
+Pengujian dilakukan untuk memastikan bahwa operasional pada modul Work Reports dapat dilaksanakan sesuai dengan kebutuhan sistem. Daftar *endpoint* pada modul *work reports* digunakan untuk mengelola siklus hidup laporan pekerjaan yang dihasilkan dari work order. Staff dapat menyimpan data work report dan mengirimkannya untuk ditinjau. Owner atau manager dapat menyetujui atau menolak work report yang telah dikirimkan. Seluruh endpoint memerlukan token otorisasi dan menerapkan pembatasan hak akses berbasis peran (role-based access control). Fokus pengujian diletakkan pada fungsionalitas utama, validasi input, transisi status laporan, serta kepatuhan terhadap batasan hak akses.
+
+### Tabel Skenario Pengujian Graybox Modul Work Reports
+
+| ID Test | Endpoint | HTTP Method | Skenario Uji (Graybox) | Pengecekan Internal (Sistem/DB) | Expected Output |
+|---|---|---|---|---|---|
+| TC-GB-WKRPT-001 | `/workreports/:id/submit` | POST | Menguji keberhasilan operasi: Menyimpan data work report (Valid/Authorized) | Verifikasi perubahan state (Insert/Update) pada database tabel terkait; cek log aktivitas. | Status 200/201 OK |
+| TC-GB-WKRPT-002 | `/workreports/:id/submit` | POST | Menguji penolakan operasi: Menyimpan data work report dengan akses yang tidak sah atau data invalid | Mengecek penjagaan sistem pada level middleware/controller untuk memastikan transaksi database di-rollback atau tidak dipanggil sama sekali. | Status 400/401/403/404 Error |
+| TC-GB-WKRPT-003 | `/workreports/:id/sent` | PATCH | Menguji keberhasilan operasi: Mengirim work report untuk review (Valid/Authorized) | Verifikasi perubahan state (Update) pada database tabel terkait; cek log aktivitas. | Status 200/201 OK |
+| TC-GB-WKRPT-004 | `/workreports/:id/sent` | PATCH | Menguji penolakan operasi: Mengirim work report untuk review dengan akses yang tidak sah atau data invalid | Mengecek penjagaan sistem pada level middleware/controller untuk memastikan transaksi database di-rollback atau tidak dipanggil sama sekali. | Status 400/401/403/404 Error |
+| TC-GB-WKRPT-005 | `/workreports/:id/approve` | PATCH | Menguji keberhasilan operasi: Menyetujui work report (Valid/Authorized) | Verifikasi perubahan state (Update) pada database tabel terkait; cek log aktivitas. | Status 200/201 OK |
+| TC-GB-WKRPT-006 | `/workreports/:id/approve` | PATCH | Menguji penolakan operasi: Menyetujui work report dengan akses yang tidak sah atau data invalid | Mengecek penjagaan sistem pada level middleware/controller untuk memastikan transaksi database di-rollback atau tidak dipanggil sama sekali. | Status 400/401/403/404 Error |
+| TC-GB-WKRPT-007 | `/workreports/:id/reject` | PATCH | Menguji keberhasilan operasi: Menolak work report (Valid/Authorized) | Verifikasi perubahan state (Update) pada database tabel terkait; cek log aktivitas. | Status 200/201 OK |
+| TC-GB-WKRPT-008 | `/workreports/:id/reject` | PATCH | Menguji penolakan operasi: Menolak work report dengan akses yang tidak sah atau data invalid | Mengecek penjagaan sistem pada level middleware/controller untuk memastikan transaksi database di-rollback atau tidak dipanggil sama sekali. | Status 400/401/403/404 Error |

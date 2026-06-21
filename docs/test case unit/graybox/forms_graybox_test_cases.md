@@ -1,0 +1,18 @@
+# Skenario Pengujian Graybox Modul Forms
+
+Pengujian dilakukan untuk memastikan bahwa operasional pada modul Forms dapat dilaksanakan sesuai dengan kebutuhan sistem. Daftar *endpoint* pada modul *forms* digunakan untuk mengelola data formulir yang digunakan dalam proses layanan dan work order. Owner dapat melakukan operasi CRUD (Create, Read, Update, Delete) terhadap formulir yang akan digunakan sebagai template pengisian data oleh client maupun staff. Seluruh endpoint memerlukan token otorisasi dan menerapkan pembatasan hak akses berbasis peran (role-based access control). Fokus pengujian diletakkan pada fungsionalitas utama, validasi input, serta kepatuhan terhadap batasan hak akses.
+
+### Tabel Skenario Pengujian Graybox Modul Forms
+
+| ID Test | Endpoint | HTTP Method | Skenario Uji (Graybox) | Pengecekan Internal (Sistem/DB) | Expected Output |
+|---|---|---|---|---|---|
+| TC-GB-FORMS-001 | `/forms` | GET | Menguji keberhasilan operasi: Mengambil semua data form (Valid/Authorized) | Verifikasi query yang dieksekusi database menggunakan parameter yang benar dan mengembalikan relasi data dengan tepat. | Status 200/201 OK |
+| TC-GB-FORMS-002 | `/forms` | GET | Menguji penolakan operasi: Mengambil semua data form dengan akses yang tidak sah atau data invalid | Mengecek penjagaan sistem pada level middleware/controller untuk memastikan transaksi database di-rollback atau tidak dipanggil sama sekali. | Status 400/401/403/404 Error |
+| TC-GB-FORMS-003 | `/forms` | POST | Menguji keberhasilan operasi: Membuat form baru (Valid/Authorized) | Verifikasi perubahan state (Insert) pada database tabel terkait; cek log aktivitas. | Status 200/201 OK |
+| TC-GB-FORMS-004 | `/forms` | POST | Menguji penolakan operasi: Membuat form baru dengan akses yang tidak sah atau data invalid | Mengecek penjagaan sistem pada level middleware/controller untuk memastikan transaksi database di-rollback atau tidak dipanggil sama sekali. | Status 400/401/403/404 Error |
+| TC-GB-FORMS-005 | `/forms/:id` | GET | Menguji keberhasilan operasi: Mengambil detail form berdasarkan ID (Valid/Authorized) | Verifikasi query yang dieksekusi database menggunakan parameter yang benar dan mengembalikan relasi data dengan tepat. | Status 200/201 OK |
+| TC-GB-FORMS-006 | `/forms/:id` | GET | Menguji penolakan operasi: Mengambil detail form berdasarkan ID dengan akses yang tidak sah atau data invalid | Mengecek penjagaan sistem pada level middleware/controller untuk memastikan transaksi database di-rollback atau tidak dipanggil sama sekali. | Status 400/401/403/404 Error |
+| TC-GB-FORMS-007 | `/forms/:id` | PUT | Menguji keberhasilan operasi: Memperbarui data form (Valid/Authorized) | Verifikasi perubahan state (Update) pada database tabel terkait; cek log aktivitas. | Status 200/201 OK |
+| TC-GB-FORMS-008 | `/forms/:id` | PUT | Menguji penolakan operasi: Memperbarui data form dengan akses yang tidak sah atau data invalid | Mengecek penjagaan sistem pada level middleware/controller untuk memastikan transaksi database di-rollback atau tidak dipanggil sama sekali. | Status 400/401/403/404 Error |
+| TC-GB-FORMS-009 | `/forms/:id` | DELETE | Menguji keberhasilan operasi: Menghapus form (Valid/Authorized) | Verifikasi perubahan state (Delete) pada database tabel terkait; cek log aktivitas. | Status 200/201 OK |
+| TC-GB-FORMS-010 | `/forms/:id` | DELETE | Menguji penolakan operasi: Menghapus form dengan akses yang tidak sah atau data invalid | Mengecek penjagaan sistem pada level middleware/controller untuk memastikan transaksi database di-rollback atau tidak dipanggil sama sekali. | Status 400/401/403/404 Error |

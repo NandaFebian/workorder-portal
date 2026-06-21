@@ -1,0 +1,18 @@
+# Skenario Pengujian Graybox Modul Positions
+
+Pengujian dilakukan untuk memastikan bahwa operasional pada modul Positions dapat dilaksanakan sesuai dengan kebutuhan sistem. Daftar *endpoint* pada modul *positions* digunakan untuk mengelola data posisi atau jabatan yang tersedia di dalam perusahaan. Owner dapat melakukan operasi CRUD (Create, Read, Update, Delete) terhadap posisi yang digunakan untuk mengklasifikasikan peran karyawan dalam struktur organisasi perusahaan. Seluruh endpoint memerlukan token otorisasi dan menerapkan pembatasan hak akses berbasis peran (role-based access control). Fokus pengujian diletakkan pada fungsionalitas utama, validasi input, serta kepatuhan terhadap batasan hak akses.
+
+### Tabel Skenario Pengujian Graybox Modul Positions
+
+| ID Test | Endpoint | HTTP Method | Skenario Uji (Graybox) | Pengecekan Internal (Sistem/DB) | Expected Output |
+|---|---|---|---|---|---|
+| TC-GB-POSTN-001 | `/positions` | GET | Menguji keberhasilan operasi: Mengambil semua data posisi (Valid/Authorized) | Verifikasi query yang dieksekusi database menggunakan parameter yang benar dan mengembalikan relasi data dengan tepat. | Status 200/201 OK |
+| TC-GB-POSTN-002 | `/positions` | GET | Menguji penolakan operasi: Mengambil semua data posisi dengan akses yang tidak sah atau data invalid | Mengecek penjagaan sistem pada level middleware/controller untuk memastikan transaksi database di-rollback atau tidak dipanggil sama sekali. | Status 400/401/403/404 Error |
+| TC-GB-POSTN-003 | `/positions` | POST | Menguji keberhasilan operasi: Membuat posisi baru (Valid/Authorized) | Verifikasi perubahan state (Insert) pada database tabel terkait; cek log aktivitas. | Status 200/201 OK |
+| TC-GB-POSTN-004 | `/positions` | POST | Menguji penolakan operasi: Membuat posisi baru dengan akses yang tidak sah atau data invalid | Mengecek penjagaan sistem pada level middleware/controller untuk memastikan transaksi database di-rollback atau tidak dipanggil sama sekali. | Status 400/401/403/404 Error |
+| TC-GB-POSTN-005 | `/positions/:id` | GET | Menguji keberhasilan operasi: Mengambil detail posisi berdasarkan ID (Valid/Authorized) | Verifikasi query yang dieksekusi database menggunakan parameter yang benar dan mengembalikan relasi data dengan tepat. | Status 200/201 OK |
+| TC-GB-POSTN-006 | `/positions/:id` | GET | Menguji penolakan operasi: Mengambil detail posisi berdasarkan ID dengan akses yang tidak sah atau data invalid | Mengecek penjagaan sistem pada level middleware/controller untuk memastikan transaksi database di-rollback atau tidak dipanggil sama sekali. | Status 400/401/403/404 Error |
+| TC-GB-POSTN-007 | `/positions/:id` | PUT | Menguji keberhasilan operasi: Memperbarui data posisi (Valid/Authorized) | Verifikasi perubahan state (Update) pada database tabel terkait; cek log aktivitas. | Status 200/201 OK |
+| TC-GB-POSTN-008 | `/positions/:id` | PUT | Menguji penolakan operasi: Memperbarui data posisi dengan akses yang tidak sah atau data invalid | Mengecek penjagaan sistem pada level middleware/controller untuk memastikan transaksi database di-rollback atau tidak dipanggil sama sekali. | Status 400/401/403/404 Error |
+| TC-GB-POSTN-009 | `/positions/:id` | DELETE | Menguji keberhasilan operasi: Menghapus posisi (Valid/Authorized) | Verifikasi perubahan state (Delete) pada database tabel terkait; cek log aktivitas. | Status 200/201 OK |
+| TC-GB-POSTN-010 | `/positions/:id` | DELETE | Menguji penolakan operasi: Menghapus posisi dengan akses yang tidak sah atau data invalid | Mengecek penjagaan sistem pada level middleware/controller untuk memastikan transaksi database di-rollback atau tidak dipanggil sama sekali. | Status 400/401/403/404 Error |

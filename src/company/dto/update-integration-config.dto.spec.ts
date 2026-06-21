@@ -29,6 +29,18 @@ describe('UpdateIntegrationConfigDto', () => {
     expect(errors[0].property).toBe('external_login_url');
   });
 
+  it('should fail validation when URLs are null and integration_type is external_system', async () => {
+    const payload = {
+      integration_type: 'external_system',
+      external_login_url: null,
+    };
+
+    const dto = plainToInstance(UpdateIntegrationConfigDto, payload);
+    const errors = await validate(dto);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0].property).toBe('external_login_url');
+  });
+
   it('should pass validation when URLs are null and integration_type is claim_token', async () => {
     const payload = {
       integration_type: 'claim_token',
@@ -60,6 +72,17 @@ describe('UpdateIntegrationConfigDto', () => {
   it('should pass validation when URLs are omitted/undefined and integration_type is claim_token', async () => {
     const payload = {
       integration_type: 'claim_token',
+    };
+
+    const dto = plainToInstance(UpdateIntegrationConfigDto, payload);
+    const errors = await validate(dto);
+    expect(errors.length).toBe(0);
+  });
+
+  it('should pass validation with partial update when integration_type is external_system (no URL fields sent)', async () => {
+    const payload = {
+      integration_type: 'external_system',
+      is_integration_active: true,
     };
 
     const dto = plainToInstance(UpdateIntegrationConfigDto, payload);

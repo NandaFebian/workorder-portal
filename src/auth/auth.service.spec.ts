@@ -3,8 +3,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { CompaniesInternalService } from '../company/companies.internal.service';
+import { PositionsService } from '../positions/positions.service';
 import { JwtService } from '@nestjs/jwt';
 import { HttpException, HttpStatus } from '@nestjs/common';
+
+jest.mock('bcrypt', () => ({
+  compare: jest.fn(),
+}));
 import * as bcrypt from 'bcrypt';
 import { Role } from '../common/enums/role.enum';
 
@@ -29,6 +34,12 @@ describe('AuthService', () => {
           provide: CompaniesInternalService,
           useValue: {
             create: jest.fn(),
+          },
+        },
+        {
+          provide: PositionsService,
+          useValue: {
+            findById: jest.fn(),
           },
         },
         {
@@ -70,9 +81,7 @@ describe('AuthService', () => {
       jest
         .spyOn(usersService, 'findOneByEmail')
         .mockResolvedValue(mockUser as any);
-      jest
-        .spyOn(bcrypt, 'compare')
-        .mockImplementation(() => Promise.resolve(true as never));
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true as never);
       jest.spyOn(jwtService, 'sign').mockReturnValue('mockJwtToken123');
 
       // Act
@@ -166,9 +175,7 @@ describe('AuthService', () => {
       jest
         .spyOn(usersService, 'findOneByEmail')
         .mockResolvedValue(mockUser as any);
-      jest
-        .spyOn(bcrypt, 'compare')
-        .mockImplementation(() => Promise.resolve(true as never));
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true as never);
       const signSpy = jest
         .spyOn(jwtService, 'sign')
         .mockReturnValue('mockToken');
@@ -196,9 +203,7 @@ describe('AuthService', () => {
       jest
         .spyOn(usersService, 'findOneByEmail')
         .mockResolvedValue(userWithPassword as any);
-      jest
-        .spyOn(bcrypt, 'compare')
-        .mockImplementation(() => Promise.resolve(true as never));
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true as never);
       jest.spyOn(jwtService, 'sign').mockReturnValue('mockToken');
 
       // Act

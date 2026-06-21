@@ -1,0 +1,18 @@
+{
+  "name": "workorder-stress-test",
+  "version": "1.0.0",
+  "description": "K6 stress testing scripts for Work Order Portal",
+  "scripts": {
+    "setup": "k6 run helpers/setup.js",
+    "scenario:auth": "k6 run --out json=reports/01-auth.json scenarios/01-auth.js",
+    "scenario:public": "k6 run --out json=reports/02-public.json scenarios/02-public-client.js",
+    "scenario:sr": "k6 run --out json=reports/03-sr.json scenarios/03-service-request.js",
+    "scenario:wo": "k6 run --out json=reports/04-wo.json scenarios/04-work-order.js",
+    "scenario:wr": "k6 run --out json=reports/05-wr.json scenarios/05-work-report.js",
+    "scenario:dash": "k6 run --out json=reports/06-dash.json scenarios/06-dashboard.js",
+    "scenario:company": "k6 run --out json=reports/07-company.json scenarios/07-company-admin.js",
+    "scenario:config": "k6 run --out json=reports/08-config.json scenarios/08-services-config.js",
+    "all": "k6 run scenarios/01-auth.js && k6 run scenarios/02-public-client.js && k6 run scenarios/03-service-request.js && k6 run scenarios/04-work-order.js && k6 run scenarios/05-work-report.js && k6 run scenarios/06-dashboard.js && k6 run scenarios/07-company-admin.js && k6 run scenarios/08-services-config.js"
+  },
+  "devDependencies": {}
+}

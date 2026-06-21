@@ -1,0 +1,16 @@
+# Skenario Pengujian Graybox Modul Invitations
+
+Pengujian dilakukan untuk memastikan bahwa operasional pada modul Invitations dapat dilaksanakan sesuai dengan kebutuhan sistem. Daftar *endpoint* pada modul *invitations* digunakan untuk mengelola undangan yang dikirimkan kepada staff untuk bergabung dengan perusahaan. Staff dapat melihat undangan yang masih pending dan melakukan aksi penerimaan atau penolakan terhadap undangan tersebut. Owner dapat menghapus atau membatalkan undangan yang telah dikirimkan. Seluruh endpoint memerlukan token otorisasi dan menerapkan pembatasan hak akses berbasis peran (role-based access control). Fokus pengujian diletakkan pada fungsionalitas utama, validasi input, serta kepatuhan terhadap batasan hak akses.
+
+### Tabel Skenario Pengujian Graybox Modul Invitations
+
+| ID Test | Endpoint | HTTP Method | Skenario Uji (Graybox) | Pengecekan Internal (Sistem/DB) | Expected Output |
+|---|---|---|---|---|---|
+| TC-GB-INVIT-001 | `/invitations/pending` | GET | Menguji keberhasilan operasi: Mengambil undangan pending untuk staff (Valid/Authorized) | Verifikasi query yang dieksekusi database menggunakan parameter yang benar dan mengembalikan relasi data dengan tepat. | Status 200/201 OK |
+| TC-GB-INVIT-002 | `/invitations/pending` | GET | Menguji penolakan operasi: Mengambil undangan pending untuk staff dengan akses yang tidak sah atau data invalid | Mengecek penjagaan sistem pada level middleware/controller untuk memastikan transaksi database di-rollback atau tidak dipanggil sama sekali. | Status 400/401/403/404 Error |
+| TC-GB-INVIT-003 | `/invitations/:id/accept` | PUT | Menguji keberhasilan operasi: Menerima undangan bergabung (Valid/Authorized) | Verifikasi perubahan state (Update) pada database tabel terkait; cek log aktivitas. | Status 200/201 OK |
+| TC-GB-INVIT-004 | `/invitations/:id/accept` | PUT | Menguji penolakan operasi: Menerima undangan bergabung dengan akses yang tidak sah atau data invalid | Mengecek penjagaan sistem pada level middleware/controller untuk memastikan transaksi database di-rollback atau tidak dipanggil sama sekali. | Status 400/401/403/404 Error |
+| TC-GB-INVIT-005 | `/invitations/:id/reject` | PUT | Menguji keberhasilan operasi: Menolak undangan bergabung (Valid/Authorized) | Verifikasi perubahan state (Update) pada database tabel terkait; cek log aktivitas. | Status 200/201 OK |
+| TC-GB-INVIT-006 | `/invitations/:id/reject` | PUT | Menguji penolakan operasi: Menolak undangan bergabung dengan akses yang tidak sah atau data invalid | Mengecek penjagaan sistem pada level middleware/controller untuk memastikan transaksi database di-rollback atau tidak dipanggil sama sekali. | Status 400/401/403/404 Error |
+| TC-GB-INVIT-007 | `/invitations/:id` | DELETE | Menguji keberhasilan operasi: Menghapus atau membatalkan undangan (Valid/Authorized) | Verifikasi perubahan state (Delete) pada database tabel terkait; cek log aktivitas. | Status 200/201 OK |
+| TC-GB-INVIT-008 | `/invitations/:id` | DELETE | Menguji penolakan operasi: Menghapus atau membatalkan undangan dengan akses yang tidak sah atau data invalid | Mengecek penjagaan sistem pada level middleware/controller untuk memastikan transaksi database di-rollback atau tidak dipanggil sama sekali. | Status 400/401/403/404 Error |

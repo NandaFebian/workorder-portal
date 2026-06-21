@@ -6,6 +6,9 @@ import { Company } from './schemas/company.schemas';
 import { Invitation } from './schemas/invitation.schemas';
 import { UsersService } from '../users/users.service';
 import { PositionsService } from '../positions/positions.service';
+import { ExternalAccount } from '../customer-pairing/schemas/external-account.schema';
+import { MembershipCode } from '../membership/schemas/membership.schema';
+import { FcmService } from '../fcm/fcm.service';
 import {
   NotFoundException,
   UnprocessableEntityException,
@@ -33,7 +36,10 @@ describe('CompaniesInternalService', () => {
         {
           provide: getModelToken(Company.name),
           useValue: {
-            findById: jest.fn(),
+            findById: jest.fn().mockReturnValue({
+              select: jest.fn().mockReturnThis(),
+              exec: jest.fn().mockResolvedValue(mockCompany),
+            }),
             findOne: jest.fn(),
             create: jest.fn(),
           },
@@ -42,7 +48,11 @@ describe('CompaniesInternalService', () => {
           provide: getModelToken(Invitation.name),
           useValue: {
             create: jest.fn(),
-            find: jest.fn(),
+            find: jest.fn().mockReturnValue({
+              populate: jest.fn().mockReturnThis(),
+              exec: jest.fn().mockResolvedValue([]),
+            }),
+            updateMany: jest.fn().mockResolvedValue({ modifiedCount: 0 }),
           },
         },
         {
@@ -55,6 +65,26 @@ describe('CompaniesInternalService', () => {
           provide: PositionsService,
           useValue: {
             findById: jest.fn(),
+          },
+        },
+        {
+          provide: getModelToken(ExternalAccount.name),
+          useValue: {
+            findOne: jest.fn(),
+            create: jest.fn(),
+          },
+        },
+        {
+          provide: getModelToken(MembershipCode.name),
+          useValue: {
+            findOne: jest.fn(),
+            create: jest.fn(),
+          },
+        },
+        {
+          provide: FcmService,
+          useValue: {
+            sendToUser: jest.fn(),
           },
         },
       ],
@@ -97,7 +127,18 @@ describe('CompaniesInternalService', () => {
       jest
         .spyOn(positionsService, 'findById')
         .mockResolvedValue(mockPosition as any);
-      jest.spyOn(invitationModel, 'create').mockResolvedValue({});
+      const createSpy = jest.spyOn(invitationModel, 'create').mockResolvedValue({ _id: 'invite-id-123' });
+      jest.spyOn(invitationModel, 'find').mockReturnValue({
+        populate: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue([{
+          _id: 'invite-id-123',
+          companyId: mockCompany._id,
+          userId: mockUser._id,
+          positionId: mockPosition._id,
+          role: Role.CompanyStaff,
+          status: 'pending',
+        }]),
+      });
 
       const inviteDto = {
         invites: [
@@ -123,7 +164,7 @@ describe('CompaniesInternalService', () => {
       expect(positionsService.findById).toHaveBeenCalledWith(
         '507f1f77bcf86cd799439050',
       );
-      expect(invitationModel.create).toHaveBeenCalled();
+      expect(createSpy).toHaveBeenCalled();
       expect(result.data).toHaveLength(1);
       expect(result.errors).toHaveLength(0);
     });
@@ -149,7 +190,19 @@ describe('CompaniesInternalService', () => {
       jest
         .spyOn(positionsService, 'findById')
         .mockResolvedValue(mockPosition as any);
-      jest.spyOn(invitationModel, 'create').mockResolvedValue({});
+      const createSpy = jest.spyOn(invitationModel, 'create').mockResolvedValue({ _id: 'invite-id-123' });
+      const mockInvites = Array.from({ length: 5 }, (_, i) => ({
+        _id: `invite-id-${i}`,
+        companyId: mockCompany._id,
+        userId: [user1, user2, user3, user4, user5][i]._id,
+        positionId: mockPosition._id,
+        role: Role.CompanyStaff,
+        status: 'pending',
+      }));
+      jest.spyOn(invitationModel, 'find').mockReturnValue({
+        populate: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockInvites),
+      });
 
       const inviteDto = {
         invites: [
@@ -189,7 +242,7 @@ describe('CompaniesInternalService', () => {
 
       // Assert
       expect(usersService.findOneByEmail).toHaveBeenCalledTimes(5);
-      expect(invitationModel.create).toHaveBeenCalledTimes(5);
+      expect(createSpy).toHaveBeenCalledTimes(5);
       expect(result.data).toHaveLength(5);
       expect(result.errors).toHaveLength(0);
     });
@@ -209,6 +262,17 @@ describe('CompaniesInternalService', () => {
       const createSpy = jest
         .spyOn(invitationModel, 'create')
         .mockResolvedValue({});
+      jest.spyOn(invitationModel, 'find').mockReturnValue({
+        populate: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue([{
+          _id: 'invite-id-123',
+          companyId: mockCompany._id,
+          userId: mockUser._id,
+          positionId: mockPosition._id,
+          role: Role.CompanyStaff,
+          status: 'pending',
+        }]),
+      });
       const beforeTime = new Date();
       beforeTime.setDate(beforeTime.getDate() + 7);
 
@@ -267,8 +331,10 @@ describe('CompaniesInternalService', () => {
         await service.inviteEmployees('507f1f77bcf86cd799439012', inviteDto);
       } catch (error: any) {
         const errResponse = error.getResponse();
-        expect(errResponse.errors).toHaveLength(1);
-        expect(errResponse.errors[0].message).toContain('Position');
+        expect(errResponse.errors.field).toHaveLength(1);
+        expect(Object.values(errResponse.errors.field[0])[0]).toContain(
+          'Invalid Position ID format',
+        );
       }
     });
 
@@ -307,8 +373,8 @@ describe('CompaniesInternalService', () => {
         await service.inviteEmployees('507f1f77bcf86cd799439012', inviteDto);
       } catch (error: any) {
         const errResponse = error.getResponse();
-        expect(errResponse.errors).toHaveLength(1);
-        expect(errResponse.errors[0].message).toContain(
+        expect(errResponse.errors.field).toHaveLength(1);
+        expect(Object.values(errResponse.errors.field[0])[0]).toContain(
           'already belongs to a company',
         );
       }
@@ -333,6 +399,13 @@ describe('CompaniesInternalService', () => {
       const createSpy = jest
         .spyOn(invitationModel, 'create')
         .mockResolvedValue({});
+      jest.spyOn(invitationModel, 'find').mockReturnValue({
+        populate: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue([
+          { _id: 'invite-id-1', companyId: mockCompany._id, userId: user1._id, positionId: mockPosition._id, role: Role.CompanyStaff, status: 'pending' },
+          { _id: 'invite-id-2', companyId: mockCompany._id, userId: user2._id, positionId: mockPosition._id, role: Role.CompanyStaff, status: 'pending' },
+        ]),
+      });
 
       const inviteDto = {
         invites: [
@@ -375,6 +448,17 @@ describe('CompaniesInternalService', () => {
       const createSpy = jest
         .spyOn(invitationModel, 'create')
         .mockResolvedValue({});
+      jest.spyOn(invitationModel, 'find').mockReturnValue({
+        populate: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue([{
+          _id: 'invite-id-123',
+          companyId: mockCompany._id,
+          userId: mockUser._id,
+          positionId: mockPosition._id,
+          role: Role.CompanyStaff,
+          status: 'pending',
+        }]),
+      });
 
       const inviteDto = {
         invites: [

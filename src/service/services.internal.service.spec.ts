@@ -66,7 +66,8 @@ describe('ServicesInternalService', () => {
       // Arrange
       const existingService = { ...mockService, version: 1 };
       const mockExec = jest.fn().mockResolvedValue(existingService);
-      serviceModel.findOne.mockReturnValue({ exec: mockExec });
+      const mockSort = jest.fn().mockReturnValue({ exec: mockExec });
+      serviceModel.findOne.mockReturnValue({ exec: mockExec, sort: mockSort });
 
       const updateSpy = jest.spyOn(service, 'update').mockResolvedValue({
         ...existingService,
@@ -99,7 +100,8 @@ describe('ServicesInternalService', () => {
       // Arrange
       const existingService = { ...mockService, version: 3 };
       const mockExec = jest.fn().mockResolvedValue(existingService);
-      serviceModel.findOne.mockReturnValue({ exec: mockExec });
+      const mockSort = jest.fn().mockReturnValue({ exec: mockExec });
+      serviceModel.findOne.mockReturnValue({ exec: mockExec, sort: mockSort });
 
       const updateSpy = jest.spyOn(service, 'update').mockResolvedValue({
         ...existingService,
@@ -126,7 +128,8 @@ describe('ServicesInternalService', () => {
       // Arrange
       const existingService = { ...mockService };
       const mockExec = jest.fn().mockResolvedValue(existingService);
-      serviceModel.findOne.mockReturnValue({ exec: mockExec });
+      const mockSort = jest.fn().mockReturnValue({ exec: mockExec });
+      serviceModel.findOne.mockReturnValue({ exec: mockExec, sort: mockSort });
 
       // Mock update to verify old service is not modified
       const updateSpy = jest.spyOn(service, 'update').mockResolvedValue({
@@ -156,7 +159,8 @@ describe('ServicesInternalService', () => {
       // Arrange
       const existingService = { ...mockService, serviceKey: 'SVC-001' };
       const mockExec = jest.fn().mockResolvedValue(existingService);
-      serviceModel.findOne.mockReturnValue({ exec: mockExec });
+      const mockSort = jest.fn().mockReturnValue({ exec: mockExec });
+      serviceModel.findOne.mockReturnValue({ exec: mockExec, sort: mockSort });
 
       const updateSpy = jest.spyOn(service, 'update').mockResolvedValue({
         ...existingService,
@@ -187,7 +191,8 @@ describe('ServicesInternalService', () => {
         companyId: mockUser.company._id,
       };
       const mockExec = jest.fn().mockResolvedValue(existingService);
-      serviceModel.findOne.mockReturnValue({ exec: mockExec });
+      const mockSort = jest.fn().mockReturnValue({ exec: mockExec });
+      serviceModel.findOne.mockReturnValue({ exec: mockExec, sort: mockSort });
 
       const updateSpy = jest.spyOn(service, 'update').mockResolvedValue({
         ...existingService,
@@ -243,7 +248,8 @@ describe('ServicesInternalService', () => {
       // Arrange
       const existingService = { ...mockService, requiredStaffs: [] };
       const mockExec = jest.fn().mockResolvedValue(existingService);
-      serviceModel.findOne.mockReturnValue({ exec: mockExec });
+      const mockSort = jest.fn().mockReturnValue({ exec: mockExec });
+      serviceModel.findOne.mockReturnValue({ exec: mockExec, sort: mockSort });
 
       const newRequiredStaffs = [
         { positionId: '507f1f77bcf86cd799439030', count: 2 },

@@ -36,8 +36,17 @@ describe('MembershipService', () => {
     };
 
     externalAccountModelMock = {
-      create: jest.fn(),
+      create: jest.fn().mockResolvedValue({ _id: 'ea-id-123' }),
       findOne: jest.fn(),
+      findById: jest.fn().mockReturnValue({
+        populate: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue({
+          _id: 'ea-id-123',
+          externalCustomerEmail: 'external@example.com',
+          companyId: 'company-id-123',
+        }),
+      }),
     };
 
     const module: TestingModule = await Test.createTestingModule({

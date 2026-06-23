@@ -973,6 +973,28 @@ export class WorkOrderService {
       newAssignedStaff = staffIds as any;
     }
 
+    // Validation: assigned staff count must respect the WO's configured bounds
+    const assignedCount = newAssignedStaff.length;
+    if (
+      typeof wo.maxStaff === 'number' &&
+      wo.maxStaff > 0 &&
+      assignedCount > wo.maxStaff
+    ) {
+      errors.push(
+        `Jumlah staf melebihi batas maksimal (${assignedCount}/${wo.maxStaff})`,
+      );
+    }
+    if (
+      typeof wo.minStaff === 'number' &&
+      wo.minStaff > 0 &&
+      assignedCount > 0 &&
+      assignedCount < wo.minStaff
+    ) {
+      errors.push(
+        `Jumlah staf kurang dari batas minimal (${assignedCount}/${wo.minStaff})`,
+      );
+    }
+
     if (errors.length > 0)
       throw new UnprocessableEntityException(errors.join(', '));
 

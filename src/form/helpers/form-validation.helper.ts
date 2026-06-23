@@ -1,5 +1,6 @@
 import { UnprocessableEntityException } from '@nestjs/common';
 import { FormField } from '../schemas/form-field.schema';
+import { FieldType } from '../../common/enums/field-type.enum';
 
 /**
  * Validates a field value against its form field definition
@@ -16,7 +17,7 @@ export function validateFieldValue(
   fieldOrder: number,
 ): void {
   // Validate single_select fields
-  if (field.type === 'single_select') {
+  if (field.type === FieldType.SingleSelect) {
     if (!field.options || field.options.length === 0) {
       throw new UnprocessableEntityException(
         `Field at order ${fieldOrder} (${field.label}) has no options defined`,
@@ -32,8 +33,31 @@ export function validateFieldValue(
     }
   }
 
+  // Validate number fields against their optional min/max bounds
+  if (field.type === FieldType.Number) {
+    const numValue = typeof value === 'number' ? value : Number(value);
+
+    if (typeof value === 'boolean' || Number.isNaN(numValue)) {
+      throw new UnprocessableEntityException(
+        `Field "${field.label}" (order ${fieldOrder}) must be a valid number`,
+      );
+    }
+
+    if (typeof field.min === 'number' && numValue < field.min) {
+      throw new UnprocessableEntityException(
+        `Value ${numValue} for field "${field.label}" (order ${fieldOrder}) is below the allowed minimum of ${field.min}`,
+      );
+    }
+
+    if (typeof field.max === 'number' && numValue > field.max) {
+      throw new UnprocessableEntityException(
+        `Value ${numValue} for field "${field.label}" (order ${fieldOrder}) exceeds the allowed maximum of ${field.max}`,
+      );
+    }
+  }
+
   // Validate multi_select fields
-  if (field.type === 'multi_select') {
+  if (field.type === FieldType.MultiSelect) {
     if (!Array.isArray(value)) {
       throw new UnprocessableEntityException(
         `Field "${field.label}" (order ${fieldOrder}) must be an array for multi_select type`,

@@ -1,13 +1,30 @@
 param(
-    [string]$BaseUrl = "https://workorder-production.up.railway.app"
+    [string]$BaseUrl = "https://workorders-production.up.railway.app",
+    [switch]$SkipSetup
 )
 
 $ErrorActionPreference = "Continue"
 $ReportDir = Join-Path $PSScriptRoot "reports"
 $ScriptsDir = Join-Path $PSScriptRoot "scenarios"
+$SetupScript = Join-Path $PSScriptRoot "helpers/setup.js"
 
 if (-not (Test-Path $ReportDir)) {
     New-Item -ItemType Directory -Path $ReportDir -Force | Out-Null
+}
+
+# ═══════════════════════════════════════════
+# Seed data (provision companies, services, SRs, work orders, ...) before tests
+# ═══════════════════════════════════════════
+if (-not $SkipSetup) {
+    Write-Host ">>> Seeding test data via helpers/setup.js" -ForegroundColor Cyan
+    Write-Host "    Target: $BaseUrl" -ForegroundColor Gray
+    & k6 run --no-color "-e" "BASE_URL=$BaseUrl" $SetupScript
+    Write-Host "<<< Seeding complete" -ForegroundColor Cyan
+    Write-Host ""
+}
+else {
+    Write-Host ">>> Skipping data seeding (-SkipSetup)" -ForegroundColor Yellow
+    Write-Host ""
 }
 
 $scenarios = @(
@@ -163,7 +180,7 @@ foreach ($scenario in $scenarios) {
     Write-Host ">>> Running: $name" -ForegroundColor Green
     Write-Host "    File: $file" -ForegroundColor Gray
 
-    $output = & k6 run --no-color "--out" "json=$outputPath" $filePath 2>&1
+    $output = & k6 run --no-color "-e" "BASE_URL=$BaseUrl" "--out" "json=$outputPath" $filePath 2>&1
     $output | ForEach-Object { Write-Host $_ }
 
     $parsed = Parse-K6Output $output

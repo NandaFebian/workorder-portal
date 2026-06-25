@@ -9,7 +9,11 @@ import { WorkReportService } from 'src/work-report/work-report.service';
 import { ServiceRequestService } from 'src/service-request/service-request.service';
 import { FcmService } from 'src/fcm/fcm.service';
 import { Types } from 'mongoose';
-import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  NotFoundException,
+  ForbiddenException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 
 jest.mock('src/common/utils/generate-code.util', () => ({
   generateCode: jest.fn(() => 'TEST-001'),
@@ -201,6 +205,38 @@ describe('WorkOrderService', () => {
         service.assignStaff(woId, { staff_pic: 'invalid', assign_staffs: [] }, mockManager),
       ).rejects.toThrow(NotFoundException);
     });
+
+    it('UT-WO-020: Menugaskan staff melebihi batas maksimal (maxStaff) → throw UnprocessableEntity', async () => {
+      workOrderModel.findOne.mockReturnValue(makeQuery(makeWO({ minStaff: 1, maxStaff: 1 })));
+      usersService.findOneByEmail.mockResolvedValue({
+        _id: new Types.ObjectId('507f1f77bcf86cd799439055'),
+        email: 'staff@test.com',
+        companyId: mockManager.company._id,
+      });
+
+      // maxStaff = 1, tetapi 2 staff diberikan → harus ditolak
+      await expect(
+        service.assignStaff(
+          woId,
+          { assign_staffs: ['staff1@test.com', 'staff2@test.com'] },
+          mockManager,
+        ),
+      ).rejects.toThrow(UnprocessableEntityException);
+    });
+
+    it('UT-WO-021: Menugaskan staff kurang dari batas minimal (minStaff) → throw UnprocessableEntity', async () => {
+      workOrderModel.findOne.mockReturnValue(makeQuery(makeWO({ minStaff: 3, maxStaff: 5 })));
+      usersService.findOneByEmail.mockResolvedValue({
+        _id: new Types.ObjectId('507f1f77bcf86cd799439055'),
+        email: 'staff@test.com',
+        companyId: mockManager.company._id,
+      });
+
+      // minStaff = 3, tetapi hanya 1 staff diberikan → harus ditolak
+      await expect(
+        service.assignStaff(woId, { assign_staffs: ['staff1@test.com'] }, mockManager),
+      ).rejects.toThrow(UnprocessableEntityException);
+    });
   });
 
   // ─── start() ───
@@ -368,6 +404,137 @@ describe('WorkOrderService', () => {
       await expect(service.findOneInternal(woId, mockManager)).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  // ─── validateAutoAssignForConfigs() ───
+
+  describe('validateAutoAssignForConfigs()', () => {
+    const companyId = '507f1f77bcf86cd799439001';
+
+    it('UT-WO-022: Staf tersedia mencukupi kebutuhan posisi → tidak melempar eksepsi', async () => {
+      usersService.findByPositionId.mockResolvedValue([
+        { _id: 'u1', companyId, role: 'staff_company', deletedAt: null },
+        { _id: 'u2', companyId, role: 'staff_company', deletedAt: null },
+      ]);
+
+      await expect(
+        service.validateAutoAssignForConfigs(
+          [{ positionId: '507f1f77bcf86cd799439040', minStaff: 2, maxStaff: 3 }],
+          companyId,
+        ),
+      ).resolves.toBeUndefined();
+    });
+
+    it('UT-WO-023: Staf tersedia kurang dari minimal → throw UnprocessableEntity', async () => {
+      usersService.findByPositionId.mockResolvedValue([
+        { _id: 'u1', companyId, role: 'staff_company', deletedAt: null },
+      ]);
+
+      await expect(
+        service.validateAutoAssignForConfigs(
+          [{ positionId: '507f1f77bcf86cd799439040', minStaff: 3, maxStaff: 5 }],
+          companyId,
+        ),
+      ).rejects.toThrow(UnprocessableEntityException);
+    });
+  });
+
+  // ─── createInternal() ───
+
+  describe('createInternal()', () => {
+    it('UT-WO-024: Membuat WO internal non-auto → status DRAFTED dan membuat work report', async () => {
+      const saved = await service.createInternal({
+        companyId: mockManager.company._id,
+        serviceId: '507f1f77bcf86cd799439030',
+        draftingWorkOrderType: 'manual',
+        workReportApprovalAccessType: 'auto',
+      });
+
+      expect(saved).toBeDefined();
+      expect(saved.status).toBe('drafted');
+      expect(workReportService.create).toHaveBeenCalled();
+    });
+
+    it('UT-WO-025: Membuat WO internal auto-draft → status APPROVED dan auto-assign staf', async () => {
+      usersService.findByPositionId.mockResolvedValue([
+        {
+          _id: new Types.ObjectId('507f1f77bcf86cd799439056'),
+          companyId: mockManager.company._id,
+          role: 'staff_company',
+          deletedAt: null,
+        },
+      ]);
+
+      const saved = await service.createInternal({
+        companyId: mockManager.company._id,
+        serviceId: '507f1f77bcf86cd799439030',
+        positionId: new Types.ObjectId('507f1f77bcf86cd799439040'),
+        draftingWorkOrderType: 'auto',
+        workReportApprovalAccessType: 'auto',
+        minStaff: 1,
+        maxStaff: 2,
+      });
+
+      expect(saved.status).toBe('approved');
+      expect(fcmService.sendToUser).toHaveBeenCalled();
+    });
+  });
+
+  // ─── update() ───
+
+  describe('update()', () => {
+    const woId = '507f1f77bcf86cd799439020';
+
+    it('UT-WO-026: Memperbarui WO dengan data valid → mengembalikan detail terbaru', async () => {
+      workOrderModel.findOne.mockReturnValue(makeQuery(makeWO()));
+      jest.spyOn(service, 'findOneInternal').mockResolvedValue({ data: {} });
+
+      const result = await service.update(woId, { note: 'updated' }, mockManager);
+      expect(result).toBeDefined();
+    });
+  });
+
+  // ─── markAsSent() ───
+
+  describe('markAsSent()', () => {
+    const woId = '507f1f77bcf86cd799439020';
+
+    it('UT-WO-027: Mengirim WO DRAFTED dengan staf cukup → status APPROVED/SENT', async () => {
+      const wo = makeWO({
+        status: 'drafted',
+        assignedStaff: [new Types.ObjectId('507f1f77bcf86cd799439056')],
+        minStaff: 1,
+        workOrderApprovalAccessType: 'auto',
+        workOrderFormId: null,
+      });
+      workOrderModel.findOne.mockReturnValue(makeQuery(wo));
+      jest.spyOn(service, 'findOneInternal').mockResolvedValue({ data: {} });
+
+      const result = await service.markAsSent(woId, mockManager);
+      expect(result).toBeDefined();
+      expect(wo.save).toHaveBeenCalled();
+    });
+
+    it('UT-WO-028: Mengirim WO dengan staf kurang dari minimal → throw BadRequest', async () => {
+      const wo = makeWO({ status: 'drafted', assignedStaff: [], minStaff: 2 });
+      workOrderModel.findOne.mockReturnValue(makeQuery(wo));
+
+      await expect(service.markAsSent(woId, mockManager)).rejects.toThrow();
+    });
+  });
+
+  // ─── autoCompleteByWorkReport() ───
+
+  describe('autoCompleteByWorkReport()', () => {
+    const woId = '507f1f77bcf86cd799439020';
+
+    it('UT-WO-029: Auto-complete WO ON_PROGRESS setelah laporan disetujui → status COMPLETED', async () => {
+      const wo = makeWO({ status: 'on_progress' });
+      workOrderModel.findOne.mockReturnValue(makeQuery(wo));
+
+      await service.autoCompleteByWorkReport(woId);
+      expect(wo.save).toHaveBeenCalled();
     });
   });
 });

@@ -1,0 +1,548 @@
+{
+  "meta": {
+    "project": "Work Order Portal",
+    "database": "MongoDB (Mongoose)",
+    "description": "Physical Data Model (PDM) export. Setiap collection dipetakan sebagai entitas/tabel. Field ObjectId dengan 'ref' menjadi foreign key (relasi). Field array-of-ref menandakan relasi many-to-many (dapat dipecah menjadi tabel penghubung pada PDM relasional). Sub-dokumen ditandai 'embedded'.",
+    "primaryKeyConvention": "_id (ObjectId) pada setiap entitas",
+    "auditColumns": "Entitas dengan timestamps memiliki createdAt & updatedAt (DATETIME); __v (versi) ada kecuali versionKey dimatikan",
+    "typeLegend": {
+      "ObjectId": "VARCHAR(24) / ObjectId",
+      "VARCHAR": "string pendek",
+      "TEXT": "string panjang",
+      "INT": "bilangan bulat",
+      "DECIMAL": "bilangan desimal",
+      "BOOLEAN": "true/false",
+      "DATETIME": "tanggal-waktu",
+      "JSON": "object tersarang",
+      "ARRAY": "larik nilai"
+    },
+    "entityCount": 18,
+    "generatedFrom": "src/**/schemas/*.schema.ts"
+  },
+
+  "entities": [
+    {
+      "name": "User",
+      "collection": "users",
+      "description": "Akun pengguna (owner, manager, staff, client).",
+      "columns": [
+        { "name": "_id", "type": "ObjectId", "mongoType": "ObjectId", "key": "PK", "nullable": false },
+        { "name": "name", "type": "VARCHAR", "mongoType": "String", "nullable": false },
+        { "name": "email", "type": "VARCHAR", "mongoType": "String", "nullable": false, "key": "UNIQUE", "index": true },
+        { "name": "password", "type": "VARCHAR", "mongoType": "String", "nullable": false, "note": "select:false, di-hash bcrypt" },
+        { "name": "role", "type": "VARCHAR", "mongoType": "String", "nullable": false, "enum": ["client", "admin_app", "owner_company", "manager_company", "staff_company", "staff_unassigned"] },
+        { "name": "companyId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "Company", "field": "_id" } },
+        { "name": "positionId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "Position", "field": "_id" } },
+        { "name": "fcmTokens", "type": "ARRAY", "mongoType": "[String]", "nullable": false, "note": "select:false" },
+        { "name": "deletedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "createdAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "updatedAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "__v", "type": "INT", "mongoType": "Number", "nullable": false }
+      ]
+    },
+    {
+      "name": "Company",
+      "collection": "companies",
+      "description": "Perusahaan penyedia layanan.",
+      "columns": [
+        { "name": "_id", "type": "ObjectId", "mongoType": "ObjectId", "key": "PK", "nullable": false },
+        { "name": "name", "type": "VARCHAR", "mongoType": "String", "nullable": false },
+        { "name": "address", "type": "VARCHAR", "mongoType": "String", "nullable": true },
+        { "name": "description", "type": "TEXT", "mongoType": "String", "nullable": true },
+        { "name": "ownerId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "User", "field": "_id" } },
+        { "name": "managers", "type": "ARRAY", "mongoType": "[ObjectId]", "nullable": false, "relation": "many-to-many", "references": { "entity": "User", "field": "_id" } },
+        { "name": "staffs", "type": "ARRAY", "mongoType": "[ObjectId]", "nullable": false, "relation": "many-to-many", "references": { "entity": "User", "field": "_id" } },
+        { "name": "isActive", "type": "BOOLEAN", "mongoType": "Boolean", "nullable": false },
+        { "name": "isFaqActive", "type": "BOOLEAN", "mongoType": "Boolean", "nullable": false },
+        { "name": "faqApiKey", "type": "VARCHAR", "mongoType": "String", "nullable": true },
+        { "name": "faqExternalCompanyId", "type": "INT", "mongoType": "Number", "nullable": true },
+        { "name": "integrationConfig", "type": "JSON", "mongoType": "Object", "nullable": true, "embedded": "IntegrationConfig" },
+        { "name": "deletedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "createdAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "updatedAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "__v", "type": "INT", "mongoType": "Number", "nullable": false }
+      ]
+    },
+    {
+      "name": "Position",
+      "collection": "positions",
+      "description": "Posisi/jabatan staf dalam perusahaan.",
+      "columns": [
+        { "name": "_id", "type": "ObjectId", "mongoType": "ObjectId", "key": "PK", "nullable": false },
+        { "name": "name", "type": "VARCHAR", "mongoType": "String", "nullable": false },
+        { "name": "description", "type": "VARCHAR", "mongoType": "String", "nullable": true },
+        { "name": "isActive", "type": "BOOLEAN", "mongoType": "Boolean", "nullable": false },
+        { "name": "companyId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "Company", "field": "_id" } },
+        { "name": "deletedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "createdAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "updatedAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "__v", "type": "INT", "mongoType": "Number", "nullable": false }
+      ]
+    },
+    {
+      "name": "Service",
+      "collection": "services",
+      "description": "Definisi layanan (mendukung versioning lewat serviceKey).",
+      "columns": [
+        { "name": "_id", "type": "ObjectId", "mongoType": "ObjectId", "key": "PK", "nullable": false },
+        { "name": "serviceKey", "type": "VARCHAR", "mongoType": "String", "nullable": false, "index": true, "note": "identitas logis lintas versi" },
+        { "name": "companyId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": false, "references": { "entity": "Company", "field": "_id" } },
+        { "name": "title", "type": "VARCHAR", "mongoType": "String", "nullable": false },
+        { "name": "description", "type": "TEXT", "mongoType": "String", "nullable": false },
+        { "name": "accessType", "type": "VARCHAR", "mongoType": "String", "nullable": false, "enum": ["public", "member_only", "internal"] },
+        { "name": "isActive", "type": "BOOLEAN", "mongoType": "Boolean", "nullable": false },
+        { "name": "draftingWorkOrderType", "type": "VARCHAR", "mongoType": "String", "nullable": false, "enum": ["auto", "manual"] },
+        { "name": "serviceRequestConfig", "type": "JSON", "mongoType": "Object", "nullable": true, "embedded": "ServiceRequestConfig" },
+        { "name": "workOrdersConfig", "type": "ARRAY", "mongoType": "[Object]", "nullable": false, "embedded": "WorkOrderConfig" },
+        { "name": "__v", "type": "INT", "mongoType": "Number", "nullable": false, "note": "versi service (manual)" },
+        { "name": "deletedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "createdAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "updatedAt", "type": "DATETIME", "mongoType": "Date", "nullable": false }
+      ]
+    },
+    {
+      "name": "ServiceRequest",
+      "collection": "servicerequests",
+      "description": "Permintaan layanan dari klien.",
+      "columns": [
+        { "name": "_id", "type": "ObjectId", "mongoType": "ObjectId", "key": "PK", "nullable": false },
+        { "name": "code", "type": "VARCHAR", "mongoType": "String", "nullable": true, "key": "UNIQUE" },
+        { "name": "serviceId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": false, "references": { "entity": "Service", "field": "_id" } },
+        { "name": "requestedBy", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": false, "references": { "entity": "User", "field": "_id" } },
+        { "name": "companyId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": false, "references": { "entity": "Company", "field": "_id" } },
+        { "name": "serviceRequestApprovalAccessType", "type": "VARCHAR", "mongoType": "String", "nullable": false, "enum": ["auto", "manager", "staff_pic", "staff_any"] },
+        { "name": "staffPIC", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "User", "field": "_id" } },
+        { "name": "reviewNeed", "type": "BOOLEAN", "mongoType": "Boolean", "nullable": false },
+        { "name": "approvedBy", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "User", "field": "_id" } },
+        { "name": "serviceRequestStatus", "type": "VARCHAR", "mongoType": "String", "nullable": false, "enum": ["received", "approved", "rejected", "cancelled", "completed", "closed"] },
+        { "name": "intakeFormId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "FormTemplate", "field": "_id" } },
+        { "name": "reviewFormId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "FormTemplate", "field": "_id" } },
+        { "name": "intakeSubmissionId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "FormSubmission", "field": "_id" } },
+        { "name": "reviewSubmissionId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "FormSubmission", "field": "_id" } },
+        { "name": "receivedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "approvedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "rejectedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "cancelledAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "workOrderCreatedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "onProgressAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "unprocessableAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "partialCompletedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "failedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "completedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "closedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "deletedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "createdAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "updatedAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "__v", "type": "INT", "mongoType": "Number", "nullable": false }
+      ]
+    },
+    {
+      "name": "WorkOrder",
+      "collection": "workorders",
+      "description": "Perintah kerja yang diturunkan dari ServiceRequest.",
+      "columns": [
+        { "name": "_id", "type": "ObjectId", "mongoType": "ObjectId", "key": "PK", "nullable": false },
+        { "name": "code", "type": "VARCHAR", "mongoType": "String", "nullable": true, "key": "UNIQUE" },
+        { "name": "serviceRequestId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "ServiceRequest", "field": "_id" } },
+        { "name": "batchId", "type": "VARCHAR", "mongoType": "String", "nullable": true },
+        { "name": "createdBy", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "User", "field": "_id" } },
+        { "name": "configId", "type": "VARCHAR", "mongoType": "String", "nullable": true },
+        { "name": "serviceId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": false, "references": { "entity": "Service", "field": "_id" } },
+        { "name": "companyId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": false, "references": { "entity": "Company", "field": "_id" } },
+        { "name": "approvedBy", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "User", "field": "_id" } },
+        { "name": "staffPIC", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "User", "field": "_id" } },
+        { "name": "assignedStaff", "type": "ARRAY", "mongoType": "[ObjectId]", "nullable": false, "relation": "many-to-many", "references": { "entity": "User", "field": "_id" } },
+        { "name": "workOrderFormId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "FormTemplate", "field": "_id" } },
+        { "name": "reportFormId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "FormTemplate", "field": "_id" } },
+        { "name": "positionId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "Position", "field": "_id" } },
+        { "name": "workOrderApprovalAccessType", "type": "VARCHAR", "mongoType": "String", "nullable": false, "enum": ["auto", "staff_pic"] },
+        { "name": "workReportApprovalAccessType", "type": "VARCHAR", "mongoType": "String", "nullable": false, "enum": ["auto", "manager"] },
+        { "name": "minStaff", "type": "INT", "mongoType": "Number", "nullable": false },
+        { "name": "maxStaff", "type": "INT", "mongoType": "Number", "nullable": false },
+        { "name": "status", "type": "VARCHAR", "mongoType": "String", "nullable": false, "enum": ["drafted", "sent", "approved", "rejected", "cancelled", "on_progress", "completed", "failed"] },
+        { "name": "has_issue", "type": "BOOLEAN", "mongoType": "Boolean", "nullable": false },
+        { "name": "issue_note", "type": "TEXT", "mongoType": "String", "nullable": true },
+        { "name": "draftedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "sentAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "approvedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "rejectedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "startedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "completedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "failedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "cancelledAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "deletedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "createdAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "updatedAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "__v", "type": "INT", "mongoType": "Number", "nullable": false }
+      ]
+    },
+    {
+      "name": "WorkReport",
+      "collection": "workreports",
+      "description": "Laporan hasil pengerjaan untuk sebuah WorkOrder.",
+      "columns": [
+        { "name": "_id", "type": "ObjectId", "mongoType": "ObjectId", "key": "PK", "nullable": false },
+        { "name": "workOrderId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": false, "references": { "entity": "WorkOrder", "field": "_id" } },
+        { "name": "companyId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": false, "references": { "entity": "Company", "field": "_id" } },
+        { "name": "reportFormId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "FormTemplate", "field": "_id" } },
+        { "name": "approvedBy", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "User", "field": "_id" } },
+        { "name": "workReportApprovalAccessType", "type": "VARCHAR", "mongoType": "String", "nullable": false, "enum": ["auto", "manager"] },
+        { "name": "status", "type": "VARCHAR", "mongoType": "String", "nullable": false, "enum": ["drafted", "on_progress", "submitted", "rejected", "approved"] },
+        { "name": "startedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "submittedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "approvedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "rejectedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "showReportToRequester", "type": "BOOLEAN", "mongoType": "Boolean", "nullable": false },
+        { "name": "deletedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "createdAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "updatedAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "__v", "type": "INT", "mongoType": "Number", "nullable": false }
+      ]
+    },
+    {
+      "name": "ServicePrice",
+      "collection": "serviceprices",
+      "description": "Harga untuk sebuah layanan (dihubungkan via serviceKey).",
+      "columns": [
+        { "name": "_id", "type": "ObjectId", "mongoType": "ObjectId", "key": "PK", "nullable": false },
+        { "name": "serviceKey", "type": "VARCHAR", "mongoType": "String", "nullable": false, "key": "UNIQUE", "softReference": { "entity": "Service", "field": "serviceKey" } },
+        { "name": "price", "type": "DECIMAL", "mongoType": "Number", "nullable": false },
+        { "name": "deletedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "createdAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "updatedAt", "type": "DATETIME", "mongoType": "Date", "nullable": false }
+      ]
+    },
+    {
+      "name": "MembershipCode",
+      "collection": "membershipcodes",
+      "description": "Kode keanggotaan untuk klien eksternal.",
+      "columns": [
+        { "name": "_id", "type": "ObjectId", "mongoType": "ObjectId", "key": "PK", "nullable": false },
+        { "name": "companyId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": false, "references": { "entity": "Company", "field": "_id" } },
+        { "name": "externalCustomerEmail", "type": "VARCHAR", "mongoType": "String", "nullable": false },
+        { "name": "externalCustomerName", "type": "VARCHAR", "mongoType": "String", "nullable": false },
+        { "name": "token", "type": "VARCHAR", "mongoType": "String", "nullable": false, "key": "UNIQUE" },
+        { "name": "claimedBy", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "User", "field": "_id" } },
+        { "name": "claimedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "integrationType", "type": "VARCHAR", "mongoType": "String", "nullable": true, "enum": ["external_system", "claim_token"] },
+        { "name": "deletedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "createdAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "updatedAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "__v", "type": "INT", "mongoType": "Number", "nullable": false }
+      ]
+    },
+    {
+      "name": "Notification",
+      "collection": "notifications",
+      "description": "Notifikasi inbox untuk user (TTL 30 hari).",
+      "columns": [
+        { "name": "_id", "type": "ObjectId", "mongoType": "ObjectId", "key": "PK", "nullable": false },
+        { "name": "userId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": false, "references": { "entity": "User", "field": "_id" } },
+        { "name": "title", "type": "VARCHAR", "mongoType": "String", "nullable": false },
+        { "name": "body", "type": "TEXT", "mongoType": "String", "nullable": false },
+        { "name": "data", "type": "JSON", "mongoType": "Object", "nullable": true },
+        { "name": "isRead", "type": "BOOLEAN", "mongoType": "Boolean", "nullable": false },
+        { "name": "readAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "createdAt", "type": "DATETIME", "mongoType": "Date", "nullable": false, "note": "TTL index 30d" },
+        { "name": "updatedAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "__v", "type": "INT", "mongoType": "Number", "nullable": false }
+      ]
+    },
+    {
+      "name": "FormTemplate",
+      "collection": "formtemplates",
+      "description": "Template formulir (intake, work order, report).",
+      "columns": [
+        { "name": "_id", "type": "ObjectId", "mongoType": "ObjectId", "key": "PK", "nullable": false },
+        { "name": "formKey", "type": "VARCHAR", "mongoType": "String", "nullable": false, "index": true },
+        { "name": "companyId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": false, "references": { "entity": "Company", "field": "_id" } },
+        { "name": "position", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "Position", "field": "_id" } },
+        { "name": "title", "type": "VARCHAR", "mongoType": "String", "nullable": false },
+        { "name": "description", "type": "TEXT", "mongoType": "String", "nullable": true },
+        { "name": "formType", "type": "VARCHAR", "mongoType": "String", "nullable": false },
+        { "name": "__v", "type": "INT", "mongoType": "Number", "nullable": false, "note": "versi template (manual)" },
+        { "name": "fields", "type": "ARRAY", "mongoType": "[Object]", "nullable": false, "embedded": "FormField" },
+        { "name": "deletedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "createdAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "updatedAt", "type": "DATETIME", "mongoType": "Date", "nullable": false }
+      ]
+    },
+    {
+      "name": "FormSubmission",
+      "collection": "formsubmissions",
+      "description": "Pengisian formulir oleh user. ownerId bersifat polimorfik (ServiceRequest atau WorkOrder).",
+      "columns": [
+        { "name": "_id", "type": "ObjectId", "mongoType": "ObjectId", "key": "PK", "nullable": false },
+        { "name": "submissionType", "type": "VARCHAR", "mongoType": "String", "nullable": false, "enum": ["intake", "work_order", "report", "review"] },
+        { "name": "ownerId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "index": true, "polymorphicReferences": ["ServiceRequest", "WorkOrder"] },
+        { "name": "formId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": false, "references": { "entity": "FormTemplate", "field": "_id" } },
+        { "name": "submittedBy", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "User", "field": "_id" } },
+        { "name": "fieldsData", "type": "ARRAY", "mongoType": "[Object]", "nullable": false, "embedded": "FieldData" },
+        { "name": "status", "type": "VARCHAR", "mongoType": "String", "nullable": false, "enum": ["submitted", "draft"] },
+        { "name": "submittedAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "deletedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "createdAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "updatedAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "__v", "type": "INT", "mongoType": "Number", "nullable": false }
+      ]
+    },
+    {
+      "name": "Invitation",
+      "collection": "invitations",
+      "description": "Undangan keanggotaan staf ke perusahaan.",
+      "columns": [
+        { "name": "_id", "type": "ObjectId", "mongoType": "ObjectId", "key": "PK", "nullable": false },
+        { "name": "companyId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": false, "references": { "entity": "Company", "field": "_id" } },
+        { "name": "userId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": false, "references": { "entity": "User", "field": "_id" } },
+        { "name": "role", "type": "VARCHAR", "mongoType": "String", "nullable": false },
+        { "name": "positionId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "Position", "field": "_id" } },
+        { "name": "status", "type": "VARCHAR", "mongoType": "String", "nullable": false, "enum": ["pending", "accepted", "rejected", "expired"] },
+        { "name": "expiresAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "deletedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "createdAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "updatedAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "__v", "type": "INT", "mongoType": "Number", "nullable": false }
+      ]
+    },
+    {
+      "name": "ActiveToken",
+      "collection": "activetokens",
+      "description": "Token JWT aktif (whitelist sesi).",
+      "columns": [
+        { "name": "_id", "type": "ObjectId", "mongoType": "ObjectId", "key": "PK", "nullable": false },
+        { "name": "token", "type": "TEXT", "mongoType": "String", "nullable": false, "key": "UNIQUE" },
+        { "name": "userId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": false, "references": { "entity": "User", "field": "_id" } },
+        { "name": "createdAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "updatedAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "__v", "type": "INT", "mongoType": "Number", "nullable": false }
+      ]
+    },
+    {
+      "name": "ExternalAccount",
+      "collection": "externalaccounts",
+      "description": "Pasangan akun klien eksternal dengan user internal.",
+      "columns": [
+        { "name": "_id", "type": "ObjectId", "mongoType": "ObjectId", "key": "PK", "nullable": false },
+        { "name": "externalCustomerEmail", "type": "VARCHAR", "mongoType": "String", "nullable": false },
+        { "name": "externalCustomerName", "type": "VARCHAR", "mongoType": "String", "nullable": false },
+        { "name": "companyId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": false, "references": { "entity": "Company", "field": "_id" } },
+        { "name": "userId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": false, "references": { "entity": "User", "field": "_id" } },
+        { "name": "pairedAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "expiresAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "integrationType", "type": "VARCHAR", "mongoType": "String", "nullable": true, "enum": ["external_system", "claim_token"] },
+        { "name": "deletedAt", "type": "DATETIME", "mongoType": "Date", "nullable": true },
+        { "name": "createdAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "updatedAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "__v", "type": "INT", "mongoType": "Number", "nullable": false }
+      ]
+    },
+    {
+      "name": "PairingState",
+      "collection": "pairingstates",
+      "description": "State sementara untuk proses pairing OAuth (TTL).",
+      "columns": [
+        { "name": "_id", "type": "ObjectId", "mongoType": "ObjectId", "key": "PK", "nullable": false },
+        { "name": "state", "type": "VARCHAR", "mongoType": "String", "nullable": false, "key": "UNIQUE" },
+        { "name": "userId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": false, "references": { "entity": "User", "field": "_id" } },
+        { "name": "companyId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": false, "references": { "entity": "Company", "field": "_id" } },
+        { "name": "expiresAt", "type": "DATETIME", "mongoType": "Date", "nullable": false, "note": "TTL index" },
+        { "name": "createdAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "updatedAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "__v", "type": "INT", "mongoType": "Number", "nullable": false }
+      ]
+    },
+    {
+      "name": "CompanyType",
+      "collection": "companytypes",
+      "description": "Kategori/jenis perusahaan (master data untuk template).",
+      "columns": [
+        { "name": "_id", "type": "ObjectId", "mongoType": "ObjectId", "key": "PK", "nullable": false },
+        { "name": "name", "type": "VARCHAR", "mongoType": "String", "nullable": false },
+        { "name": "description", "type": "TEXT", "mongoType": "String", "nullable": true },
+        { "name": "createdAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "updatedAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "__v", "type": "INT", "mongoType": "Number", "nullable": false }
+      ]
+    },
+    {
+      "name": "ServiceTemplate",
+      "collection": "servicetemplates",
+      "description": "Cetak biru layanan berdasarkan jenis perusahaan.",
+      "columns": [
+        { "name": "_id", "type": "ObjectId", "mongoType": "ObjectId", "key": "PK", "nullable": false },
+        { "name": "title", "type": "VARCHAR", "mongoType": "String", "nullable": false },
+        { "name": "description", "type": "TEXT", "mongoType": "String", "nullable": false },
+        { "name": "companyTypeId", "type": "ObjectId", "mongoType": "ObjectId", "key": "FK", "nullable": false, "references": { "entity": "CompanyType", "field": "_id" } },
+        { "name": "accessType", "type": "VARCHAR", "mongoType": "String", "nullable": false, "enum": ["public", "member_only", "internal"] },
+        { "name": "draftingWorkOrderType", "type": "VARCHAR", "mongoType": "String", "nullable": false, "enum": ["auto", "manual"] },
+        { "name": "serviceRequestConfig", "type": "JSON", "mongoType": "Object", "nullable": true, "embedded": "ServiceRequestTemplateConfig" },
+        { "name": "workOrdersConfig", "type": "ARRAY", "mongoType": "[Object]", "nullable": false, "embedded": "WorkOrderTemplateConfig" },
+        { "name": "createdAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "updatedAt", "type": "DATETIME", "mongoType": "Date", "nullable": false },
+        { "name": "__v", "type": "INT", "mongoType": "Number", "nullable": false }
+      ]
+    }
+  ],
+
+  "embeddedTypes": [
+    {
+      "name": "IntegrationConfig",
+      "embeddedIn": "Company.integrationConfig",
+      "columns": [
+        { "name": "externalLoginUrl", "type": "VARCHAR", "nullable": true },
+        { "name": "externalVerifyUrl", "type": "VARCHAR", "nullable": true },
+        { "name": "externalCheckMembershipsUrl", "type": "VARCHAR", "nullable": true },
+        { "name": "externalCheckStatusUrl", "type": "VARCHAR", "nullable": true },
+        { "name": "secretKey", "type": "VARCHAR", "nullable": true },
+        { "name": "isIntegrationActive", "type": "BOOLEAN", "nullable": false },
+        { "name": "integrationType", "type": "VARCHAR", "nullable": false, "enum": ["external_system", "claim_token"] }
+      ]
+    },
+    {
+      "name": "ServiceRequestConfig",
+      "embeddedIn": "Service.serviceRequestConfig",
+      "columns": [
+        { "name": "intakeFormId", "type": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "FormTemplate", "field": "_id" } },
+        { "name": "reviewFormId", "type": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "FormTemplate", "field": "_id" } },
+        { "name": "serviceRequestApprovalAccessType", "type": "VARCHAR", "nullable": false, "enum": ["auto", "manager", "staff_pic", "staff_any"] },
+        { "name": "reviewNeed", "type": "BOOLEAN", "nullable": false }
+      ]
+    },
+    {
+      "name": "WorkOrderConfig",
+      "embeddedIn": "Service.workOrdersConfig[]",
+      "columns": [
+        { "name": "configId", "type": "VARCHAR", "nullable": true },
+        { "name": "positionId", "type": "ObjectId", "key": "FK", "nullable": false, "references": { "entity": "Position", "field": "_id" } },
+        { "name": "workOrderFormId", "type": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "FormTemplate", "field": "_id" } },
+        { "name": "workReportFormId", "type": "ObjectId", "key": "FK", "nullable": true, "references": { "entity": "FormTemplate", "field": "_id" } },
+        { "name": "workOrderApprovalAccessType", "type": "VARCHAR", "nullable": false, "enum": ["auto"] },
+        { "name": "workReportApprovalAccessType", "type": "VARCHAR", "nullable": false, "enum": ["auto", "manager"] },
+        { "name": "minStaff", "type": "INT", "nullable": false },
+        { "name": "maxStaff", "type": "INT", "nullable": false },
+        { "name": "showReportToRequester", "type": "BOOLEAN", "nullable": false }
+      ]
+    },
+    {
+      "name": "FormField",
+      "embeddedIn": "FormTemplate.fields[]",
+      "columns": [
+        { "name": "order", "type": "INT", "nullable": false },
+        { "name": "label", "type": "VARCHAR", "nullable": false },
+        { "name": "type", "type": "VARCHAR", "nullable": false, "enum": ["text", "textarea", "email", "number", "date", "single_select", "multi_select", "checkbox", "file", "image"] },
+        { "name": "required", "type": "BOOLEAN", "nullable": false },
+        { "name": "placeholder", "type": "VARCHAR", "nullable": true },
+        { "name": "options", "type": "ARRAY", "nullable": true, "embedded": "Option" },
+        { "name": "min", "type": "INT", "nullable": true },
+        { "name": "max", "type": "INT", "nullable": true }
+      ]
+    },
+    {
+      "name": "Option",
+      "embeddedIn": "FormField.options[]",
+      "columns": [
+        { "name": "key", "type": "VARCHAR", "nullable": false },
+        { "name": "value", "type": "VARCHAR", "nullable": false }
+      ]
+    },
+    {
+      "name": "FieldData",
+      "embeddedIn": "FormSubmission.fieldsData[]",
+      "columns": [
+        { "name": "order", "type": "INT", "nullable": false },
+        { "name": "value", "type": "JSON", "nullable": true, "note": "Mixed" }
+      ]
+    },
+    {
+      "name": "ServiceRequestTemplateConfig",
+      "embeddedIn": "ServiceTemplate.serviceRequestConfig",
+      "columns": [
+        { "name": "intakeForm", "type": "JSON", "nullable": true, "embedded": "FormTemplateBlueprint" },
+        { "name": "reviewForm", "type": "JSON", "nullable": true, "embedded": "FormTemplateBlueprint" },
+        { "name": "serviceRequestApprovalAccessType", "type": "VARCHAR", "nullable": false },
+        { "name": "reviewNeed", "type": "BOOLEAN", "nullable": false }
+      ]
+    },
+    {
+      "name": "WorkOrderTemplateConfig",
+      "embeddedIn": "ServiceTemplate.workOrdersConfig[]",
+      "columns": [
+        { "name": "configId", "type": "VARCHAR", "nullable": true },
+        { "name": "positionsOnDuty", "type": "JSON", "nullable": false },
+        { "name": "workOrderForm", "type": "JSON", "nullable": true, "embedded": "FormTemplateBlueprint" },
+        { "name": "workReportForm", "type": "JSON", "nullable": true, "embedded": "FormTemplateBlueprint" },
+        { "name": "workOrderApprovalAccessType", "type": "VARCHAR", "nullable": false },
+        { "name": "workReportApprovalAccessType", "type": "VARCHAR", "nullable": false },
+        { "name": "minStaff", "type": "INT", "nullable": false },
+        { "name": "maxStaff", "type": "INT", "nullable": false },
+        { "name": "showReportToRequester", "type": "BOOLEAN", "nullable": false }
+      ]
+    },
+    {
+      "name": "FormTemplateBlueprint",
+      "embeddedIn": "ServiceTemplate (intakeForm/reviewForm/workOrderForm/workReportForm)",
+      "columns": [
+        { "name": "title", "type": "VARCHAR", "nullable": false },
+        { "name": "description", "type": "TEXT", "nullable": true },
+        { "name": "formType", "type": "VARCHAR", "nullable": false },
+        { "name": "fields", "type": "ARRAY", "nullable": false }
+      ]
+    }
+  ],
+
+  "relationships": [
+    { "from": "User.companyId", "to": "Company._id", "type": "many-to-one", "label": "User bekerja di Company" },
+    { "from": "User.positionId", "to": "Position._id", "type": "many-to-one", "label": "User memiliki Position" },
+    { "from": "Company.ownerId", "to": "User._id", "type": "many-to-one", "label": "Company dimiliki User (owner)" },
+    { "from": "Company.managers[]", "to": "User._id", "type": "many-to-many", "label": "Company memiliki banyak manager" },
+    { "from": "Company.staffs[]", "to": "User._id", "type": "many-to-many", "label": "Company memiliki banyak staff" },
+    { "from": "Position.companyId", "to": "Company._id", "type": "many-to-one", "label": "Position milik Company" },
+    { "from": "Service.companyId", "to": "Company._id", "type": "many-to-one", "label": "Service milik Company" },
+    { "from": "Service.serviceRequestConfig.intakeFormId", "to": "FormTemplate._id", "type": "many-to-one", "label": "Service memakai intake FormTemplate" },
+    { "from": "Service.serviceRequestConfig.reviewFormId", "to": "FormTemplate._id", "type": "many-to-one", "label": "Service memakai review FormTemplate" },
+    { "from": "Service.workOrdersConfig[].positionId", "to": "Position._id", "type": "many-to-one", "label": "WorkOrderConfig butuh Position" },
+    { "from": "Service.workOrdersConfig[].workOrderFormId", "to": "FormTemplate._id", "type": "many-to-one" },
+    { "from": "Service.workOrdersConfig[].workReportFormId", "to": "FormTemplate._id", "type": "many-to-one" },
+    { "from": "ServiceRequest.serviceId", "to": "Service._id", "type": "many-to-one", "label": "SR untuk Service" },
+    { "from": "ServiceRequest.requestedBy", "to": "User._id", "type": "many-to-one", "label": "SR diajukan User" },
+    { "from": "ServiceRequest.companyId", "to": "Company._id", "type": "many-to-one" },
+    { "from": "ServiceRequest.staffPIC", "to": "User._id", "type": "many-to-one" },
+    { "from": "ServiceRequest.approvedBy", "to": "User._id", "type": "many-to-one" },
+    { "from": "ServiceRequest.intakeFormId", "to": "FormTemplate._id", "type": "many-to-one" },
+    { "from": "ServiceRequest.reviewFormId", "to": "FormTemplate._id", "type": "many-to-one" },
+    { "from": "ServiceRequest.intakeSubmissionId", "to": "FormSubmission._id", "type": "many-to-one" },
+    { "from": "ServiceRequest.reviewSubmissionId", "to": "FormSubmission._id", "type": "many-to-one" },
+    { "from": "WorkOrder.serviceRequestId", "to": "ServiceRequest._id", "type": "many-to-one", "label": "WO berasal dari SR" },
+    { "from": "WorkOrder.serviceId", "to": "Service._id", "type": "many-to-one" },
+    { "from": "WorkOrder.companyId", "to": "Company._id", "type": "many-to-one" },
+    { "from": "WorkOrder.createdBy", "to": "User._id", "type": "many-to-one" },
+    { "from": "WorkOrder.approvedBy", "to": "User._id", "type": "many-to-one" },
+    { "from": "WorkOrder.staffPIC", "to": "User._id", "type": "many-to-one" },
+    { "from": "WorkOrder.assignedStaff[]", "to": "User._id", "type": "many-to-many", "label": "WO ditugaskan ke banyak staff" },
+    { "from": "WorkOrder.workOrderFormId", "to": "FormTemplate._id", "type": "many-to-one" },
+    { "from": "WorkOrder.reportFormId", "to": "FormTemplate._id", "type": "many-to-one" },
+    { "from": "WorkOrder.positionId", "to": "Position._id", "type": "many-to-one" },
+    { "from": "WorkReport.workOrderId", "to": "WorkOrder._id", "type": "many-to-one", "label": "WorkReport untuk WO" },
+    { "from": "WorkReport.companyId", "to": "Company._id", "type": "many-to-one" },
+    { "from": "WorkReport.reportFormId", "to": "FormTemplate._id", "type": "many-to-one" },
+    { "from": "WorkReport.approvedBy", "to": "User._id", "type": "many-to-one" },
+    { "from": "ServicePrice.serviceKey", "to": "Service.serviceKey", "type": "soft", "label": "Harga untuk Service (via serviceKey, bukan FK ObjectId)" },
+    { "from": "MembershipCode.companyId", "to": "Company._id", "type": "many-to-one" },
+    { "from": "MembershipCode.claimedBy", "to": "User._id", "type": "many-to-one" },
+    { "from": "Notification.userId", "to": "User._id", "type": "many-to-one" },
+    { "from": "FormTemplate.companyId", "to": "Company._id", "type": "many-to-one" },
+    { "from": "FormTemplate.position", "to": "Position._id", "type": "many-to-one" },
+    { "from": "FormSubmission.ownerId", "to": "ServiceRequest._id | WorkOrder._id", "type": "polymorphic", "label": "Submission milik SR atau WO (tanpa ref tegas)" },
+    { "from": "FormSubmission.formId", "to": "FormTemplate._id", "type": "many-to-one" },
+    { "from": "FormSubmission.submittedBy", "to": "User._id", "type": "many-to-one" },
+    { "from": "Invitation.companyId", "to": "Company._id", "type": "many-to-one" },
+    { "from": "Invitation.userId", "to": "User._id", "type": "many-to-one" },
+    { "from": "Invitation.positionId", "to": "Position._id", "type": "many-to-one" },
+    { "from": "ActiveToken.userId", "to": "User._id", "type": "many-to-one" },
+    { "from": "ExternalAccount.companyId", "to": "Company._id", "type": "many-to-one" },
+    { "from": "ExternalAccount.userId", "to": "User._id", "type": "many-to-one" },
+    { "from": "PairingState.userId", "to": "User._id", "type": "many-to-one" },
+    { "from": "PairingState.companyId", "to": "Company._id", "type": "many-to-one" },
+    { "from": "ServiceTemplate.companyTypeId", "to": "CompanyType._id", "type": "many-to-one", "label": "Template untuk CompanyType" }
+  ]
+}

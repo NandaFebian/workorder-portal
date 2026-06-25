@@ -1,0 +1,424 @@
+// =====================================================================
+//  Work Order Portal - Physical Data Model (DBML untuk dbdiagram.io)
+//  Cara pakai: buka https://dbdiagram.io/d  -> tempel seluruh isi file ini.
+//  Sumber: src/**/schemas/*.schema.ts (MongoDB / Mongoose).
+//  Catatan:
+//   - _id (objectid) = primary key tiap koleksi.
+//   - Relasi array (many-to-many) dimodelkan sebagai tabel penghubung.
+//   - Konfigurasi tersarang (embedded) disimpan sebagai kolom json.
+// =====================================================================
+
+Project work_order_portal {
+  Note: 'PDM aplikasi Work Order Portal (MongoDB/Mongoose) — 18 koleksi inti + 3 tabel penghubung.'
+}
+
+// ----------------------------- ENUM ----------------------------------
+
+Enum role {
+  client
+  admin_app
+  owner_company
+  manager_company
+  staff_company
+  staff_unassigned
+}
+
+Enum access_type {
+  public
+  member_only
+  internal
+}
+
+Enum drafting_type {
+  auto
+  manual
+}
+
+Enum work_order_status {
+  drafted
+  sent
+  approved
+  rejected
+  cancelled
+  on_progress
+  completed
+  failed
+}
+
+Enum work_report_status {
+  drafted
+  on_progress
+  submitted
+  rejected
+  approved
+}
+
+Enum service_request_status {
+  received
+  approved
+  rejected
+  cancelled
+  completed
+  closed
+}
+
+Enum sr_approval_access_type {
+  auto
+  manager
+  staff_pic
+  staff_any
+}
+
+Enum integration_type {
+  external_system
+  claim_token
+}
+
+Enum invitation_status {
+  pending
+  accepted
+  rejected
+  expired
+}
+
+Enum submission_type {
+  intake
+  work_order
+  report
+  review
+}
+
+// --------------------------- TABEL INTI -------------------------------
+
+Table User {
+  _id objectid [pk]
+  name varchar [not null]
+  email varchar [not null, unique]
+  password varchar [not null, note: 'select:false, hash bcrypt']
+  role role [not null]
+  companyId objectid [ref: > Company._id, note: 'nullable']
+  positionId objectid [ref: > Position._id, note: 'nullable']
+  fcmTokens varchar [note: 'array token FCM (string[])']
+  deletedAt datetime
+  createdAt datetime [not null]
+  updatedAt datetime [not null]
+  __v int
+  Note: 'Akun pengguna (owner, manager, staff, client).'
+}
+
+Table Company {
+  _id objectid [pk]
+  name varchar [not null]
+  address varchar
+  description text
+  ownerId objectid [ref: > User._id, note: 'pemilik perusahaan']
+  isActive boolean [not null]
+  isFaqActive boolean [not null]
+  faqApiKey varchar
+  faqExternalCompanyId int
+  integrationConfig json [note: 'embedded object IntegrationConfig']
+  deletedAt datetime
+  createdAt datetime [not null]
+  updatedAt datetime [not null]
+  __v int
+  Note: 'Perusahaan penyedia layanan. managers[]/staffs[] -> lihat tabel penghubung.'
+}
+
+Table Position {
+  _id objectid [pk]
+  name varchar [not null]
+  description varchar
+  isActive boolean [not null]
+  companyId objectid [ref: > Company._id, note: 'nullable']
+  deletedAt datetime
+  createdAt datetime [not null]
+  updatedAt datetime [not null]
+  __v int
+  Note: 'Posisi/jabatan staf dalam perusahaan.'
+}
+
+Table Service {
+  _id objectid [pk]
+  serviceKey varchar [not null, note: 'identitas logis lintas versi']
+  companyId objectid [not null, ref: > Company._id]
+  title varchar [not null]
+  description text [not null]
+  accessType access_type [not null]
+  isActive boolean [not null]
+  draftingWorkOrderType drafting_type [not null]
+  serviceRequestConfig json [note: 'embedded: intakeFormId/reviewFormId -> FormTemplate']
+  workOrdersConfig json [note: 'embedded array: positionId -> Position, form -> FormTemplate']
+  __v int [not null, note: 'versi service (manual)']
+  deletedAt datetime
+  createdAt datetime [not null]
+  updatedAt datetime [not null]
+  Note: 'Definisi layanan dengan versioning lewat serviceKey.'
+}
+
+Table ServiceRequest {
+  _id objectid [pk]
+  code varchar [unique]
+  serviceId objectid [not null, ref: > Service._id]
+  requestedBy objectid [not null, ref: > User._id]
+  companyId objectid [not null, ref: > Company._id]
+  serviceRequestApprovalAccessType sr_approval_access_type [not null]
+  staffPIC objectid [ref: > User._id]
+  reviewNeed boolean [not null]
+  approvedBy objectid [ref: > User._id]
+  serviceRequestStatus service_request_status [not null]
+  intakeFormId objectid [ref: > FormTemplate._id]
+  reviewFormId objectid [ref: > FormTemplate._id]
+  intakeSubmissionId objectid [ref: > FormSubmission._id]
+  reviewSubmissionId objectid [ref: > FormSubmission._id]
+  receivedAt datetime
+  approvedAt datetime
+  rejectedAt datetime
+  cancelledAt datetime
+  workOrderCreatedAt datetime
+  onProgressAt datetime
+  unprocessableAt datetime
+  partialCompletedAt datetime
+  failedAt datetime
+  completedAt datetime
+  closedAt datetime
+  deletedAt datetime
+  createdAt datetime [not null]
+  updatedAt datetime [not null]
+  __v int
+  Note: 'Permintaan layanan dari klien.'
+}
+
+Table WorkOrder {
+  _id objectid [pk]
+  code varchar [unique]
+  serviceRequestId objectid [ref: > ServiceRequest._id, note: 'nullable']
+  batchId varchar
+  createdBy objectid [ref: > User._id, note: 'null = dibuat sistem']
+  configId varchar
+  serviceId objectid [not null, ref: > Service._id]
+  companyId objectid [not null, ref: > Company._id]
+  approvedBy objectid [ref: > User._id]
+  staffPIC objectid [ref: > User._id]
+  workOrderFormId objectid [ref: > FormTemplate._id]
+  reportFormId objectid [ref: > FormTemplate._id]
+  positionId objectid [ref: > Position._id]
+  workOrderApprovalAccessType varchar [not null, note: 'auto | staff_pic']
+  workReportApprovalAccessType varchar [not null, note: 'auto | manager']
+  minStaff int [not null]
+  maxStaff int [not null]
+  status work_order_status [not null]
+  has_issue boolean [not null]
+  issue_note text
+  draftedAt datetime
+  sentAt datetime
+  approvedAt datetime
+  rejectedAt datetime
+  startedAt datetime
+  completedAt datetime
+  failedAt datetime
+  cancelledAt datetime
+  deletedAt datetime
+  createdAt datetime [not null]
+  updatedAt datetime [not null]
+  __v int
+  Note: 'Perintah kerja turunan ServiceRequest. assignedStaff[] -> tabel penghubung.'
+}
+
+Table WorkReport {
+  _id objectid [pk]
+  workOrderId objectid [not null, ref: > WorkOrder._id]
+  companyId objectid [not null, ref: > Company._id]
+  reportFormId objectid [ref: > FormTemplate._id]
+  approvedBy objectid [ref: > User._id]
+  workReportApprovalAccessType varchar [not null, note: 'auto | manager']
+  status work_report_status [not null]
+  startedAt datetime
+  submittedAt datetime
+  approvedAt datetime
+  rejectedAt datetime
+  showReportToRequester boolean [not null]
+  deletedAt datetime
+  createdAt datetime [not null]
+  updatedAt datetime [not null]
+  __v int
+  Note: 'Laporan hasil pengerjaan untuk sebuah WorkOrder.'
+}
+
+Table ServicePrice {
+  _id objectid [pk]
+  serviceKey varchar [not null, unique, ref: > Service.serviceKey, note: 'soft ref via serviceKey']
+  price decimal [not null]
+  deletedAt datetime
+  createdAt datetime [not null]
+  updatedAt datetime [not null]
+  Note: 'Harga untuk sebuah layanan (dihubungkan via serviceKey, bukan _id).'
+}
+
+Table MembershipCode {
+  _id objectid [pk]
+  companyId objectid [not null, ref: > Company._id]
+  externalCustomerEmail varchar [not null]
+  externalCustomerName varchar [not null]
+  token varchar [not null, unique]
+  claimedBy objectid [ref: > User._id, note: 'null = belum diklaim']
+  claimedAt datetime
+  integrationType integration_type
+  deletedAt datetime
+  createdAt datetime [not null]
+  updatedAt datetime [not null]
+  __v int
+  Note: 'Kode keanggotaan untuk klien eksternal.'
+}
+
+Table Notification {
+  _id objectid [pk]
+  userId objectid [not null, ref: > User._id]
+  title varchar [not null]
+  body text [not null]
+  data json
+  isRead boolean [not null]
+  readAt datetime
+  createdAt datetime [not null, note: 'TTL index 30 hari']
+  updatedAt datetime [not null]
+  __v int
+  Note: 'Notifikasi inbox untuk user (auto-expire 30 hari).'
+}
+
+Table FormTemplate {
+  _id objectid [pk]
+  formKey varchar [not null]
+  companyId objectid [not null, ref: > Company._id]
+  position objectid [ref: > Position._id]
+  title varchar [not null]
+  description text
+  formType varchar [not null]
+  __v int [not null, note: 'versi template (manual)']
+  fields json [note: 'embedded array FormField']
+  deletedAt datetime
+  createdAt datetime [not null]
+  updatedAt datetime [not null]
+  Note: 'Template formulir (intake, work order, report).'
+}
+
+Table FormSubmission {
+  _id objectid [pk]
+  submissionType submission_type [not null]
+  ownerId objectid [note: 'POLIMORFIK -> ServiceRequest._id atau WorkOrder._id (tanpa ref tegas)']
+  formId objectid [not null, ref: > FormTemplate._id]
+  submittedBy objectid [ref: > User._id]
+  fieldsData json [note: 'embedded array FieldData']
+  status varchar [not null, note: 'submitted | draft']
+  submittedAt datetime [not null]
+  deletedAt datetime
+  createdAt datetime [not null]
+  updatedAt datetime [not null]
+  __v int
+  Note: 'Pengisian formulir oleh user.'
+}
+
+Table Invitation {
+  _id objectid [pk]
+  companyId objectid [not null, ref: > Company._id]
+  userId objectid [not null, ref: > User._id]
+  role varchar [not null]
+  positionId objectid [ref: > Position._id]
+  status invitation_status [not null]
+  expiresAt datetime [not null]
+  deletedAt datetime
+  createdAt datetime [not null]
+  updatedAt datetime [not null]
+  __v int
+  Note: 'Undangan keanggotaan staf ke perusahaan.'
+}
+
+Table ActiveToken {
+  _id objectid [pk]
+  token text [not null, unique]
+  userId objectid [not null, ref: > User._id]
+  createdAt datetime [not null]
+  updatedAt datetime [not null]
+  __v int
+  Note: 'Whitelist token JWT aktif (sesi).'
+}
+
+Table ExternalAccount {
+  _id objectid [pk]
+  externalCustomerEmail varchar [not null]
+  externalCustomerName varchar [not null]
+  companyId objectid [not null, ref: > Company._id]
+  userId objectid [not null, ref: > User._id]
+  pairedAt datetime [not null]
+  expiresAt datetime
+  integrationType integration_type
+  deletedAt datetime
+  createdAt datetime [not null]
+  updatedAt datetime [not null]
+  __v int
+  Note: 'Pasangan akun klien eksternal dengan user internal.'
+}
+
+Table PairingState {
+  _id objectid [pk]
+  state varchar [not null, unique]
+  userId objectid [not null, ref: > User._id]
+  companyId objectid [not null, ref: > Company._id]
+  expiresAt datetime [not null, note: 'TTL index']
+  createdAt datetime [not null]
+  updatedAt datetime [not null]
+  __v int
+  Note: 'State sementara proses pairing OAuth.'
+}
+
+Table CompanyType {
+  _id objectid [pk]
+  name varchar [not null]
+  description text
+  createdAt datetime [not null]
+  updatedAt datetime [not null]
+  __v int
+  Note: 'Master data jenis perusahaan.'
+}
+
+Table ServiceTemplate {
+  _id objectid [pk]
+  title varchar [not null]
+  description text [not null]
+  companyTypeId objectid [not null, ref: > CompanyType._id]
+  accessType access_type [not null]
+  draftingWorkOrderType drafting_type [not null]
+  serviceRequestConfig json [note: 'embedded blueprint']
+  workOrdersConfig json [note: 'embedded array blueprint']
+  createdAt datetime [not null]
+  updatedAt datetime [not null]
+  __v int
+  Note: 'Cetak biru layanan berdasarkan jenis perusahaan.'
+}
+
+// ------------------- TABEL PENGHUBUNG (MANY-TO-MANY) ------------------
+
+Table CompanyManager {
+  companyId objectid [ref: > Company._id]
+  userId objectid [ref: > User._id]
+  indexes {
+    (companyId, userId) [pk]
+  }
+  Note: 'Company.managers[] : daftar manager per perusahaan.'
+}
+
+Table CompanyStaff {
+  companyId objectid [ref: > Company._id]
+  userId objectid [ref: > User._id]
+  indexes {
+    (companyId, userId) [pk]
+  }
+  Note: 'Company.staffs[] : daftar staff per perusahaan.'
+}
+
+Table WorkOrderAssignedStaff {
+  workOrderId objectid [ref: > WorkOrder._id]
+  userId objectid [ref: > User._id]
+  indexes {
+    (workOrderId, userId) [pk]
+  }
+  Note: 'WorkOrder.assignedStaff[] : staf yang ditugaskan pada perintah kerja.'
+}

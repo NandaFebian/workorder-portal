@@ -40,9 +40,8 @@ export function setup() {
     email: AUTH.owner.email, password: AUTH.owner.password,
   }), { headers: JSON_HEADERS });
   const ownerToken = ownerRes.status === 200 ? ownerRes.json('data.token') : null;
-  if (!ownerToken) return { ownerToken: null, serviceId: null, formId: null, companyTypeId: null, serviceTemplateId: null };
+  if (!ownerToken) return { ownerToken: null };
 
-  const authHeaders = { Authorization: ownerToken };
   console.log('[Setup] ownerToken:', !!ownerToken);
   return { ownerToken };
 }
@@ -122,10 +121,10 @@ export default function (data) {
 
   sleep(0.2);
 
-  // GET /services/:id/price
+  // GET /service-price (company-wide service pricing list)
   {
-    const res = http.get(`${BASE}/services/${serviceId}/price`, { headers });
-    const ok = check(res, { 'service price 200/404': (r) => [200, 400, 404].includes(r.status) });
+    const res = http.get(`${BASE}/service-price`, { headers });
+    const ok = check(res, { 'service price 200': (r) => r.status === 200 });
     t_service_price.add(res.timings.duration);
     errorRate.add(!ok);
   }
@@ -159,9 +158,9 @@ export default function (data) {
 
   sleep(0.2);
 
-  // GET /templates/company-types/:id/services
+  // GET /template/company-type/:id/services
   {
-    const res = http.get(`${BASE}/templates/company-types/${companyTypeId}/services`, { headers });
+    const res = http.get(`${BASE}/template/company-type/${companyTypeId}/services`, { headers });
     const ok = check(res, { 'template ct services 200/404': (r) => [200, 400, 404].includes(r.status) });
     t_tpl_services.add(res.timings.duration);
     errorRate.add(!ok);
@@ -176,13 +175,14 @@ export default function (data) {
 
   sleep(0.2);
 
-  // GET /templates/services/:id
+  // GET /template/services/:id
   {
-    const res = http.get(`${BASE}/templates/services/${serviceTemplateId}`, { headers });
+    const res = http.get(`${BASE}/template/services/${serviceTemplateId}`, { headers });
     const ok = check(res, { 'template service detail 200/404': (r) => [200, 400, 404].includes(r.status) });
     t_tpl_service_detail.add(res.timings.duration);
     errorRate.add(!ok);
   }
 
   sleep(0.3);
+}
 

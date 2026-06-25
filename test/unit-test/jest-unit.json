@@ -6,8 +6,14 @@
     "^.+\\.(t|j)s$": "ts-jest"
   },
   "collectCoverageFrom": [
-    "src/**/*.(t|j)s",
-    "!src/main.ts"
+    "src/auth/auth.service.ts",
+    "src/work-order/work-order.service.ts",
+    "src/service-request/service-request.service.ts",
+    "src/membership/membership.service.ts",
+    "src/service/services.internal.service.ts",
+    "src/invitations/invitations.service.ts",
+    "src/fcm/fcm.service.ts",
+    "src/form/helpers/form-validation.helper.ts"
   ],
   "coverageDirectory": "./coverage/unit",
   "testEnvironment": "node",

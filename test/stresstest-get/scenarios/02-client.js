@@ -27,10 +27,15 @@ export const options = {
 };
 
 const users = new SharedArray('users', function () {
-  return open('../' + CSV_PATH).split('\n').slice(1).filter(Boolean).map((line) => {
-    const [name, email, password, role] = line.split(',');
-    return { name, email, password, role };
-  });
+  return open('../' + CSV_PATH)
+    .split('\n')
+    .slice(1)
+    .map((line) => line.trim()) // strip trailing \r from CRLF line endings
+    .filter(Boolean)
+    .map((line) => {
+      const [name, email, password, role] = line.split(',');
+      return { name, email, password, role };
+    });
 });
 
 export function setup() {

@@ -5,6 +5,7 @@ import {
   ServiceRequestSchema,
 } from './schemas/service-request.schema';
 import { ServiceRequestService } from './service-request.service';
+import { SrReviewDeadlineWorker } from './sr-review-deadline.worker';
 import { ServiceRequestPublicController } from './service-request.public.controller';
 import { ServiceRequestInternalController } from './service-request.internal.controller';
 import { AuthModule } from 'src/auth/auth.module';
@@ -19,6 +20,7 @@ import { ServicesModule } from 'src/service/services.module';
 import { WorkReportModule } from 'src/work-report/work-report.module';
 import { MembershipModule } from 'src/membership/membership.module';
 import { Service, ServiceSchema } from 'src/service/schemas/service.schema';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [
@@ -34,12 +36,13 @@ import { Service, ServiceSchema } from 'src/service/schemas/service.schema';
     forwardRef(() => ServicesModule),
     WorkReportModule,
     MembershipModule,
+    BullModule.registerQueue({ name: 'sr-review-deadline' }),
   ],
   controllers: [
     ServiceRequestInternalController, // harus duluan agar /inbox tidak tertangkap /:id
     ServiceRequestPublicController,
   ],
-  providers: [ServiceRequestService],
+  providers: [ServiceRequestService, SrReviewDeadlineWorker],
   exports: [ServiceRequestService],
 })
 export class ServiceRequestModule {}

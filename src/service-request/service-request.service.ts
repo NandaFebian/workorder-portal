@@ -39,6 +39,8 @@ import { WorkOrderStatus } from 'src/common/enums/work-order-status.enum';
 import { WorkReportStatus } from 'src/common/enums/work-report-status.enum';
 import { StatusTranslator } from 'src/common/utils/status-translator.util';
 import { DepartmentAuthHelper } from 'src/common/helpers/department-auth.helper';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 @Injectable()
 export class ServiceRequestService {
@@ -57,6 +59,8 @@ export class ServiceRequestService {
     private readonly membershipService: MembershipService,
     private readonly fcmService: FcmService,
     private readonly usersService: UsersService,
+    @InjectQueue('sr-review-deadline')
+    private readonly srReviewDeadlineQueue: Queue,
   ) {}
 
   async create(data: any): Promise<ServiceRequestDocument> {
@@ -804,6 +808,15 @@ export class ServiceRequestService {
       targetStatus = ServiceRequestStatus.CLOSED;
       sr.completedAt = now;
     }
+    if (targetStatus === ServiceRequestStatus.COMPLETED && sr.reviewNeed) {
+      const delay = 7 * 24 * 60 * 60 * 1000;
+      sr.reviewDeadlineAt = new Date(now.getTime() + delay);
+      await this.srReviewDeadlineQueue.add(
+        'auto-close',
+        { serviceRequestId: id },
+        { delay, jobId: `sr-review-${id}` },
+      );
+    }
 
     sr.serviceRequestStatus = targetStatus;
     switch (targetStatus) {
@@ -948,8 +961,17 @@ export class ServiceRequestService {
     if (targetStatus === ServiceRequestStatus.COMPLETED && !sr.reviewNeed) {
       targetStatus = ServiceRequestStatus.CLOSED;
     }
-
     const updateData: any = { serviceRequestStatus: targetStatus };
+
+    if (targetStatus === ServiceRequestStatus.COMPLETED && sr.reviewNeed) {
+      const delay = 7 * 24 * 60 * 60 * 1000;
+      updateData.reviewDeadlineAt = new Date(now.getTime() + delay);
+      await this.srReviewDeadlineQueue.add(
+        'auto-close',
+        { serviceRequestId: id },
+        { delay, jobId: `sr-review-${id}` },
+      );
+    }
 
     switch (targetStatus) {
       case ServiceRequestStatus.APPROVED:

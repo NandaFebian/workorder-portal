@@ -123,6 +123,9 @@ export class ServiceRequest {
   closedAt: Date | null;
 
   @Prop({ type: Date, default: null, index: true })
+  reviewDeadlineAt: Date | null;
+
+  @Prop({ type: Date, default: null, index: true })
   deletedAt: Date | null;
 }
 

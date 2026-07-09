@@ -38,6 +38,10 @@ export const companyTypesData = [
 ];
 
 export const serviceTemplatesData = [
+  // ══════════════════════════════════════════════════════════════════════════
+  // MANUAL DRAFT (SR approval: manager, WO approval: auto, WR approval: manager)
+  // ══════════════════════════════════════════════════════════════════════════
+
   // ── 1. ISP & Jaringan — Instalasi Internet & Jaringan ──────────────────
   {
     title: 'Instalasi Internet & Jaringan',
@@ -105,65 +109,7 @@ export const serviceTemplatesData = [
     ],
   },
 
-  // ── 2. Manufaktur & Produksi — Pemeliharaan Peralatan Produksi ──────────
-  {
-    title: 'Pemeliharaan Peralatan Produksi',
-    description:
-      'Layanan perbaikan dan pemeliharaan rutin mesin produksi untuk menjaga kelancaran operasional pabrik.',
-    companyTypeId: COMPANY_TYPE_IDS.Manufaktur,
-    accessType: 'internal',
-    draftingWorkOrderType: 'auto',
-    serviceRequestConfig: {
-      serviceRequestApprovalAccessType: ApprovalAccessType.AUTO,
-      reviewNeed: true,
-      intakeForm: {
-        title: 'Formulir Laporan Gangguan Mesin',
-        description: 'Laporkan kerusakan atau gangguan pada mesin produksi.',
-        formType: SubmissionType.Intake,
-        fields: [
-          { order: 1, label: 'Nama/Kode Mesin', type: FieldType.Text, required: true, placeholder: 'contoh: CNC-M03 / Conveyor Line B' },
-          { order: 2, label: 'Lokasi Mesin', type: FieldType.Text, required: true, placeholder: 'contoh: Gedung Produksi, Lantai 2, Area B' },
-          { order: 3, label: 'Jenis Gangguan', type: FieldType.SingleSelect, required: true, options: [{ key: 'mekanik', value: 'Kerusakan Mekanik' }, { key: 'elektrik', value: 'Gangguan Elektrik' }, { key: 'hydraulic', value: 'Kebocoran Hydraulic' }, { key: 'software', value: 'Error Software/PLC' }] },
-          { order: 4, label: 'Deskripsi Gangguan', type: FieldType.Textarea, required: true, placeholder: 'Jelaskan gejala kerusakan secara detail...' },
-          { order: 5, label: 'Foto Kondisi Mesin', type: FieldType.Image, required: false },
-        ],
-      },
-      reviewForm: {
-        title: 'Evaluasi Hasil Perbaikan Mesin',
-        description: 'Penilaian kinerja mesin setelah perbaikan dilakukan.',
-        formType: SubmissionType.Review,
-        fields: [
-          { order: 1, label: 'Mesin Berfungsi Normal?', type: FieldType.SingleSelect, required: true, options: [{ key: 'normal', value: 'Ya, berfungsi normal' }, { key: 'sebagian', value: 'Sebagian berfungsi' }, { key: 'masalah', value: 'Masih bermasalah' }] },
-          { order: 2, label: 'Kecepatan Penanganan', type: FieldType.SingleSelect, required: true, options: [{ key: 'cepat', value: 'Cepat' }, { key: 'normal', value: 'Normal' }, { key: 'lambat', value: 'Lambat' }] },
-          { order: 3, label: 'Catatan Operator', type: FieldType.Textarea, required: false },
-        ],
-      },
-    },
-    workOrdersConfig: [
-      {
-        configId: null,
-        positionsOnDuty: { name: 'Teknisi Mesin Produksi', description: 'Teknisi yang menangani perbaikan dan pemeliharaan mesin-mesin produksi pabrik.' },
-        workOrderApprovalAccessType: ApprovalAccessType.AUTO,
-        workReportApprovalAccessType: ApprovalAccessType.AUTO,
-        showReportToRequester: false,
-        minStaff: 1,
-        maxStaff: 3,
-        workReportForm: {
-          title: 'Laporan Perbaikan Mesin Produksi',
-          description: 'Dokumentasi teknis perbaikan yang telah dilakukan.',
-          formType: SubmissionType.Report,
-          fields: [
-            { order: 1, label: 'Tindakan Perbaikan', type: FieldType.Textarea, required: true, placeholder: 'Uraikan langkah perbaikan yang dilakukan...' },
-            { order: 2, label: 'Sparepart yang Diganti', type: FieldType.Textarea, required: true, placeholder: 'Daftar komponen yang diganti beserta kode part...' },
-            { order: 3, label: 'Hasil Testing Mesin', type: FieldType.SingleSelect, required: true, options: [{ key: 'ok', value: 'Lolos Test - Siap Produksi' }, { key: 'partial', value: 'Perlu Monitoring Lanjutan' }, { key: 'fail', value: 'Gagal - Perlu Tindakan Tambahan' }] },
-            { order: 4, label: 'Foto Before & After', type: FieldType.Image, required: true },
-          ],
-        },
-      },
-    ],
-  },
-
-  // ── 3. Fasilitas & Perkantoran — Perawatan AC & Tata Udara Gedung ──────
+  // ── 2. Fasilitas & Perkantoran — Perawatan AC & Tata Udara Gedung ──────
   {
     title: 'Perawatan AC & Tata Udara Gedung',
     description:
@@ -230,7 +176,7 @@ export const serviceTemplatesData = [
     ],
   },
 
-  // ── 4. Servis & Reparasi — Servis Kendaraan ────────────────────────────
+  // ── 3. Servis & Reparasi — Servis Kendaraan ────────────────────────────
   {
     title: 'Servis Kendaraan',
     description:
@@ -298,11 +244,71 @@ export const serviceTemplatesData = [
     ],
   },
 
-  // ── 5. Servis & Reparasi — Perbaikan Perangkat Elektronik ──────────────
+  // ══════════════════════════════════════════════════════════════════════════
+  // AUTO DRAFT (Semua auto: SR, WO, WR)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // ── 4. ISP & Jaringan — Validasi Pembayaran Tagihan Internet ───────────
   {
-    title: 'Perbaikan Perangkat Elektronik',
+    title: 'Validasi Pembayaran Tagihan Internet',
     description:
-      'Layanan perbaikan dan servis perangkat elektronik seperti laptop, printer, smartphone, dan peralatan elektronik lainnya.',
+      'Layanan verifikasi pembayaran tagihan internet pelanggan. Pelanggan mengirimkan bukti transfer, staf memvalidasi dan mengaktifkan layanan.',
+    companyTypeId: COMPANY_TYPE_IDS.ISP,
+    accessType: 'public',
+    draftingWorkOrderType: 'auto',
+    serviceRequestConfig: {
+      serviceRequestApprovalAccessType: ApprovalAccessType.AUTO,
+      reviewNeed: true,
+      intakeForm: {
+        title: 'Formulir Konfirmasi Pembayaran Tagihan',
+        description: 'Kirimkan bukti pembayaran tagihan internet Anda untuk diverifikasi.',
+        formType: SubmissionType.Intake,
+        fields: [
+          { order: 1, label: 'Nomor Pelanggan / ID Akun', type: FieldType.Text, required: true, placeholder: 'contoh: CUST-20250101' },
+          { order: 2, label: 'Periode Tagihan', type: FieldType.SingleSelect, required: true, options: [{ key: 'jan', value: 'Januari' }, { key: 'feb', value: 'Februari' }, { key: 'mar', value: 'Maret' }, { key: 'apr', value: 'April' }, { key: 'mei', value: 'Mei' }, { key: 'jun', value: 'Juni' }, { key: 'jul', value: 'Juli' }, { key: 'agu', value: 'Agustus' }, { key: 'sep', value: 'September' }, { key: 'okt', value: 'Oktober' }, { key: 'nov', value: 'November' }, { key: 'des', value: 'Desember' }] },
+          { order: 3, label: 'Nominal Pembayaran (Rp)', type: FieldType.Text, required: true, placeholder: 'contoh: 350000' },
+          { order: 4, label: 'Metode Pembayaran', type: FieldType.SingleSelect, required: true, options: [{ key: 'transfer', value: 'Transfer Bank' }, { key: 'ewallet', value: 'E-Wallet (GoPay/OVO/Dana)' }, { key: 'minimarket', value: 'Minimarket (Indomaret/Alfamart)' }] },
+          { order: 5, label: 'Bukti Pembayaran', type: FieldType.Image, required: true },
+        ],
+      },
+      reviewForm: {
+        title: 'Ulasan Proses Validasi Pembayaran',
+        description: 'Berikan penilaian terhadap kecepatan dan kemudahan proses validasi pembayaran.',
+        formType: SubmissionType.Review,
+        fields: [
+          { order: 1, label: 'Kecepatan Proses Validasi', type: FieldType.SingleSelect, required: true, options: [{ key: 'cepat', value: 'Cepat (< 1 jam)' }, { key: 'normal', value: 'Normal (1-24 jam)' }, { key: 'lambat', value: 'Lambat (> 24 jam)' }] },
+          { order: 2, label: 'Komentar', type: FieldType.Textarea, required: false },
+        ],
+      },
+    },
+    workOrdersConfig: [
+      {
+        configId: null,
+        positionsOnDuty: { name: 'Staf Billing & Keuangan', description: 'Staf yang memverifikasi pembayaran dan mengaktifkan layanan pelanggan.' },
+        workOrderApprovalAccessType: ApprovalAccessType.AUTO,
+        workReportApprovalAccessType: ApprovalAccessType.AUTO,
+        showReportToRequester: false,
+        minStaff: 1,
+        maxStaff: 1,
+        workReportForm: {
+          title: 'Laporan Verifikasi Pembayaran',
+          description: 'Hasil verifikasi pembayaran tagihan pelanggan.',
+          formType: SubmissionType.Report,
+          fields: [
+            { order: 1, label: 'Status Verifikasi', type: FieldType.SingleSelect, required: true, options: [{ key: 'valid', value: 'Valid - Pembayaran Dikonfirmasi' }, { key: 'nominal_salah', value: 'Nominal Tidak Sesuai' }, { key: 'tidak_valid', value: 'Tidak Valid - Bukti Ditolak' }] },
+            { order: 2, label: 'Nomor Referensi Transaksi', type: FieldType.Text, required: true, placeholder: 'Nomor referensi dari sistem billing...' },
+            { order: 3, label: 'Screenshot Konfirmasi Sistem', type: FieldType.Image, required: true },
+          ],
+        },
+      },
+    ],
+  },
+
+  // ── 5. Servis & Reparasi — Konfirmasi Pembayaran Servis ────────────────
+  {
+    title: 'Konfirmasi Pembayaran Servis',
+    description:
+      'Layanan verifikasi pembayaran atas jasa servis kendaraan atau perangkat. Pelanggan mengirimkan bukti bayar, staf mengkonfirmasi dan merilis unit.',
     companyTypeId: COMPANY_TYPE_IDS.Servis,
     accessType: 'public',
     draftingWorkOrderType: 'auto',
@@ -310,58 +316,54 @@ export const serviceTemplatesData = [
       serviceRequestApprovalAccessType: ApprovalAccessType.AUTO,
       reviewNeed: true,
       intakeForm: {
-        title: 'Formulir Penerimaan Perangkat Elektronik',
-        description: 'Daftarkan perangkat elektronik Anda untuk diperbaiki.',
+        title: 'Formulir Konfirmasi Pembayaran Servis',
+        description: 'Kirimkan bukti pembayaran untuk mengambil unit yang telah selesai diservis.',
         formType: SubmissionType.Intake,
         fields: [
-          { order: 1, label: 'Jenis Perangkat', type: FieldType.SingleSelect, required: true, options: [{ key: 'laptop', value: 'Laptop / Notebook' }, { key: 'printer', value: 'Printer / Scanner' }, { key: 'smartphone', value: 'Smartphone / Tablet' }, { key: 'lainnya', value: 'Perangkat Lainnya' }] },
-          { order: 2, label: 'Merk & Tipe', type: FieldType.Text, required: true, placeholder: 'contoh: HP Pavilion 14 / Epson L3210' },
-          { order: 3, label: 'Nomor Seri (opsional)', type: FieldType.Text, required: false, placeholder: 'Nomor seri perangkat...' },
-          { order: 4, label: 'Keluhan / Kerusakan', type: FieldType.Textarea, required: true, placeholder: 'Jelaskan masalah yang dialami perangkat...' },
-          { order: 5, label: 'Foto Kondisi Perangkat', type: FieldType.Image, required: false },
+          { order: 1, label: 'Nomor Invoice / Nota Servis', type: FieldType.Text, required: true, placeholder: 'contoh: INV-2025-001234' },
+          { order: 2, label: 'Nominal Pembayaran (Rp)', type: FieldType.Text, required: true, placeholder: 'contoh: 750000' },
+          { order: 3, label: 'Metode Pembayaran', type: FieldType.SingleSelect, required: true, options: [{ key: 'tunai', value: 'Tunai' }, { key: 'transfer', value: 'Transfer Bank' }, { key: 'debit', value: 'Kartu Debit' }, { key: 'cc', value: 'Kartu Kredit' }] },
+          { order: 4, label: 'Bukti Pembayaran', type: FieldType.Image, required: true },
         ],
       },
       reviewForm: {
-        title: 'Ulasan Perbaikan Perangkat',
-        description: 'Berikan penilaian terhadap hasil perbaikan perangkat Anda.',
+        title: 'Ulasan Proses Pembayaran & Pengambilan',
+        description: 'Berikan penilaian terhadap proses pembayaran dan pengambilan unit.',
         formType: SubmissionType.Review,
         fields: [
-          { order: 1, label: 'Perangkat Berfungsi Normal?', type: FieldType.SingleSelect, required: true, options: [{ key: 'normal', value: 'Ya, berfungsi normal' }, { key: 'sebagian', value: 'Sebagian berfungsi' }, { key: 'masalah', value: 'Masih bermasalah' }] },
-          { order: 2, label: 'Kepuasan Pelayanan', type: FieldType.SingleSelect, required: true, options: [{ key: 'puas', value: 'Puas' }, { key: 'cukup', value: 'Cukup Puas' }, { key: 'kurang', value: 'Kurang Puas' }] },
-          { order: 3, label: 'Komentar', type: FieldType.Textarea, required: false },
+          { order: 1, label: 'Kemudahan Proses Pembayaran', type: FieldType.SingleSelect, required: true, options: [{ key: 'mudah', value: 'Mudah & Cepat' }, { key: 'cukup', value: 'Cukup Mudah' }, { key: 'sulit', value: 'Rumit / Berbelit' }] },
+          { order: 2, label: 'Komentar', type: FieldType.Textarea, required: false },
         ],
       },
     },
     workOrdersConfig: [
       {
         configId: null,
-        positionsOnDuty: { name: 'Teknisi Elektronik', description: 'Teknisi spesialis perbaikan laptop, printer, smartphone, dan perangkat elektronik.' },
+        positionsOnDuty: { name: 'Staf Kasir & Administrasi', description: 'Staf kasir yang memverifikasi pembayaran dan memproses serah terima unit.' },
         workOrderApprovalAccessType: ApprovalAccessType.AUTO,
         workReportApprovalAccessType: ApprovalAccessType.AUTO,
         showReportToRequester: false,
         minStaff: 1,
         maxStaff: 1,
         workReportForm: {
-          title: 'Laporan Perbaikan Perangkat Elektronik',
-          description: 'Dokumentasi diagnosis dan perbaikan perangkat elektronik.',
+          title: 'Laporan Konfirmasi Pembayaran & Serah Terima',
+          description: 'Dokumentasi verifikasi pembayaran dan penyerahan unit ke pelanggan.',
           formType: SubmissionType.Report,
           fields: [
-            { order: 1, label: 'Hasil Diagnosa', type: FieldType.Textarea, required: true, placeholder: 'Uraikan penyebab kerusakan...' },
-            { order: 2, label: 'Tindakan Perbaikan', type: FieldType.Textarea, required: true, placeholder: 'Detail perbaikan yang dilakukan...' },
-            { order: 3, label: 'Komponen yang Diganti', type: FieldType.Textarea, required: false, placeholder: 'Daftar komponen pengganti (jika ada)...' },
-            { order: 4, label: 'Status Akhir', type: FieldType.SingleSelect, required: true, options: [{ key: 'selesai', value: 'Selesai - Perangkat Normal' }, { key: 'tidak_bisa', value: 'Tidak Dapat Diperbaiki' }, { key: 'tunggu_part', value: 'Menunggu Sparepart' }] },
-            { order: 5, label: 'Foto Hasil Perbaikan', type: FieldType.Image, required: true },
+            { order: 1, label: 'Status Pembayaran', type: FieldType.SingleSelect, required: true, options: [{ key: 'lunas', value: 'Lunas - Unit Siap Diambil' }, { key: 'kurang', value: 'Pembayaran Kurang' }, { key: 'ditolak', value: 'Bukti Tidak Valid' }] },
+            { order: 2, label: 'Nomor Kwitansi Resmi', type: FieldType.Text, required: true, placeholder: 'Nomor kwitansi yang diterbitkan...' },
+            { order: 3, label: 'Foto Kwitansi / Bukti Serah Terima', type: FieldType.Image, required: true },
           ],
         },
       },
     ],
   },
 
-  // ── 6. Fasilitas & Perkantoran — Kebersihan & Perawatan Gedung ─────────
+  // ── 6. Fasilitas & Perkantoran — Validasi Pembayaran Sewa & Utilitas ───
   {
-    title: 'Kebersihan & Perawatan Gedung',
+    title: 'Validasi Pembayaran Sewa & Utilitas',
     description:
-      'Layanan kebersihan rutin dan perawatan area gedung meliputi pembersihan lantai, kaca, toilet, dan pengelolaan sampah.',
+      'Layanan verifikasi pembayaran sewa ruangan, listrik, air, dan biaya pengelolaan gedung bagi tenant/penyewa.',
     companyTypeId: COMPANY_TYPE_IDS.Fasilitas,
     accessType: 'member_only',
     draftingWorkOrderType: 'auto',
@@ -369,45 +371,44 @@ export const serviceTemplatesData = [
       serviceRequestApprovalAccessType: ApprovalAccessType.AUTO,
       reviewNeed: true,
       intakeForm: {
-        title: 'Formulir Permintaan Layanan Kebersihan',
-        description: 'Ajukan permintaan layanan kebersihan untuk area gedung Anda.',
+        title: 'Formulir Konfirmasi Pembayaran Sewa & Utilitas',
+        description: 'Kirimkan bukti pembayaran sewa dan/atau utilitas gedung Anda.',
         formType: SubmissionType.Intake,
         fields: [
-          { order: 1, label: 'Area yang Perlu Dibersihkan', type: FieldType.Text, required: true, placeholder: 'contoh: Lobby Utama / Toilet Lt. 3 / Parkiran' },
-          { order: 2, label: 'Jenis Layanan', type: FieldType.SingleSelect, required: true, options: [{ key: 'rutin', value: 'Pembersihan Rutin' }, { key: 'deep', value: 'Deep Cleaning' }, { key: 'kaca', value: 'Pembersihan Kaca & Jendela' }, { key: 'sampah', value: 'Pengangkutan Sampah' }, { key: 'pest', value: 'Pest Control' }] },
-          { order: 3, label: 'Tingkat Urgensi', type: FieldType.SingleSelect, required: true, options: [{ key: 'rendah', value: 'Rendah - Terjadwal' }, { key: 'sedang', value: 'Sedang' }, { key: 'tinggi', value: 'Tinggi - Segera' }] },
-          { order: 4, label: 'Catatan Tambahan', type: FieldType.Textarea, required: false, placeholder: 'Informasi tambahan...' },
+          { order: 1, label: 'Nomor Unit / Tenant', type: FieldType.Text, required: true, placeholder: 'contoh: Unit 5A / Tenant-012' },
+          { order: 2, label: 'Jenis Pembayaran', type: FieldType.SingleSelect, required: true, options: [{ key: 'sewa', value: 'Sewa Ruangan' }, { key: 'listrik', value: 'Tagihan Listrik' }, { key: 'air', value: 'Tagihan Air' }, { key: 'ipl', value: 'IPL (Biaya Pengelolaan)' }, { key: 'gabungan', value: 'Gabungan' }] },
+          { order: 3, label: 'Periode Pembayaran', type: FieldType.Text, required: true, placeholder: 'contoh: Juli 2025' },
+          { order: 4, label: 'Nominal Pembayaran (Rp)', type: FieldType.Text, required: true, placeholder: 'contoh: 15000000' },
+          { order: 5, label: 'Bukti Transfer / Pembayaran', type: FieldType.Image, required: true },
         ],
       },
       reviewForm: {
-        title: 'Evaluasi Layanan Kebersihan',
-        description: 'Berikan penilaian atas hasil pembersihan yang dilakukan.',
+        title: 'Evaluasi Proses Validasi Pembayaran',
+        description: 'Penilaian terhadap kecepatan dan akurasi proses validasi pembayaran sewa.',
         formType: SubmissionType.Review,
         fields: [
-          { order: 1, label: 'Kebersihan Area', type: FieldType.SingleSelect, required: true, options: [{ key: 'bersih', value: 'Bersih & Wangi' }, { key: 'cukup', value: 'Cukup Bersih' }, { key: 'kotor', value: 'Masih Kotor' }] },
-          { order: 2, label: 'Ketepatan Waktu', type: FieldType.SingleSelect, required: true, options: [{ key: 'tepat', value: 'Tepat Waktu' }, { key: 'terlambat', value: 'Terlambat' }] },
-          { order: 3, label: 'Saran', type: FieldType.Textarea, required: false },
+          { order: 1, label: 'Kecepatan Konfirmasi', type: FieldType.SingleSelect, required: true, options: [{ key: 'cepat', value: 'Cepat' }, { key: 'normal', value: 'Normal' }, { key: 'lambat', value: 'Lambat' }] },
+          { order: 2, label: 'Catatan', type: FieldType.Textarea, required: false },
         ],
       },
     },
     workOrdersConfig: [
       {
         configId: null,
-        positionsOnDuty: { name: 'Petugas Kebersihan', description: 'Tim kebersihan yang menangani pembersihan dan perawatan area gedung.' },
+        positionsOnDuty: { name: 'Staf Keuangan Gedung', description: 'Staf keuangan yang memverifikasi pembayaran sewa dan utilitas dari tenant.' },
         workOrderApprovalAccessType: ApprovalAccessType.AUTO,
         workReportApprovalAccessType: ApprovalAccessType.AUTO,
         showReportToRequester: false,
         minStaff: 1,
-        maxStaff: 4,
+        maxStaff: 1,
         workReportForm: {
-          title: 'Laporan Pelaksanaan Kebersihan',
-          description: 'Dokumentasi hasil pembersihan area gedung.',
+          title: 'Laporan Verifikasi Pembayaran Sewa & Utilitas',
+          description: 'Hasil verifikasi pembayaran dari tenant/penyewa.',
           formType: SubmissionType.Report,
           fields: [
-            { order: 1, label: 'Area yang Dibersihkan', type: FieldType.Textarea, required: true, placeholder: 'Daftar area yang telah dibersihkan...' },
-            { order: 2, label: 'Pekerjaan yang Dilakukan', type: FieldType.Textarea, required: true, placeholder: 'Detail pekerjaan: sapu, pel, lap kaca, dll...' },
-            { order: 3, label: 'Kondisi Akhir', type: FieldType.SingleSelect, required: true, options: [{ key: 'bersih', value: 'Bersih Sempurna' }, { key: 'cukup', value: 'Cukup Bersih' }, { key: 'perlu_lanjutan', value: 'Perlu Pembersihan Lanjutan' }] },
-            { order: 4, label: 'Foto Hasil Pembersihan', type: FieldType.Image, required: true },
+            { order: 1, label: 'Status Verifikasi', type: FieldType.SingleSelect, required: true, options: [{ key: 'valid', value: 'Valid - Pembayaran Diterima' }, { key: 'kurang', value: 'Nominal Kurang Bayar' }, { key: 'tidak_valid', value: 'Tidak Valid' }] },
+            { order: 2, label: 'Nomor Bukti Penerimaan', type: FieldType.Text, required: true, placeholder: 'Nomor kwitansi resmi...' },
+            { order: 3, label: 'Screenshot Mutasi / Sistem', type: FieldType.Image, required: true },
           ],
         },
       },

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" agent="Claude" version="24.0.0">
+  <diagram id="deploy-arch" name="Arsitektur Deployment">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- User -->
+        <mxCell id="user" value="Pengguna" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3FA9DC;strokeColor=none;fontColor=#FFFFFF;fontStyle=1;fontSize=13;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="320" y="40" width="140" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- GitHub repo -->
+        <mxCell id="github" value="GitHub Repository" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#24292E;strokeColor=none;fontColor=#FFFFFF;fontStyle=1;fontSize=12;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="560" y="40" width="160" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- App -->
+        <mxCell id="app" value="workorder-portal&#10;(aplikasi utama)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1C7293;strokeColor=none;fontColor=#FFFFFF;fontStyle=1;fontSize=14;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="310" y="170" width="180" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- MongoDB -->
+        <mxCell id="mongo" value="MongoDB" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#47A248;strokeColor=none;fontColor=#FFFFFF;fontStyle=1;fontSize=13;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="60" y="320" width="170" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="mongov" value="mongodb-volume" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#2E7D32;strokeColor=none;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="85" y="440" width="120" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Redis -->
+        <mxCell id="redis" value="Redis" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DC382D;strokeColor=none;fontColor=#FFFFFF;fontStyle=1;fontSize=13;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="280" y="320" width="170" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="redisv" value="redis-volume" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#A32921;strokeColor=none;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="305" y="440" width="120" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- MinIO group -->
+        <mxCell id="minioGroup" value="MinIO" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#EF4A5B;dashed=1;verticalAlign=top;fontColor=#EF4A5B;fontStyle=1;fontSize=13;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="500" y="310" width="230" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="minioc" value="Console" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EF4A5B;strokeColor=none;fontColor=#FFFFFF;fontStyle=1;fontSize=13;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="525" y="345" width="180" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="miniob" value="Bucket" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#B5303A;strokeColor=none;fontColor=#FFFFFF;fontStyle=1;fontSize=13;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="525" y="430" width="180" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="bucketv" value="bucket-volume" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#7A2027;strokeColor=none;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="555" y="510" width="120" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Edges -->
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8592AD;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="user" target="app">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="CI/CD deploy" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8592AD;strokeWidth=2;endArrow=block;endFill=1;fontColor=#5A6B8C;fontSize=10;dashed=1;" edge="1" parent="1" source="github" target="app">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#47A248;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="app" target="mongo">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#DC382D;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="app" target="redis">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#EF4A5B;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="app" target="minioc">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" value="kelola" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#FFFFFF;strokeWidth=1.5;endArrow=block;startArrow=block;endFill=1;startFill=1;fontColor=#8592AD;fontSize=10;" edge="1" parent="1" source="minioc" target="miniob">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#5A6B8C;strokeWidth=1.5;endArrow=none;dashed=1;" edge="1" parent="1" source="mongo" target="mongov">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#5A6B8C;strokeWidth=1.5;endArrow=none;dashed=1;" edge="1" parent="1" source="redis" target="redisv">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#5A6B8C;strokeWidth=1.5;endArrow=none;dashed=1;" edge="1" parent="1" source="miniob" target="bucketv">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="legend1" value="Garis solid = alur permintaan/data   |   Garis putus-putus = koneksi ke volume persisten / proses deploy" style="text;html=1;align=left;verticalAlign=middle;fontColor=#5A6B8C;fontSize=10;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="60" y="600" width="600" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

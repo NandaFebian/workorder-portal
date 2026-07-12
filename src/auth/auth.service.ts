@@ -23,10 +23,13 @@ import {
   PendingRegistrationDocument,
 } from './schemas/pending-registration.schema';
 import { MailService } from '../mail/mail.service';
-import { generateOtp, hashOtp } from '../common/utils/otp.util';
+import {
+  generateOtp,
+  hashOtp,
+  OTP_TTL_MS,
+} from '../common/utils/otp.util';
 import { encrypt, decrypt } from '../common/utils/crypto.util';
 
-const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const OTP_MAX_ATTEMPTS = 5;
 
 @Injectable()

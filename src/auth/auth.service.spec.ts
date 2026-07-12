@@ -292,7 +292,7 @@ describe('AuthService', () => {
       );
       expect(result).toEqual({
         email: 'new@example.com',
-        expiresInSeconds: 600,
+        expiresInSeconds: 300,
       });
     });
 

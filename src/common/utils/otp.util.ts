@@ -1,5 +1,9 @@
 import * as crypto from 'crypto';
 
+/** How long a registration OTP stays valid. Single source of truth. */
+export const OTP_TTL_MINUTES = 5;
+export const OTP_TTL_MS = OTP_TTL_MINUTES * 60 * 1000;
+
 /**
  * Generates a cryptographically-random numeric OTP of the given length.
  * Defaults to a 6-digit code, zero-padded (e.g. "042571").

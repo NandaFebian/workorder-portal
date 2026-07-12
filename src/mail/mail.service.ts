@@ -7,8 +7,18 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import * as nodemailer from 'nodemailer';
 import type SMTPTransport from 'nodemailer/lib/smtp-transport';
+import { OTP_TTL_MINUTES } from '../common/utils/otp.util';
 
 type MailMode = 'resend' | 'smtp' | 'console';
+
+// Email palette, led by the app's primary brand colour (lightPrimary).
+const PRIMARY = '#0978FE';
+const TINT = '#EEF5FF'; // primary at ~6% — code block background
+const TINT_BORDER = '#CFE2FF'; // primary at ~25% — code block border
+const TEXT = '#101828';
+const MUTED = '#667085';
+const BG = '#F4F6F8';
+const BORDER = '#E5E9F0';
 
 /**
  * Sends transactional email (currently just registration OTPs).
@@ -31,8 +41,7 @@ export class MailService {
 
   constructor(private readonly config: ConfigService) {
     this.from = this.config.get<string>('MAIL_FROM') || 'onboarding@resend.dev';
-    this.fromName =
-      this.config.get<string>('MAIL_FROM_NAME') || 'Work Order Portal';
+    this.fromName = this.config.get<string>('MAIL_FROM_NAME') || 'Work Order';
     this.resendApiKey = this.config.get<string>('RESEND_API_KEY') || undefined;
     const smtpHost = this.config.get<string>('SMTP_HOST');
 
@@ -89,18 +98,62 @@ export class MailService {
   private buildOtpMessage(otp: string, name?: string) {
     const greeting = name ? `Hi ${name},` : 'Hi,';
     return {
-      subject: 'Your verification code',
+      subject: `${otp} is your verification code`,
       text:
         `${greeting}\n\n` +
-        `Your verification code is ${otp}. It will expire in 10 minutes.\n\n` +
+        `Your verification code is ${otp}. It will expire in ${OTP_TTL_MINUTES} minutes.\n\n` +
         `If you did not request this, you can safely ignore this email.`,
-      html:
-        `<p>${greeting}</p>` +
-        `<p>Your verification code is:</p>` +
-        `<p style="font-size:24px;font-weight:bold;letter-spacing:4px;">${otp}</p>` +
-        `<p>It will expire in 10 minutes.</p>` +
-        `<p style="color:#888;">If you did not request this, you can safely ignore this email.</p>`,
+      html: this.buildOtpHtml(otp, greeting),
     };
+  }
+
+  /**
+   * Table-based, fully inlined HTML — the only layout that renders reliably
+   * across Gmail / Outlook / Apple Mail (no flexbox, grid, or external CSS).
+   */
+  private buildOtpHtml(otp: string, greeting: string): string {
+    const brand = this.fromName;
+    const font =
+      "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+    return `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${BG};margin:0;padding:32px 16px;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;background-color:#ffffff;border:1px solid ${BORDER};border-radius:14px;overflow:hidden;">
+        <tr>
+          <td style="height:4px;line-height:4px;font-size:0;background-color:${PRIMARY};">&nbsp;</td>
+        </tr>
+        <tr>
+          <td style="padding:36px 36px 32px 36px;font-family:${font};">
+            <p style="margin:0 0 28px 0;font-size:13px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:${PRIMARY};">${brand}</p>
+
+            <h1 style="margin:0 0 14px 0;font-size:22px;line-height:1.35;font-weight:700;color:${TEXT};">Verify your email</h1>
+
+            <p style="margin:0 0 8px 0;font-size:15px;line-height:1.6;color:${TEXT};">${greeting}</p>
+            <p style="margin:0 0 26px 0;font-size:15px;line-height:1.6;color:${MUTED};">Use the verification code below to finish creating your account.</p>
+
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${TINT};border:1px solid ${TINT_BORDER};border-radius:10px;">
+              <tr>
+                <td align="center" style="padding:22px 16px;">
+                  <span style="display:inline-block;font-family:'SFMono-Regular',Consolas,'Courier New',monospace;font-size:32px;font-weight:700;line-height:1.2;letter-spacing:9px;text-indent:9px;color:${PRIMARY};">${otp}</span>
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin:22px 0 0 0;font-size:14px;line-height:1.6;color:${MUTED};">This code expires in <strong style="color:${TEXT};">${OTP_TTL_MINUTES} minutes</strong>. Please don't share it with anyone.</p>
+
+            <div style="margin:28px 0 0 0;border-top:1px solid ${BORDER};"></div>
+
+            <p style="margin:20px 0 0 0;font-size:13px;line-height:1.6;color:${MUTED};">If you didn't request this, you can safely ignore this email.</p>
+          </td>
+        </tr>
+      </table>
+
+      <p style="margin:20px 0 0 0;font-family:${font};font-size:12px;color:${MUTED};">&copy; ${new Date().getFullYear()} ${brand}</p>
+    </td>
+  </tr>
+</table>`.trim();
   }
 
   private async sendViaResend(

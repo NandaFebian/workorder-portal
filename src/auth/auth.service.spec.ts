@@ -1,17 +1,31 @@
 // src/auth/auth.service.spec.ts
 import { Test, TestingModule } from '@nestjs/testing';
+import { getModelToken } from '@nestjs/mongoose';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { CompaniesInternalService } from '../company/companies.internal.service';
+import { PositionsService } from '../positions/positions.service';
 import { JwtService } from '@nestjs/jwt';
-import { HttpException, HttpStatus } from '@nestjs/common';
+import { HttpException, HttpStatus, BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { Role } from '../common/enums/role.enum';
+import { PendingRegistration } from './schemas/pending-registration.schema';
+import { MailService } from '../mail/mail.service';
+import { hashOtp } from '../common/utils/otp.util';
+import { encrypt } from '../common/utils/crypto.util';
+
+// Auto-mock bcrypt so `jest.spyOn(bcrypt, 'compare')` in the login tests can
+// redefine it (the real module export is non-configurable).
+jest.mock('bcrypt');
+
+const asExec = (value: any) => ({ exec: jest.fn().mockResolvedValue(value) });
 
 describe('AuthService', () => {
   let authService: AuthService;
   let usersService: UsersService;
   let jwtService: JwtService;
+  let pendingModel: any;
+  let mailService: MailService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -32,9 +46,27 @@ describe('AuthService', () => {
           },
         },
         {
+          provide: PositionsService,
+          useValue: {},
+        },
+        {
           provide: JwtService,
           useValue: {
             sign: jest.fn(),
+          },
+        },
+        {
+          provide: getModelToken(PendingRegistration.name),
+          useValue: {
+            findOne: jest.fn(),
+            findOneAndUpdate: jest.fn(),
+            deleteOne: jest.fn(),
+          },
+        },
+        {
+          provide: MailService,
+          useValue: {
+            sendOtpEmail: jest.fn().mockResolvedValue(undefined),
           },
         },
       ],
@@ -43,10 +75,13 @@ describe('AuthService', () => {
     authService = module.get<AuthService>(AuthService);
     usersService = module.get<UsersService>(UsersService);
     jwtService = module.get<JwtService>(JwtService);
+    pendingModel = module.get(getModelToken(PendingRegistration.name));
+    mailService = module.get<MailService>(MailService);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
+    jest.restoreAllMocks();
   });
 
   describe('login()', () => {
@@ -221,6 +256,138 @@ describe('AuthService', () => {
         'Database connection failed',
       );
       expect(usersService.findOneByEmail).toHaveBeenCalledWith('test@test.com');
+    });
+  });
+
+  describe('register() — OTP dispatch', () => {
+    const dto = {
+      name: 'New User',
+      email: 'New@Example.com',
+      password: 'password123',
+      role: Role.Client,
+    };
+
+    it('stores a pending registration and emails an OTP without creating a user', async () => {
+      jest.spyOn(usersService, 'findOneByEmail').mockResolvedValue(null);
+      pendingModel.findOneAndUpdate.mockReturnValue(asExec({}));
+
+      const result = await authService.register(dto as any);
+
+      expect(usersService.create).not.toHaveBeenCalled();
+      expect(pendingModel.findOneAndUpdate).toHaveBeenCalledTimes(1);
+
+      const [filter, update, options] =
+        pendingModel.findOneAndUpdate.mock.calls[0];
+      expect(filter.email).toBe('new@example.com'); // normalized
+      expect(update.type).toBe('user');
+      expect(update.role).toBe(Role.Client);
+      expect(update.password).not.toBe(dto.password); // encrypted at rest
+      expect(update.otpHash).toEqual(expect.any(String));
+      expect(options.upsert).toBe(true);
+
+      expect(mailService.sendOtpEmail).toHaveBeenCalledWith(
+        'new@example.com',
+        expect.any(String),
+        dto.name,
+      );
+      expect(result).toEqual({
+        email: 'new@example.com',
+        expiresInSeconds: 600,
+      });
+    });
+
+    it('rejects when the email is already registered', async () => {
+      jest
+        .spyOn(usersService, 'findOneByEmail')
+        .mockResolvedValue({ _id: 'x' } as any);
+
+      await expect(authService.register(dto as any)).rejects.toThrow(
+        HttpException,
+      );
+      expect(pendingModel.findOneAndUpdate).not.toHaveBeenCalled();
+      expect(mailService.sendOtpEmail).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('verifyOtp()', () => {
+    const email = 'new@example.com';
+    const otp = '123456';
+
+    const makePending = (overrides: any = {}) => ({
+      _id: 'pending-1',
+      email,
+      name: 'New User',
+      password: encrypt('password123'),
+      type: 'user',
+      role: Role.Client,
+      companyName: null,
+      otpHash: hashOtp(otp),
+      otpExpiresAt: new Date(Date.now() + 60_000),
+      attempts: 0,
+      save: jest.fn().mockResolvedValue(undefined),
+      ...overrides,
+    });
+
+    it('creates the user account on a valid OTP and clears the pending record', async () => {
+      const pending = makePending();
+      pendingModel.findOne.mockReturnValue(asExec(pending));
+      pendingModel.deleteOne.mockReturnValue(asExec({}));
+      jest.spyOn(usersService, 'findOneByEmail').mockResolvedValue(null);
+      jest.spyOn(usersService, 'create').mockResolvedValue({
+        toObject: () => ({
+          _id: 'u1',
+          name: 'New User',
+          email,
+          role: Role.Client,
+          password: 'hashed',
+          fcmTokens: [],
+        }),
+      } as any);
+
+      const result = await authService.verifyOtp({ email, otp });
+
+      // Password decrypted back to the original before hashing by the model.
+      expect(usersService.create).toHaveBeenCalledWith(
+        expect.objectContaining({ email, password: 'password123', role: Role.Client }),
+      );
+      expect(result).not.toHaveProperty('password');
+      expect(result).not.toHaveProperty('fcmTokens');
+      expect(pendingModel.deleteOne).toHaveBeenCalledWith({ _id: 'pending-1' });
+    });
+
+    it('increments attempts and throws on an invalid OTP', async () => {
+      const pending = makePending();
+      pendingModel.findOne.mockReturnValue(asExec(pending));
+
+      await expect(
+        authService.verifyOtp({ email, otp: '000000' }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(pending.attempts).toBe(1);
+      expect(pending.save).toHaveBeenCalled();
+      expect(usersService.create).not.toHaveBeenCalled();
+    });
+
+    it('throws and deletes the pending record when the OTP has expired', async () => {
+      const pending = makePending({
+        otpExpiresAt: new Date(Date.now() - 1000),
+      });
+      pendingModel.findOne.mockReturnValue(asExec(pending));
+      pendingModel.deleteOne.mockReturnValue(asExec({}));
+
+      await expect(authService.verifyOtp({ email, otp })).rejects.toThrow(
+        /expired/i,
+      );
+      expect(pendingModel.deleteOne).toHaveBeenCalledWith({ _id: 'pending-1' });
+      expect(usersService.create).not.toHaveBeenCalled();
+    });
+
+    it('throws when there is no pending registration', async () => {
+      pendingModel.findOne.mockReturnValue(asExec(null));
+
+      await expect(authService.verifyOtp({ email, otp })).rejects.toThrow(
+        /No pending registration/i,
+      );
     });
   });
 });

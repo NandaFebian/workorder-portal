@@ -16,6 +16,7 @@ import { AuthService } from './auth.service';
 import { RegisterAuthDto } from './dto/register-auth.dto';
 import { RegisterCompanyDto } from './dto/register-company.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ResponseUtil } from 'src/common/utils/response.util';
 
 @UseGuards(ThrottlerGuard)
@@ -26,8 +27,11 @@ export class AuthController {
   @Post('register')
   @HttpCode(HttpStatus.OK)
   async register(@Body() registerAuthDto: RegisterAuthDto) {
-    const newUser = await this.authService.register(registerAuthDto);
-    return ResponseUtil.success('User registered successfully', newUser);
+    const data = await this.authService.register(registerAuthDto);
+    return ResponseUtil.success(
+      'Verification code sent to your email. Please verify to complete registration.',
+      data,
+    );
   }
 
   @Post('register-company')
@@ -35,9 +39,18 @@ export class AuthController {
   async registerCompany(@Body() registerCompanyDto: RegisterCompanyDto) {
     const data = await this.authService.registerCompany(registerCompanyDto);
     return ResponseUtil.success(
-      'Company and owner registered successfully',
+      'Verification code sent to your email. Please verify to complete registration.',
       data,
-      { welcome: true },
+    );
+  }
+
+  @Post('verify-otp')
+  @HttpCode(HttpStatus.OK)
+  async verifyOtp(@Body() verifyOtpDto: VerifyOtpDto) {
+    const data = await this.authService.verifyOtp(verifyOtpDto);
+    return ResponseUtil.success(
+      'Email verified and account created successfully',
+      data,
     );
   }
 

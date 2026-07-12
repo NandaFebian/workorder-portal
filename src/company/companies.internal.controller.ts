@@ -10,7 +10,9 @@ import {
   UseGuards,
   Post,
   ForbiddenException,
+  BadRequestException,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { CompaniesInternalService } from './companies.internal.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
@@ -85,6 +87,37 @@ export class CompaniesInternalController {
       invitingUser.company._id.toString(),
       inviteEmployeesDto,
       invitingUser,
+    );
+  }
+
+  // Endpoint: {{base_url}}/company/invitable-users?email=<keyword>
+  // Look up unassigned-staff users (available for invitation) by email so an
+  // owner/manager can find the right person before sending an invite.
+  @Get('invitable-users')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @HttpCode(HttpStatus.OK)
+  async searchInvitableUsers(
+    @GetUser() user: AuthenticatedUser,
+    @Query('email') email?: string,
+  ) {
+    if (!user.company?._id) {
+      throw new ForbiddenException('You are not associated with any company.');
+    }
+
+    const keyword = email?.trim();
+    if (!keyword) {
+      throw new BadRequestException(
+        'The "email" query parameter is required to search for invitable users.',
+      );
+    }
+
+    const users =
+      await this.usersService.searchAvailableUnassignedStaffByEmail(keyword);
+
+    return ResponseUtil.success(
+      'Invitable users retrieved successfully',
+      users,
     );
   }
 

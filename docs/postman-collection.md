@@ -15,15 +15,24 @@ Auto-generated Postman collection covering **all 119 endpoints** across 23 modul
 2. Select the **Work Order Portal - Local** environment (top-right).
 3. Adjust `base_url` if your server is not on `http://localhost:3000`.
 
+## Registration is two-step (email OTP)
+
+Registration now verifies the email with a 6-digit OTP **before** the account is created:
+
+1. **Register user — step 1** (or **Register company + owner — step 1**) validates the input and emails an OTP. No account exists yet.
+2. Read the OTP: if SMTP is configured it arrives by email; in **dev mode** (no `SMTP_HOST`) it is printed to the **server console** as `[DEV] OTP for <email>: <code>`.
+3. Set the `{{otp}}` collection variable to that code.
+4. **Verify OTP — step 2** creates the account. For company signups the response includes a JWT, which is stored in `{{token}}` automatically.
+
 ## Authentication (fully automated)
 
 You do **not** need to copy tokens by hand.
 
-1. Run **Auth → Login** (or **Auth → Register company + owner**).
+1. Run **Auth → Login** (or complete **Verify OTP** for a company signup).
 2. A test script reads the JWT from the response (`data.token`, stripping the `Bearer ` prefix) and stores it in the `{{token}}` collection variable.
 3. The collection is configured with **Bearer auth = `{{token}}`**, so every authenticated request inherits it automatically.
 
-Public endpoints (registration, login, public companies/services, public FAQ) are set to **No Auth** so they work before you have a token.
+Public endpoints (registration, verify-otp, login, public companies/services, public FAQ) are set to **No Auth** so they work before you have a token.
 
 ## ID chaining (Collection Runner)
 

@@ -8,15 +8,21 @@ import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
 import { CompaniesModule } from '../company/companies.module';
 import { ActiveToken, ActiveTokenSchema } from './schemas/active-token.schema';
+import {
+  PendingRegistration,
+  PendingRegistrationSchema,
+} from './schemas/pending-registration.schema';
 import { AuthGuard } from './guards/auth.guard';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { PositionsModule } from '../positions/positions.module';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
     UsersModule,
     forwardRef(() => CompaniesModule),
     forwardRef(() => PositionsModule),
+    MailModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -31,6 +37,7 @@ import { PositionsModule } from '../positions/positions.module';
     }),
     MongooseModule.forFeature([
       { name: ActiveToken.name, schema: ActiveTokenSchema },
+      { name: PendingRegistration.name, schema: PendingRegistrationSchema },
     ]),
   ],
   controllers: [AuthController],

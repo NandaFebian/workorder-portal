@@ -13,6 +13,7 @@ import { User, UserDocument } from './schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UserResource } from './resources/user.resource';
+import { Role } from 'src/common/enums/role.enum';
 
 @Injectable()
 export class UsersService {
@@ -37,6 +38,36 @@ export class UsersService {
   }
   findById(id: any) {
     return this.userModel.findOne({ _id: id });
+  }
+
+  /**
+   * Search users that are available to be invited as employees, i.e. users with
+   * role `staff_unassigned` that do not yet belong to any company. Matches the
+   * email against the keyword (case-insensitive, partial). Intended for the
+   * invite flow so owners/managers can look up an unassigned staff by email.
+   */
+  async searchAvailableUnassignedStaffByEmail(
+    emailKeyword: string,
+    limit = 10,
+  ): Promise<any[]> {
+    // Escape regex special characters so the keyword is matched literally.
+    const escaped = emailKeyword
+      .trim()
+      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const emailRegex = new RegExp(escaped, 'i');
+
+    return this.userModel
+      .find({
+        role: Role.UnassignedStaff,
+        companyId: null,
+        deletedAt: null,
+        email: { $regex: emailRegex },
+      })
+      .select('_id name email role createdAt')
+      .sort({ email: 1 })
+      .limit(limit)
+      .lean()
+      .exec();
   }
 
   async findByPositionId(positionId: string): Promise<any[]> {

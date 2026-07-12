@@ -1,6 +1,7 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import type SMTPTransport from 'nodemailer/lib/smtp-transport';
 
 /**
  * Thin wrapper around nodemailer.
@@ -23,7 +24,7 @@ export class MailService {
 
     if (host) {
       const user = this.config.get<string>('SMTP_USER');
-      this.transporter = nodemailer.createTransport({
+      const options: SMTPTransport.Options = {
         host,
         port: Number(this.config.get<string>('SMTP_PORT') ?? 587),
         secure: String(this.config.get<string>('SMTP_SECURE') ?? 'false') === 'true',
@@ -32,11 +33,14 @@ export class MailService {
           : undefined,
         // Fail fast instead of hanging the HTTP request forever if the SMTP
         // server is unreachable (blocked port, network issue, bad TLS).
-        // (IPv4 is preferred globally via setDefaultResultOrder in main.ts.)
+        // IPv4 is preferred process-wide via setDefaultResultOrder('ipv4first')
+        // in main.ts — required on hosts (e.g. Railway) with no IPv6 route,
+        // where reaching Gmail over IPv6 fails with ENETUNREACH.
         connectionTimeout: 10_000, // time to establish the TCP connection
         greetingTimeout: 10_000, // time to receive the SMTP greeting
         socketTimeout: 15_000, // inactivity timeout on the socket
-      });
+      };
+      this.transporter = nodemailer.createTransport(options);
     } else {
       this.transporter = null;
       this.logger.warn(

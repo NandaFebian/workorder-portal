@@ -30,6 +30,12 @@ export class MailService {
         auth: user
           ? { user, pass: this.config.get<string>('SMTP_PASS') }
           : undefined,
+        // Fail fast instead of hanging the HTTP request forever if the SMTP
+        // server is unreachable (blocked port, network issue, bad TLS).
+        // (IPv4 is preferred globally via setDefaultResultOrder in main.ts.)
+        connectionTimeout: 10_000, // time to establish the TCP connection
+        greetingTimeout: 10_000, // time to receive the SMTP greeting
+        socketTimeout: 15_000, // inactivity timeout on the socket
       });
     } else {
       this.transporter = null;

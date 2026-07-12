@@ -138,7 +138,7 @@
     },
     {
       "name": "Auth",
-      "_postman_id": "wo-0010",
+      "_postman_id": "wo-0011",
       "item": [
         {
           "name": "Register user (client / staff) — step 1",
@@ -274,8 +274,45 @@
           ]
         },
         {
-          "name": "Login",
+          "name": "Resend OTP",
           "_postman_id": "wo-0005",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/resend-otp",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "resend-otp"
+              ]
+            },
+            "description": "Re-issues the registration OTP for a signup that has not been verified yet — no need to resubmit the whole form. Invalidates the previous code and resets the attempt counter. Rate limited: 429 if called within 60s of the last send.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "_postman_id": "wo-0006",
           "request": {
             "method": "POST",
             "header": [
@@ -334,7 +371,7 @@
         },
         {
           "name": "Logout",
-          "_postman_id": "wo-0006",
+          "_postman_id": "wo-0007",
           "request": {
             "method": "POST",
             "header": [],
@@ -353,7 +390,7 @@
         },
         {
           "name": "Get profile",
-          "_postman_id": "wo-0007",
+          "_postman_id": "wo-0008",
           "request": {
             "method": "GET",
             "header": [],
@@ -372,7 +409,7 @@
         },
         {
           "name": "Forgot password — step 1",
-          "_postman_id": "wo-0008",
+          "_postman_id": "wo-0009",
           "request": {
             "method": "POST",
             "header": [
@@ -409,7 +446,7 @@
         },
         {
           "name": "Reset password — step 2",
-          "_postman_id": "wo-0009",
+          "_postman_id": "wo-0010",
           "request": {
             "method": "POST",
             "header": [
@@ -449,11 +486,11 @@
     },
     {
       "name": "Users",
-      "_postman_id": "wo-0013",
+      "_postman_id": "wo-0014",
       "item": [
         {
           "name": "Get my profile",
-          "_postman_id": "wo-0011",
+          "_postman_id": "wo-0012",
           "request": {
             "method": "GET",
             "header": [],
@@ -472,7 +509,7 @@
         },
         {
           "name": "Update my profile",
-          "_postman_id": "wo-0012",
+          "_postman_id": "wo-0013",
           "request": {
             "method": "PATCH",
             "header": [
@@ -507,11 +544,11 @@
     },
     {
       "name": "Companies (Public)",
-      "_postman_id": "wo-0017",
+      "_postman_id": "wo-0018",
       "item": [
         {
           "name": "List public companies",
-          "_postman_id": "wo-0014",
+          "_postman_id": "wo-0015",
           "request": {
             "method": "GET",
             "header": [],
@@ -555,7 +592,7 @@
         },
         {
           "name": "Get company by id",
-          "_postman_id": "wo-0015",
+          "_postman_id": "wo-0016",
           "request": {
             "method": "GET",
             "header": [],
@@ -578,7 +615,7 @@
         },
         {
           "name": "Get company services",
-          "_postman_id": "wo-0016",
+          "_postman_id": "wo-0017",
           "request": {
             "method": "GET",
             "header": [],
@@ -604,11 +641,11 @@
     },
     {
       "name": "Company (Internal)",
-      "_postman_id": "wo-0030",
+      "_postman_id": "wo-0031",
       "item": [
         {
           "name": "Get my company",
-          "_postman_id": "wo-0018",
+          "_postman_id": "wo-0019",
           "request": {
             "method": "GET",
             "header": [],
@@ -640,7 +677,7 @@
         },
         {
           "name": "Get company detail",
-          "_postman_id": "wo-0019",
+          "_postman_id": "wo-0020",
           "request": {
             "method": "GET",
             "header": [],
@@ -659,7 +696,7 @@
         },
         {
           "name": "Update company",
-          "_postman_id": "wo-0020",
+          "_postman_id": "wo-0021",
           "request": {
             "method": "PUT",
             "header": [
@@ -691,7 +728,7 @@
         },
         {
           "name": "Delete company",
-          "_postman_id": "wo-0021",
+          "_postman_id": "wo-0022",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -709,7 +746,7 @@
         },
         {
           "name": "Invite employees",
-          "_postman_id": "wo-0022",
+          "_postman_id": "wo-0023",
           "request": {
             "method": "POST",
             "header": [
@@ -742,7 +779,7 @@
         },
         {
           "name": "Search invitable users by email",
-          "_postman_id": "wo-0023",
+          "_postman_id": "wo-0024",
           "request": {
             "method": "GET",
             "header": [],
@@ -784,7 +821,7 @@
         },
         {
           "name": "Invitation history",
-          "_postman_id": "wo-0024",
+          "_postman_id": "wo-0025",
           "request": {
             "method": "GET",
             "header": [],
@@ -804,7 +841,7 @@
         },
         {
           "name": "List employees",
-          "_postman_id": "wo-0025",
+          "_postman_id": "wo-0026",
           "request": {
             "method": "GET",
             "header": [],
@@ -837,7 +874,7 @@
         },
         {
           "name": "Get employee by id",
-          "_postman_id": "wo-0026",
+          "_postman_id": "wo-0027",
           "request": {
             "method": "GET",
             "header": [],
@@ -857,7 +894,7 @@
         },
         {
           "name": "Kick employee",
-          "_postman_id": "wo-0027",
+          "_postman_id": "wo-0028",
           "request": {
             "method": "DELETE",
             "header": [
@@ -890,7 +927,7 @@
         },
         {
           "name": "Get integration config",
-          "_postman_id": "wo-0028",
+          "_postman_id": "wo-0029",
           "request": {
             "method": "GET",
             "header": [],
@@ -909,7 +946,7 @@
         },
         {
           "name": "Update integration config",
-          "_postman_id": "wo-0029",
+          "_postman_id": "wo-0030",
           "request": {
             "method": "PUT",
             "header": [
@@ -944,11 +981,11 @@
     },
     {
       "name": "Invitations",
-      "_postman_id": "wo-0035",
+      "_postman_id": "wo-0036",
       "item": [
         {
           "name": "Pending invitations",
-          "_postman_id": "wo-0031",
+          "_postman_id": "wo-0032",
           "request": {
             "method": "GET",
             "header": [],
@@ -981,7 +1018,7 @@
         },
         {
           "name": "Accept invitation",
-          "_postman_id": "wo-0032",
+          "_postman_id": "wo-0033",
           "request": {
             "method": "PUT",
             "header": [],
@@ -1001,7 +1038,7 @@
         },
         {
           "name": "Reject invitation",
-          "_postman_id": "wo-0033",
+          "_postman_id": "wo-0034",
           "request": {
             "method": "PUT",
             "header": [],
@@ -1021,7 +1058,7 @@
         },
         {
           "name": "Delete invitation",
-          "_postman_id": "wo-0034",
+          "_postman_id": "wo-0035",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -1042,11 +1079,11 @@
     },
     {
       "name": "Positions",
-      "_postman_id": "wo-0041",
+      "_postman_id": "wo-0042",
       "item": [
         {
           "name": "List positions",
-          "_postman_id": "wo-0036",
+          "_postman_id": "wo-0037",
           "request": {
             "method": "GET",
             "header": [],
@@ -1078,7 +1115,7 @@
         },
         {
           "name": "Get position by id",
-          "_postman_id": "wo-0037",
+          "_postman_id": "wo-0038",
           "request": {
             "method": "GET",
             "header": [],
@@ -1097,7 +1134,7 @@
         },
         {
           "name": "Create position",
-          "_postman_id": "wo-0038",
+          "_postman_id": "wo-0039",
           "request": {
             "method": "POST",
             "header": [
@@ -1143,7 +1180,7 @@
         },
         {
           "name": "Update position",
-          "_postman_id": "wo-0039",
+          "_postman_id": "wo-0040",
           "request": {
             "method": "PUT",
             "header": [
@@ -1176,7 +1213,7 @@
         },
         {
           "name": "Delete position",
-          "_postman_id": "wo-0040",
+          "_postman_id": "wo-0041",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -1197,11 +1234,11 @@
     },
     {
       "name": "Forms",
-      "_postman_id": "wo-0048",
+      "_postman_id": "wo-0049",
       "item": [
         {
           "name": "Create form template",
-          "_postman_id": "wo-0042",
+          "_postman_id": "wo-0043",
           "request": {
             "method": "POST",
             "header": [
@@ -1247,7 +1284,7 @@
         },
         {
           "name": "List form templates",
-          "_postman_id": "wo-0043",
+          "_postman_id": "wo-0044",
           "request": {
             "method": "GET",
             "header": [],
@@ -1279,7 +1316,7 @@
         },
         {
           "name": "Get form template by id",
-          "_postman_id": "wo-0044",
+          "_postman_id": "wo-0045",
           "request": {
             "method": "GET",
             "header": [],
@@ -1298,7 +1335,7 @@
         },
         {
           "name": "Update form template",
-          "_postman_id": "wo-0045",
+          "_postman_id": "wo-0046",
           "request": {
             "method": "PUT",
             "header": [
@@ -1331,7 +1368,7 @@
         },
         {
           "name": "Submit form(s)",
-          "_postman_id": "wo-0046",
+          "_postman_id": "wo-0047",
           "request": {
             "method": "POST",
             "header": [
@@ -1364,7 +1401,7 @@
         },
         {
           "name": "Delete form template",
-          "_postman_id": "wo-0047",
+          "_postman_id": "wo-0048",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -1385,11 +1422,11 @@
     },
     {
       "name": "Services (Internal)",
-      "_postman_id": "wo-0057",
+      "_postman_id": "wo-0058",
       "item": [
         {
           "name": "Create service",
-          "_postman_id": "wo-0049",
+          "_postman_id": "wo-0050",
           "request": {
             "method": "POST",
             "header": [
@@ -1435,7 +1472,7 @@
         },
         {
           "name": "List services",
-          "_postman_id": "wo-0050",
+          "_postman_id": "wo-0051",
           "request": {
             "method": "GET",
             "header": [],
@@ -1467,7 +1504,7 @@
         },
         {
           "name": "Get service by id",
-          "_postman_id": "wo-0051",
+          "_postman_id": "wo-0052",
           "request": {
             "method": "GET",
             "header": [],
@@ -1486,7 +1523,7 @@
         },
         {
           "name": "Get service intake form",
-          "_postman_id": "wo-0052",
+          "_postman_id": "wo-0053",
           "request": {
             "method": "GET",
             "header": [],
@@ -1506,7 +1543,7 @@
         },
         {
           "name": "Create work order from service",
-          "_postman_id": "wo-0053",
+          "_postman_id": "wo-0054",
           "request": {
             "method": "POST",
             "header": [
@@ -1540,7 +1577,7 @@
         },
         {
           "name": "Update service",
-          "_postman_id": "wo-0054",
+          "_postman_id": "wo-0055",
           "request": {
             "method": "PUT",
             "header": [
@@ -1573,7 +1610,7 @@
         },
         {
           "name": "Toggle service active",
-          "_postman_id": "wo-0055",
+          "_postman_id": "wo-0056",
           "request": {
             "method": "PATCH",
             "header": [
@@ -1607,7 +1644,7 @@
         },
         {
           "name": "Delete service",
-          "_postman_id": "wo-0056",
+          "_postman_id": "wo-0057",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -1628,11 +1665,11 @@
     },
     {
       "name": "Services (Public)",
-      "_postman_id": "wo-0061",
+      "_postman_id": "wo-0062",
       "item": [
         {
           "name": "List public services by company",
-          "_postman_id": "wo-0058",
+          "_postman_id": "wo-0059",
           "request": {
             "method": "GET",
             "header": [],
@@ -1670,7 +1707,7 @@
         },
         {
           "name": "Get public service by id",
-          "_postman_id": "wo-0059",
+          "_postman_id": "wo-0060",
           "request": {
             "method": "GET",
             "header": [],
@@ -1693,7 +1730,7 @@
         },
         {
           "name": "Get public service intake form",
-          "_postman_id": "wo-0060",
+          "_postman_id": "wo-0061",
           "request": {
             "method": "GET",
             "header": [],
@@ -1716,11 +1753,11 @@
     },
     {
       "name": "Service Price",
-      "_postman_id": "wo-0066",
+      "_postman_id": "wo-0067",
       "item": [
         {
           "name": "List service prices",
-          "_postman_id": "wo-0062",
+          "_postman_id": "wo-0063",
           "request": {
             "method": "GET",
             "header": [],
@@ -1752,7 +1789,7 @@
         },
         {
           "name": "Create service price",
-          "_postman_id": "wo-0063",
+          "_postman_id": "wo-0064",
           "request": {
             "method": "POST",
             "header": [
@@ -1798,7 +1835,7 @@
         },
         {
           "name": "Update service price",
-          "_postman_id": "wo-0064",
+          "_postman_id": "wo-0065",
           "request": {
             "method": "PUT",
             "header": [
@@ -1831,7 +1868,7 @@
         },
         {
           "name": "Delete service price",
-          "_postman_id": "wo-0065",
+          "_postman_id": "wo-0066",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -1852,11 +1889,11 @@
     },
     {
       "name": "Service Requests (Public)",
-      "_postman_id": "wo-0073",
+      "_postman_id": "wo-0074",
       "item": [
         {
           "name": "Submit intake (create service request)",
-          "_postman_id": "wo-0067",
+          "_postman_id": "wo-0068",
           "request": {
             "method": "POST",
             "header": [
@@ -1904,7 +1941,7 @@
         },
         {
           "name": "Sent service requests",
-          "_postman_id": "wo-0068",
+          "_postman_id": "wo-0069",
           "request": {
             "method": "GET",
             "header": [],
@@ -1937,7 +1974,7 @@
         },
         {
           "name": "Get service request by id",
-          "_postman_id": "wo-0069",
+          "_postman_id": "wo-0070",
           "request": {
             "method": "GET",
             "header": [],
@@ -1963,7 +2000,7 @@
         },
         {
           "name": "Submit review",
-          "_postman_id": "wo-0070",
+          "_postman_id": "wo-0071",
           "request": {
             "method": "POST",
             "header": [
@@ -1997,7 +2034,7 @@
         },
         {
           "name": "Cancel service request",
-          "_postman_id": "wo-0071",
+          "_postman_id": "wo-0072",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2017,7 +2054,7 @@
         },
         {
           "name": "Get service request report",
-          "_postman_id": "wo-0072",
+          "_postman_id": "wo-0073",
           "request": {
             "method": "GET",
             "header": [],
@@ -2039,11 +2076,11 @@
     },
     {
       "name": "Service Requests (Internal)",
-      "_postman_id": "wo-0079",
+      "_postman_id": "wo-0080",
       "item": [
         {
           "name": "Inbox",
-          "_postman_id": "wo-0074",
+          "_postman_id": "wo-0075",
           "request": {
             "method": "GET",
             "header": [],
@@ -2076,7 +2113,7 @@
         },
         {
           "name": "Approve",
-          "_postman_id": "wo-0075",
+          "_postman_id": "wo-0076",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2096,7 +2133,7 @@
         },
         {
           "name": "Reject",
-          "_postman_id": "wo-0076",
+          "_postman_id": "wo-0077",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2116,7 +2153,7 @@
         },
         {
           "name": "Assign staff",
-          "_postman_id": "wo-0077",
+          "_postman_id": "wo-0078",
           "request": {
             "method": "PATCH",
             "header": [
@@ -2150,7 +2187,7 @@
         },
         {
           "name": "Delete",
-          "_postman_id": "wo-0078",
+          "_postman_id": "wo-0079",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -2171,11 +2208,11 @@
     },
     {
       "name": "Work Orders (Internal)",
-      "_postman_id": "wo-0098",
+      "_postman_id": "wo-0099",
       "item": [
         {
           "name": "Create work order",
-          "_postman_id": "wo-0080",
+          "_postman_id": "wo-0081",
           "request": {
             "method": "POST",
             "header": [
@@ -2221,7 +2258,7 @@
         },
         {
           "name": "List work orders",
-          "_postman_id": "wo-0081",
+          "_postman_id": "wo-0082",
           "request": {
             "method": "GET",
             "header": [],
@@ -2285,7 +2322,7 @@
         },
         {
           "name": "Get work order by id",
-          "_postman_id": "wo-0082",
+          "_postman_id": "wo-0083",
           "request": {
             "method": "GET",
             "header": [],
@@ -2311,7 +2348,7 @@
         },
         {
           "name": "Update work order",
-          "_postman_id": "wo-0083",
+          "_postman_id": "wo-0084",
           "request": {
             "method": "PATCH",
             "header": [
@@ -2344,7 +2381,7 @@
         },
         {
           "name": "Update work order status",
-          "_postman_id": "wo-0084",
+          "_postman_id": "wo-0085",
           "request": {
             "method": "PATCH",
             "header": [
@@ -2378,7 +2415,7 @@
         },
         {
           "name": "Assign staffs",
-          "_postman_id": "wo-0085",
+          "_postman_id": "wo-0086",
           "request": {
             "method": "PUT",
             "header": [
@@ -2412,7 +2449,7 @@
         },
         {
           "name": "Save submissions",
-          "_postman_id": "wo-0086",
+          "_postman_id": "wo-0087",
           "request": {
             "method": "PUT",
             "header": [
@@ -2446,7 +2483,7 @@
         },
         {
           "name": "Mark sent",
-          "_postman_id": "wo-0087",
+          "_postman_id": "wo-0088",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2466,7 +2503,7 @@
         },
         {
           "name": "Approve",
-          "_postman_id": "wo-0088",
+          "_postman_id": "wo-0089",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2486,7 +2523,7 @@
         },
         {
           "name": "Reject",
-          "_postman_id": "wo-0089",
+          "_postman_id": "wo-0090",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2506,7 +2543,7 @@
         },
         {
           "name": "Recreate",
-          "_postman_id": "wo-0090",
+          "_postman_id": "wo-0091",
           "request": {
             "method": "POST",
             "header": [],
@@ -2526,7 +2563,7 @@
         },
         {
           "name": "Cancel",
-          "_postman_id": "wo-0091",
+          "_postman_id": "wo-0092",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2546,7 +2583,7 @@
         },
         {
           "name": "Start",
-          "_postman_id": "wo-0092",
+          "_postman_id": "wo-0093",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2566,7 +2603,7 @@
         },
         {
           "name": "Complete",
-          "_postman_id": "wo-0093",
+          "_postman_id": "wo-0094",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2586,7 +2623,7 @@
         },
         {
           "name": "Fail",
-          "_postman_id": "wo-0094",
+          "_postman_id": "wo-0095",
           "request": {
             "method": "PATCH",
             "header": [
@@ -2620,7 +2657,7 @@
         },
         {
           "name": "Delete",
-          "_postman_id": "wo-0095",
+          "_postman_id": "wo-0096",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -2639,7 +2676,7 @@
         },
         {
           "name": "Get report",
-          "_postman_id": "wo-0096",
+          "_postman_id": "wo-0097",
           "request": {
             "method": "GET",
             "header": [],
@@ -2659,7 +2696,7 @@
         },
         {
           "name": "Submit report form",
-          "_postman_id": "wo-0097",
+          "_postman_id": "wo-0098",
           "request": {
             "method": "PUT",
             "header": [
@@ -2695,11 +2732,11 @@
     },
     {
       "name": "Work Orders (Staff)",
-      "_postman_id": "wo-0101",
+      "_postman_id": "wo-0102",
       "item": [
         {
           "name": "List my work orders",
-          "_postman_id": "wo-0099",
+          "_postman_id": "wo-0100",
           "request": {
             "method": "GET",
             "header": [],
@@ -2732,7 +2769,7 @@
         },
         {
           "name": "Get work order by id",
-          "_postman_id": "wo-0100",
+          "_postman_id": "wo-0101",
           "request": {
             "method": "GET",
             "header": [],
@@ -2754,11 +2791,11 @@
     },
     {
       "name": "Work Reports",
-      "_postman_id": "wo-0110",
+      "_postman_id": "wo-0111",
       "item": [
         {
           "name": "Create work report",
-          "_postman_id": "wo-0102",
+          "_postman_id": "wo-0103",
           "request": {
             "method": "POST",
             "header": [
@@ -2804,7 +2841,7 @@
         },
         {
           "name": "Get work report by id",
-          "_postman_id": "wo-0103",
+          "_postman_id": "wo-0104",
           "request": {
             "method": "GET",
             "header": [],
@@ -2823,7 +2860,7 @@
         },
         {
           "name": "Update work report",
-          "_postman_id": "wo-0104",
+          "_postman_id": "wo-0105",
           "request": {
             "method": "PUT",
             "header": [
@@ -2856,7 +2893,7 @@
         },
         {
           "name": "Submit work report form",
-          "_postman_id": "wo-0105",
+          "_postman_id": "wo-0106",
           "request": {
             "method": "POST",
             "header": [
@@ -2890,7 +2927,7 @@
         },
         {
           "name": "Mark sent",
-          "_postman_id": "wo-0106",
+          "_postman_id": "wo-0107",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2910,7 +2947,7 @@
         },
         {
           "name": "Approve",
-          "_postman_id": "wo-0107",
+          "_postman_id": "wo-0108",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2930,7 +2967,7 @@
         },
         {
           "name": "Reject",
-          "_postman_id": "wo-0108",
+          "_postman_id": "wo-0109",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2950,7 +2987,7 @@
         },
         {
           "name": "Delete",
-          "_postman_id": "wo-0109",
+          "_postman_id": "wo-0110",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -2971,11 +3008,11 @@
     },
     {
       "name": "Memberships",
-      "_postman_id": "wo-0116",
+      "_postman_id": "wo-0117",
       "item": [
         {
           "name": "My memberships",
-          "_postman_id": "wo-0111",
+          "_postman_id": "wo-0112",
           "request": {
             "method": "GET",
             "header": [],
@@ -2993,7 +3030,7 @@
         },
         {
           "name": "List membership codes",
-          "_postman_id": "wo-0112",
+          "_postman_id": "wo-0113",
           "request": {
             "method": "GET",
             "header": [],
@@ -3026,7 +3063,7 @@
         },
         {
           "name": "Import membership codes (CSV)",
-          "_postman_id": "wo-0113",
+          "_postman_id": "wo-0114",
           "request": {
             "method": "POST",
             "header": [],
@@ -3056,7 +3093,7 @@
         },
         {
           "name": "Claim membership code",
-          "_postman_id": "wo-0114",
+          "_postman_id": "wo-0115",
           "request": {
             "method": "POST",
             "header": [
@@ -3090,7 +3127,7 @@
         },
         {
           "name": "Delete membership code",
-          "_postman_id": "wo-0115",
+          "_postman_id": "wo-0116",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -3112,11 +3149,11 @@
     },
     {
       "name": "Customer Pairing",
-      "_postman_id": "wo-0122",
+      "_postman_id": "wo-0123",
       "item": [
         {
           "name": "Start pairing",
-          "_postman_id": "wo-0117",
+          "_postman_id": "wo-0118",
           "request": {
             "method": "POST",
             "header": [
@@ -3149,7 +3186,7 @@
         },
         {
           "name": "Complete pairing",
-          "_postman_id": "wo-0118",
+          "_postman_id": "wo-0119",
           "request": {
             "method": "POST",
             "header": [
@@ -3182,7 +3219,7 @@
         },
         {
           "name": "List paired accounts",
-          "_postman_id": "wo-0119",
+          "_postman_id": "wo-0120",
           "request": {
             "method": "GET",
             "header": [],
@@ -3214,7 +3251,7 @@
         },
         {
           "name": "Get paired account by company",
-          "_postman_id": "wo-0120",
+          "_postman_id": "wo-0121",
           "request": {
             "method": "GET",
             "header": [],
@@ -3234,7 +3271,7 @@
         },
         {
           "name": "Delete paired account",
-          "_postman_id": "wo-0121",
+          "_postman_id": "wo-0122",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -3255,11 +3292,11 @@
     },
     {
       "name": "FAQ",
-      "_postman_id": "wo-0130",
+      "_postman_id": "wo-0131",
       "item": [
         {
           "name": "Ask FAQ (public)",
-          "_postman_id": "wo-0123",
+          "_postman_id": "wo-0124",
           "request": {
             "method": "POST",
             "header": [
@@ -3295,7 +3332,7 @@
         },
         {
           "name": "FAQ history (public)",
-          "_postman_id": "wo-0124",
+          "_postman_id": "wo-0125",
           "request": {
             "method": "GET",
             "header": [],
@@ -3318,7 +3355,7 @@
         },
         {
           "name": "Toggle FAQ active",
-          "_postman_id": "wo-0125",
+          "_postman_id": "wo-0126",
           "request": {
             "method": "PUT",
             "header": [
@@ -3351,7 +3388,7 @@
         },
         {
           "name": "Upload text docs",
-          "_postman_id": "wo-0126",
+          "_postman_id": "wo-0127",
           "request": {
             "method": "POST",
             "header": [
@@ -3384,7 +3421,7 @@
         },
         {
           "name": "Upload PDF docs",
-          "_postman_id": "wo-0127",
+          "_postman_id": "wo-0128",
           "request": {
             "method": "POST",
             "header": [],
@@ -3419,7 +3456,7 @@
         },
         {
           "name": "List FAQ docs",
-          "_postman_id": "wo-0128",
+          "_postman_id": "wo-0129",
           "request": {
             "method": "GET",
             "header": [],
@@ -3452,7 +3489,7 @@
         },
         {
           "name": "Delete FAQ doc",
-          "_postman_id": "wo-0129",
+          "_postman_id": "wo-0130",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -3474,11 +3511,11 @@
     },
     {
       "name": "Notifications",
-      "_postman_id": "wo-0134",
+      "_postman_id": "wo-0135",
       "item": [
         {
           "name": "List notifications",
-          "_postman_id": "wo-0131",
+          "_postman_id": "wo-0132",
           "request": {
             "method": "GET",
             "header": [],
@@ -3496,7 +3533,7 @@
         },
         {
           "name": "Register FCM token",
-          "_postman_id": "wo-0132",
+          "_postman_id": "wo-0133",
           "request": {
             "method": "POST",
             "header": [
@@ -3529,7 +3566,7 @@
         },
         {
           "name": "Unregister FCM token",
-          "_postman_id": "wo-0133",
+          "_postman_id": "wo-0134",
           "request": {
             "method": "DELETE",
             "header": [
@@ -3564,11 +3601,11 @@
     },
     {
       "name": "Dashboard",
-      "_postman_id": "wo-0138",
+      "_postman_id": "wo-0139",
       "item": [
         {
           "name": "Service request stats",
-          "_postman_id": "wo-0135",
+          "_postman_id": "wo-0136",
           "request": {
             "method": "GET",
             "header": [],
@@ -3594,7 +3631,7 @@
         },
         {
           "name": "Work order stats",
-          "_postman_id": "wo-0136",
+          "_postman_id": "wo-0137",
           "request": {
             "method": "GET",
             "header": [],
@@ -3620,7 +3657,7 @@
         },
         {
           "name": "Company stats",
-          "_postman_id": "wo-0137",
+          "_postman_id": "wo-0138",
           "request": {
             "method": "GET",
             "header": [],
@@ -3641,11 +3678,11 @@
     },
     {
       "name": "Template",
-      "_postman_id": "wo-0143",
+      "_postman_id": "wo-0144",
       "item": [
         {
           "name": "List company types",
-          "_postman_id": "wo-0139",
+          "_postman_id": "wo-0140",
           "request": {
             "method": "GET",
             "header": [],
@@ -3678,7 +3715,7 @@
         },
         {
           "name": "List services by company type",
-          "_postman_id": "wo-0140",
+          "_postman_id": "wo-0141",
           "request": {
             "method": "GET",
             "header": [],
@@ -3713,7 +3750,7 @@
         },
         {
           "name": "Get service template by id",
-          "_postman_id": "wo-0141",
+          "_postman_id": "wo-0142",
           "request": {
             "method": "GET",
             "header": [],
@@ -3733,7 +3770,7 @@
         },
         {
           "name": "Generate services from templates",
-          "_postman_id": "wo-0142",
+          "_postman_id": "wo-0143",
           "request": {
             "method": "POST",
             "header": [
@@ -3769,11 +3806,11 @@
     },
     {
       "name": "Files",
-      "_postman_id": "wo-0145",
+      "_postman_id": "wo-0146",
       "item": [
         {
           "name": "Upload file",
-          "_postman_id": "wo-0144",
+          "_postman_id": "wo-0145",
           "request": {
             "method": "POST",
             "header": [],

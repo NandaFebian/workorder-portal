@@ -19,6 +19,7 @@ import { LoginAuthDto } from './dto/login-auth.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ResendOtpDto } from './dto/resend-otp.dto';
 import { ResponseUtil } from 'src/common/utils/response.util';
 
 @UseGuards(ThrottlerGuard)
@@ -52,6 +53,16 @@ export class AuthController {
     await this.authService.verifyOtp(verifyOtpDto);
     return ResponseUtil.success(
       'Email verified and account created successfully',
+      null,
+    );
+  }
+
+  @Post('resend-otp')
+  @HttpCode(HttpStatus.OK)
+  async resendOtp(@Body() resendOtpDto: ResendOtpDto) {
+    await this.authService.resendOtp(resendOtpDto);
+    return ResponseUtil.success(
+      'A new verification code has been sent to your email.',
       null,
     );
   }

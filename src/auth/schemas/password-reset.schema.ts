@@ -21,6 +21,10 @@ export class PasswordReset {
   @Prop({ required: true })
   otpExpiresAt: Date;
 
+  /** When the current OTP was emailed — drives the resend cooldown. */
+  @Prop({ type: Date, default: null })
+  lastOtpSentAt: Date | null;
+
   @Prop({ default: 0 })
   attempts: number;
 }

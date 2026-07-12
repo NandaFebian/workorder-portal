@@ -17,6 +17,7 @@ import { RegisterCompanyDto } from './dto/register-company.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ResendOtpDto } from './dto/resend-otp.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import * as bcrypt from 'bcrypt';
 import { Role } from '../common/enums/role.enum';
@@ -33,6 +34,7 @@ import {
   generateOtp,
   hashOtp,
   OTP_TTL_MS,
+  OTP_RESEND_COOLDOWN_MS,
 } from '../common/utils/otp.util';
 import { encrypt, decrypt } from '../common/utils/crypto.util';
 
@@ -64,6 +66,11 @@ export class AuthService {
     // Unknown email: do nothing, but don't reveal that to the caller.
     if (!user) return;
 
+    // Calling this endpoint again acts as a "resend". Skip silently while the
+    // cooldown is active — throwing here would leak that a request is pending.
+    const existing = await this.passwordResetModel.findOne({ email }).exec();
+    if (existing && this.isWithinResendCooldown(existing.lastOtpSentAt)) return;
+
     const otp = generateOtp();
 
     // Upsert so a repeat request replaces any previous code.
@@ -74,6 +81,7 @@ export class AuthService {
           email,
           otpHash: hashOtp(otp),
           otpExpiresAt: new Date(Date.now() + OTP_TTL_MS),
+          lastOtpSentAt: new Date(),
           attempts: 0,
         },
         { upsert: true, new: true, setDefaultsOnInsert: true },
@@ -81,6 +89,56 @@ export class AuthService {
       .exec();
 
     await this.mailService.sendPasswordResetEmail(email, otp, user.name);
+  }
+
+  /**
+   * Re-issues the registration OTP for a signup that hasn't been verified yet,
+   * without making the client resubmit the whole registration form. Invalidates
+   * the previous code and resets the attempt counter.
+   */
+  async resendOtp(resendOtpDto: ResendOtpDto): Promise<void> {
+    const email = resendOtpDto.email.toLowerCase().trim();
+    const pending = await this.pendingModel.findOne({ email }).exec();
+
+    if (!pending) {
+      throw new BadRequestException(
+        'No pending registration found for this email. Please register again.',
+      );
+    }
+
+    const waitSeconds = this.resendCooldownRemaining(pending.lastOtpSentAt);
+    if (waitSeconds > 0) {
+      throw new HttpException(
+        {
+          message: `Please wait ${waitSeconds} second(s) before requesting another code.`,
+          code: 'OTP_RESEND_COOLDOWN',
+          retryAfterSeconds: waitSeconds,
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    const otp = generateOtp();
+
+    pending.otpHash = hashOtp(otp);
+    pending.otpExpiresAt = new Date(Date.now() + OTP_TTL_MS);
+    pending.lastOtpSentAt = new Date();
+    pending.attempts = 0;
+    await pending.save();
+
+    await this.mailService.sendOtpEmail(email, otp, pending.name);
+  }
+
+  /** Seconds still remaining on the resend cooldown (0 if it has elapsed). */
+  private resendCooldownRemaining(lastSentAt: Date | null): number {
+    if (!lastSentAt) return 0;
+    const elapsed = Date.now() - lastSentAt.getTime();
+    const remaining = OTP_RESEND_COOLDOWN_MS - elapsed;
+    return remaining > 0 ? Math.ceil(remaining / 1000) : 0;
+  }
+
+  private isWithinResendCooldown(lastSentAt: Date | null): boolean {
+    return this.resendCooldownRemaining(lastSentAt) > 0;
   }
 
   /**
@@ -264,6 +322,7 @@ export class AuthService {
           companyName: data.companyName,
           otpHash: hashOtp(otp),
           otpExpiresAt,
+          lastOtpSentAt: new Date(),
           attempts: 0,
         },
         { upsert: true, new: true, setDefaultsOnInsert: true },

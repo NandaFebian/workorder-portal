@@ -404,11 +404,67 @@ describe('AuthService', () => {
     });
   });
 
+  describe('resendOtp()', () => {
+    const email = 'new@example.com';
+
+    const makePending = (overrides: any = {}) => ({
+      _id: 'pending-1',
+      email,
+      name: 'New User',
+      otpHash: hashOtp('111111'),
+      otpExpiresAt: new Date(Date.now() + 60_000),
+      lastOtpSentAt: new Date(Date.now() - 120_000), // cooldown elapsed
+      attempts: 3,
+      save: jest.fn().mockResolvedValue(undefined),
+      ...overrides,
+    });
+
+    it('issues a fresh code, resets attempts, and re-emails it', async () => {
+      const pending = makePending();
+      pendingModel.findOne.mockReturnValue(asExec(pending));
+
+      await authService.resendOtp({ email });
+
+      // Old code is invalidated and the attempt counter is cleared.
+      expect(pending.otpHash).not.toBe(hashOtp('111111'));
+      expect(pending.attempts).toBe(0);
+      expect(pending.otpExpiresAt.getTime()).toBeGreaterThan(Date.now());
+      expect(pending.save).toHaveBeenCalled();
+
+      expect(mailService.sendOtpEmail).toHaveBeenCalledWith(
+        email,
+        expect.any(String),
+        'New User',
+      );
+    });
+
+    it('rejects with 429 while the resend cooldown is active', async () => {
+      const pending = makePending({ lastOtpSentAt: new Date() });
+      pendingModel.findOne.mockReturnValue(asExec(pending));
+
+      await expect(authService.resendOtp({ email })).rejects.toThrow(
+        HttpException,
+      );
+      expect(pending.save).not.toHaveBeenCalled();
+      expect(mailService.sendOtpEmail).not.toHaveBeenCalled();
+    });
+
+    it('throws when there is no pending registration', async () => {
+      pendingModel.findOne.mockReturnValue(asExec(null));
+
+      await expect(authService.resendOtp({ email })).rejects.toThrow(
+        /No pending registration/i,
+      );
+      expect(mailService.sendOtpEmail).not.toHaveBeenCalled();
+    });
+  });
+
   describe('forgotPassword()', () => {
     it('stores a reset code and emails it when the account exists', async () => {
       jest
         .spyOn(usersService, 'findOneByEmail')
         .mockResolvedValue({ name: 'Nanda' } as any);
+      passwordResetModel.findOne.mockReturnValue(asExec(null));
       passwordResetModel.findOneAndUpdate.mockReturnValue(asExec({}));
 
       await authService.forgotPassword({ email: 'User@Example.com' });
@@ -434,6 +490,24 @@ describe('AuthService', () => {
         authService.forgotPassword({ email: 'ghost@example.com' }),
       ).resolves.toBeUndefined();
 
+      expect(passwordResetModel.findOneAndUpdate).not.toHaveBeenCalled();
+      expect(mailService.sendPasswordResetEmail).not.toHaveBeenCalled();
+    });
+
+    it('skips the resend silently while the cooldown is active', async () => {
+      jest
+        .spyOn(usersService, 'findOneByEmail')
+        .mockResolvedValue({ name: 'Nanda' } as any);
+      // A code was just sent — resending now would spam the inbox.
+      passwordResetModel.findOne.mockReturnValue(
+        asExec({ lastOtpSentAt: new Date() }),
+      );
+
+      await expect(
+        authService.forgotPassword({ email: 'user@example.com' }),
+      ).resolves.toBeUndefined();
+
+      // Silent (not an error) so it can't be used to probe for pending resets.
       expect(passwordResetModel.findOneAndUpdate).not.toHaveBeenCalled();
       expect(mailService.sendPasswordResetEmail).not.toHaveBeenCalled();
     });

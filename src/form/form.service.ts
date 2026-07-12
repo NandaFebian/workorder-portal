@@ -158,6 +158,30 @@ export class FormsService {
     return template ?? null;
   }
 
+  /**
+   * Batch form of findTemplateByIdIncludeDeleted: resolves many templates in a
+   * single query, keyed by id. Lets callers that hydrate a list of documents
+   * avoid one round-trip per row.
+   */
+  async findTemplatesByIdsIncludeDeleted(
+    ids: string[],
+  ): Promise<Map<string, FormTemplateDocument>> {
+    const uniqueIds = [...new Set(ids.filter(Boolean))];
+    if (uniqueIds.length === 0) return new Map();
+
+    const templates = await this.formTemplateModel
+      .find({ _id: { $in: uniqueIds }, deletedAt: { $exists: true } })
+      .populate({
+        path: 'position',
+        select: '-createdAt -updatedAt -deletedAt -__v',
+      })
+      .exec();
+
+    return new Map(
+      templates.map((t) => [(t._id as any).toString(), t]),
+    );
+  }
+
   async updateTemplate(
     formId: string,
     dto: UpdateFormTemplateDto,

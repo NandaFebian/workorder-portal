@@ -268,11 +268,28 @@ export class DashboardService {
     if (!companyId) throw new ForbiddenException('No company associated');
     const compIdObj = new Types.ObjectId(companyId as unknown as string);
 
-    // forms_stat
-    const forms = await this.formTemplateModel.aggregate([
-      { $match: { companyId: compIdObj } },
-      { $group: { _id: { $eq: ['$deletedAt', null] }, count: { $sum: 1 } } },
+    // These four aggregations are independent and hit different collections,
+    // so they are issued concurrently rather than one after another.
+    const [forms, services, positions, employees] = await Promise.all([
+      // forms_stat
+      this.formTemplateModel.aggregate([
+        { $match: { companyId: compIdObj } },
+        { $group: { _id: { $eq: ['$deletedAt', null] }, count: { $sum: 1 } } },
+      ]),
+      // services_stat
+      this.serviceModel.aggregate([
+        { $match: { companyId: compIdObj } },
+        { $group: { _id: '$isActive', count: { $sum: 1 } } },
+      ]),
+      // positions_stat
+      this.positionModel.aggregate([
+        { $match: { companyId: compIdObj } },
+        { $group: { _id: '$isActive', count: { $sum: 1 } } },
+      ]),
+      // employees_stat
+      this.employeeStatsAggregate(compIdObj),
     ]);
+
     let activeForms = 0;
     let inActiveForms = 0;
     forms.forEach((f) => {
@@ -280,11 +297,6 @@ export class DashboardService {
       else inActiveForms = f.count;
     });
 
-    // services_stat
-    const services = await this.serviceModel.aggregate([
-      { $match: { companyId: compIdObj } },
-      { $group: { _id: '$isActive', count: { $sum: 1 } } },
-    ]);
     let activeServices = 0;
     let inActiveServices = 0;
     services.forEach((s) => {
@@ -292,11 +304,6 @@ export class DashboardService {
       else inActiveServices = s.count;
     });
 
-    // positions_stat
-    const positions = await this.positionModel.aggregate([
-      { $match: { companyId: compIdObj } },
-      { $group: { _id: '$isActive', count: { $sum: 1 } } },
-    ]);
     let activePositions = 0;
     let inActivePositions = 0;
     positions.forEach((p) => {
@@ -304,16 +311,6 @@ export class DashboardService {
       else inActivePositions = p.count;
     });
 
-    // employees_stat
-    const employees = await this.userModel.aggregate([
-      { $match: { companyId: compIdObj } },
-      {
-        $group: {
-          _id: { active: { $eq: ['$deletedAt', null] }, role: '$role' },
-          count: { $sum: 1 },
-        },
-      },
-    ]);
     let activeEmployees = 0;
     let inActiveEmployees = 0;
     let managersCount = 0;
@@ -353,5 +350,18 @@ export class DashboardService {
         staffs_count: staffsCount,
       },
     };
+  }
+
+  /** employees_stat: counts grouped by active flag + role. */
+  private employeeStatsAggregate(compIdObj: Types.ObjectId) {
+    return this.userModel.aggregate([
+      { $match: { companyId: compIdObj } },
+      {
+        $group: {
+          _id: { active: { $eq: ['$deletedAt', null] }, role: '$role' },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
   }
 }

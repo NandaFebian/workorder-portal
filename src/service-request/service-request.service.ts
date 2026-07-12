@@ -558,7 +558,7 @@ export class ServiceRequestService {
       .lean()
       .exec();
 
-    return Promise.all(requests.map((r) => this._enrichAndFormat(r, false)));
+    return this._enrichAndFormatMany(requests, false);
   }
 
   async findOneForClient(id: string, userId: string): Promise<any> {
@@ -614,31 +614,39 @@ export class ServiceRequestService {
     // Department Manager: only see SRs whose service configs all match their position
     let filtered = requests;
     if (user && DepartmentAuthHelper.isDepartmentManager(user)) {
-      const serviceCache = new Map<string, any>();
-      filtered = [];
-      for (const r of requests) {
+      // Load every referenced service in one query instead of one per request.
+      const svcIds = [
+        ...new Set(
+          requests
+            .map(
+              (r) => r.serviceId?._id?.toString() ?? r.serviceId?.toString(),
+            )
+            .filter(Boolean),
+        ),
+      ];
+
+      const services = await this.serviceModel
+        .find({ _id: { $in: svcIds }, deletedAt: { $exists: true } })
+        .exec();
+      const serviceById = new Map(
+        services.map((svc) => [(svc._id as any).toString(), svc]),
+      );
+
+      filtered = requests.filter((r) => {
         const svcId = r.serviceId?._id?.toString() ?? r.serviceId?.toString();
-        if (!svcId) continue;
-        if (!serviceCache.has(svcId)) {
-          const svc = await this.serviceModel
-            .findOne({ _id: svcId, deletedAt: { $exists: true } })
-            .exec();
-          serviceCache.set(svcId, svc);
-        }
-        const svc = serviceCache.get(svcId);
-        if (
-          svc &&
+        if (!svcId) return false;
+        const svc = serviceById.get(svcId);
+        return (
+          !!svc &&
           DepartmentAuthHelper.canManageService(
             user,
             svc.workOrdersConfig ?? [],
           )
-        ) {
-          filtered.push(r);
-        }
-      }
+        );
+      });
     }
 
-    return Promise.all(filtered.map((r) => this._enrichAndFormat(r, true)));
+    return this._enrichAndFormatMany(filtered, true);
   }
 
   async findOneInternal(id: string, user?: AuthenticatedUser): Promise<any> {
@@ -712,88 +720,118 @@ export class ServiceRequestService {
     }
   }
 
-  private async _enrichAndFormat(sr: any, isInternal = true): Promise<any> {
-    const doc = sr.toObject ? sr.toObject() : sr;
+  /**
+   * Hydrates and formats a list of service requests.
+   *
+   * Everything the rows need (intake/review templates and their submissions) is
+   * fetched in two batched queries up front, instead of ~4 queries per row.
+   * A list of N requests costs 2 round-trips rather than 4N.
+   */
+  private async _enrichAndFormatMany(
+    srs: any[],
+    isInternal = true,
+  ): Promise<any[]> {
+    if (srs.length === 0) return [];
 
-    // Hydrate intake form
-    let intakeForm: any = null;
-    if (doc.intakeFormId) {
-      try {
-        const template = await this.formsService.findTemplateByIdIncludeDeleted(
-          doc.intakeFormId.toString(),
-        );
-        if (template) {
-          const t = template.toObject ? template.toObject() : template;
-          intakeForm = {
-            _id: t._id,
-            title: t.title,
-            description: t.description,
-            formType: t.formType,
-            fields: t.fields,
-          };
-        }
-      } catch {}
+    const docs = srs.map((sr) => (sr.toObject ? sr.toObject() : sr));
+
+    const formIds: string[] = [];
+    for (const doc of docs) {
+      if (doc.intakeFormId) formIds.push(doc.intakeFormId.toString());
+      if (doc.reviewFormId) formIds.push(doc.reviewFormId.toString());
     }
+    const srIds = docs.map((doc) => doc._id);
 
-    // Hydrate review form
-    let reviewForm: any = null;
-    if (doc.reviewFormId) {
-      try {
-        const template = await this.formsService.findTemplateByIdIncludeDeleted(
-          doc.reviewFormId.toString(),
-        );
-        if (template) {
-          const t = template.toObject ? template.toObject() : template;
-          reviewForm = {
-            _id: t._id,
-            title: t.title,
-            description: t.description,
-            formType: t.formType,
-            fields: t.fields,
-          };
-        }
-      } catch {}
-    }
-
-    // Find intake and review submissions in parallel
-    const [intakeSubmission, reviewSubmission] = await Promise.all([
-      doc.intakeFormId
-        ? this.submissionModel
-            .findOne({
-              ownerId: doc._id,
-              formId: doc.intakeFormId,
-              submissionType: SubmissionType.Intake,
-            })
-            .lean()
-            .exec()
-        : Promise.resolve(null),
-      doc.reviewFormId
-        ? this.submissionModel
-            .findOne({
-              ownerId: doc._id,
-              formId: doc.reviewFormId,
-              submissionType: SubmissionType.Review,
-            })
-            .lean()
-            .exec()
-        : Promise.resolve(null),
+    const [templateById, submissions] = await Promise.all([
+      this.formsService.findTemplatesByIdsIncludeDeleted(formIds),
+      this.submissionModel
+        .find({
+          ownerId: { $in: srIds },
+          submissionType: {
+            $in: [SubmissionType.Intake, SubmissionType.Review],
+          },
+        })
+        .lean()
+        .exec(),
     ]);
 
-    return isInternal
-      ? SrResponseUtil.formatInternal(
-          doc,
-          intakeForm,
-          reviewForm,
-          intakeSubmission,
-          reviewSubmission,
-        )
-      : SrResponseUtil.formatPublic(
-          doc,
-          intakeForm,
-          reviewForm,
-          intakeSubmission,
-          reviewSubmission,
-        );
+    // Index submissions by (owner, form, type) — the same triple the per-row
+    // findOne used to match on. First match wins, mirroring findOne.
+    const submissionByKey = new Map<string, any>();
+    for (const sub of submissions) {
+      const key = this._submissionKey(
+        sub.ownerId,
+        sub.formId,
+        sub.submissionType,
+      );
+      if (!submissionByKey.has(key)) submissionByKey.set(key, sub);
+    }
+
+    return docs.map((doc) => {
+      const intakeForm = doc.intakeFormId
+        ? this._pickFormFields(templateById.get(doc.intakeFormId.toString()))
+        : null;
+      const reviewForm = doc.reviewFormId
+        ? this._pickFormFields(templateById.get(doc.reviewFormId.toString()))
+        : null;
+
+      const intakeSubmission = doc.intakeFormId
+        ? (submissionByKey.get(
+            this._submissionKey(
+              doc._id,
+              doc.intakeFormId,
+              SubmissionType.Intake,
+            ),
+          ) ?? null)
+        : null;
+      const reviewSubmission = doc.reviewFormId
+        ? (submissionByKey.get(
+            this._submissionKey(
+              doc._id,
+              doc.reviewFormId,
+              SubmissionType.Review,
+            ),
+          ) ?? null)
+        : null;
+
+      return isInternal
+        ? SrResponseUtil.formatInternal(
+            doc,
+            intakeForm,
+            reviewForm,
+            intakeSubmission,
+            reviewSubmission,
+          )
+        : SrResponseUtil.formatPublic(
+            doc,
+            intakeForm,
+            reviewForm,
+            intakeSubmission,
+            reviewSubmission,
+          );
+    });
+  }
+
+  private _submissionKey(ownerId: any, formId: any, type: any): string {
+    return [ownerId, formId, type].map((v) => String(v)).join('|');
+  }
+
+  private _pickFormFields(template: any): any {
+    if (!template) return null;
+    const t = template.toObject ? template.toObject() : template;
+    return {
+      _id: t._id,
+      title: t.title,
+      description: t.description,
+      formType: t.formType,
+      fields: t.fields,
+    };
+  }
+
+  // Single-document path delegates to the batch one so the two cannot drift.
+  private async _enrichAndFormat(sr: any, isInternal = true): Promise<any> {
+    const [formatted] = await this._enrichAndFormatMany([sr], isInternal);
+    return formatted;
   }
 
   async updateSRStatusSystemically(

@@ -96,13 +96,13 @@ export class MailService {
   }
 
   private buildOtpMessage(otp: string, name?: string) {
-    const greeting = name ? `Hi ${name},` : 'Hi,';
+    const greeting = name ? `Halo ${name},` : 'Halo,';
     return {
-      subject: `${otp} is your verification code`,
+      subject: `${otp} adalah kode verifikasi Anda`,
       text:
         `${greeting}\n\n` +
-        `Your verification code is ${otp}. It will expire in ${OTP_TTL_MINUTES} minutes.\n\n` +
-        `If you did not request this, you can safely ignore this email.`,
+        `Kode verifikasi Anda adalah ${otp}. Kode ini berlaku selama ${OTP_TTL_MINUTES} menit.\n\n` +
+        `Jika Anda tidak meminta kode ini, abaikan saja email ini.`,
       html: this.buildOtpHtml(otp, greeting),
     };
   }
@@ -128,10 +128,10 @@ export class MailService {
           <td style="padding:36px 36px 32px 36px;font-family:${font};">
             <p style="margin:0 0 28px 0;font-size:13px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:${PRIMARY};">${brand}</p>
 
-            <h1 style="margin:0 0 14px 0;font-size:22px;line-height:1.35;font-weight:700;color:${TEXT};">Verify your email</h1>
+            <h1 style="margin:0 0 14px 0;font-size:22px;line-height:1.35;font-weight:700;color:${TEXT};">Verifikasi email Anda</h1>
 
             <p style="margin:0 0 8px 0;font-size:15px;line-height:1.6;color:${TEXT};">${greeting}</p>
-            <p style="margin:0 0 26px 0;font-size:15px;line-height:1.6;color:${MUTED};">Use the verification code below to finish creating your account.</p>
+            <p style="margin:0 0 26px 0;font-size:15px;line-height:1.6;color:${MUTED};">Gunakan kode verifikasi di bawah ini untuk menyelesaikan pendaftaran akun Anda.</p>
 
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${TINT};border:1px solid ${TINT_BORDER};border-radius:10px;">
               <tr>
@@ -141,11 +141,11 @@ export class MailService {
               </tr>
             </table>
 
-            <p style="margin:22px 0 0 0;font-size:14px;line-height:1.6;color:${MUTED};">This code expires in <strong style="color:${TEXT};">${OTP_TTL_MINUTES} minutes</strong>. Please don't share it with anyone.</p>
+            <p style="margin:22px 0 0 0;font-size:14px;line-height:1.6;color:${MUTED};">Kode ini berlaku selama <strong style="color:${TEXT};">${OTP_TTL_MINUTES} menit</strong>. Jangan bagikan kode ini kepada siapa pun.</p>
 
             <div style="margin:28px 0 0 0;border-top:1px solid ${BORDER};"></div>
 
-            <p style="margin:20px 0 0 0;font-size:13px;line-height:1.6;color:${MUTED};">If you didn't request this, you can safely ignore this email.</p>
+            <p style="margin:20px 0 0 0;font-size:13px;line-height:1.6;color:${MUTED};">Jika Anda tidak meminta kode ini, abaikan saja email ini.</p>
           </td>
         </tr>
       </table>

@@ -15,6 +15,8 @@ import { LoginAuthDto } from './dto/login-auth.dto';
 import { RegisterAuthDto } from './dto/register-auth.dto';
 import { RegisterCompanyDto } from './dto/register-company.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import * as bcrypt from 'bcrypt';
 import { Role } from '../common/enums/role.enum';
@@ -22,6 +24,10 @@ import {
   PendingRegistration,
   PendingRegistrationDocument,
 } from './schemas/pending-registration.schema';
+import {
+  PasswordReset,
+  PasswordResetDocument,
+} from './schemas/password-reset.schema';
 import { MailService } from '../mail/mail.service';
 import {
   generateOtp,
@@ -41,8 +47,83 @@ export class AuthService {
     private jwtService: JwtService,
     @InjectModel(PendingRegistration.name)
     private pendingModel: Model<PendingRegistrationDocument>,
+    @InjectModel(PasswordReset.name)
+    private passwordResetModel: Model<PasswordResetDocument>,
     private mailService: MailService,
   ) {}
+
+  /**
+   * Step 1 (forgot password): email a reset OTP if the address belongs to a
+   * real account. Callers must not be told whether the email exists, so this
+   * resolves silently either way — the controller returns a fixed message.
+   */
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<void> {
+    const email = forgotPasswordDto.email.toLowerCase().trim();
+    const user = await this.usersService.findOneByEmail(email);
+
+    // Unknown email: do nothing, but don't reveal that to the caller.
+    if (!user) return;
+
+    const otp = generateOtp();
+
+    // Upsert so a repeat request replaces any previous code.
+    await this.passwordResetModel
+      .findOneAndUpdate(
+        { email },
+        {
+          email,
+          otpHash: hashOtp(otp),
+          otpExpiresAt: new Date(Date.now() + OTP_TTL_MS),
+          attempts: 0,
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true },
+      )
+      .exec();
+
+    await this.mailService.sendPasswordResetEmail(email, otp, user.name);
+  }
+
+  /**
+   * Step 2 (forgot password): verify the emailed OTP and set the new password.
+   */
+  async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<void> {
+    const email = resetPasswordDto.email.toLowerCase().trim();
+    const reset = await this.passwordResetModel.findOne({ email }).exec();
+
+    if (!reset) {
+      throw new BadRequestException(
+        'No password reset request found for this email. Please request a new code.',
+      );
+    }
+
+    if (reset.otpExpiresAt.getTime() < Date.now()) {
+      await this.passwordResetModel.deleteOne({ _id: reset._id }).exec();
+      throw new BadRequestException(
+        'OTP has expired. Please request a new code.',
+      );
+    }
+
+    if (reset.attempts >= OTP_MAX_ATTEMPTS) {
+      await this.passwordResetModel.deleteOne({ _id: reset._id }).exec();
+      throw new BadRequestException(
+        'Too many invalid attempts. Please request a new code.',
+      );
+    }
+
+    if (hashOtp(resetPasswordDto.otp) !== reset.otpHash) {
+      reset.attempts += 1;
+      await reset.save();
+      throw new BadRequestException('Invalid OTP.');
+    }
+
+    await this.usersService.updatePasswordByEmail(
+      email,
+      resetPasswordDto.newPassword,
+    );
+
+    // Single-use: burn the code once it has been redeemed.
+    await this.passwordResetModel.deleteOne({ _id: reset._id }).exec();
+  }
 
   /**
    * Step 1 (user signup): validate, store a pending registration, and email an

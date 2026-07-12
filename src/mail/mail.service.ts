@@ -11,6 +11,15 @@ import { OTP_TTL_MINUTES } from '../common/utils/otp.util';
 
 type MailMode = 'resend' | 'smtp' | 'console';
 
+/** Per-email wording; the layout/branding around it is shared. */
+interface OtpEmailCopy {
+  subject: string;
+  heading: string;
+  intro: string;
+  textIntro: string;
+  outro: string;
+}
+
 // Email palette, led by the app's primary brand colour (lightPrimary).
 const PRIMARY = '#0978FE';
 const TINT = '#EEF5FF'; // primary at ~6% — code block background
@@ -80,7 +89,48 @@ export class MailService {
    * Sends a registration OTP to the given email address.
    */
   async sendOtpEmail(to: string, otp: string, name?: string): Promise<void> {
-    const { subject, text, html } = this.buildOtpMessage(otp, name);
+    await this.sendOtp(to, otp, name, {
+      subject: `${otp} adalah kode verifikasi Anda`,
+      heading: 'Verifikasi email Anda',
+      intro:
+        'Gunakan kode verifikasi di bawah ini untuk menyelesaikan pendaftaran akun Anda.',
+      textIntro: `Kode verifikasi Anda adalah ${otp}.`,
+      outro: 'Jika Anda tidak meminta kode ini, abaikan saja email ini.',
+    });
+  }
+
+  /**
+   * Sends a password-reset OTP to the given email address.
+   */
+  async sendPasswordResetEmail(
+    to: string,
+    otp: string,
+    name?: string,
+  ): Promise<void> {
+    await this.sendOtp(to, otp, name, {
+      subject: `${otp} adalah kode reset password Anda`,
+      heading: 'Reset password Anda',
+      intro:
+        'Gunakan kode di bawah ini untuk mengatur ulang password akun Anda.',
+      textIntro: `Kode reset password Anda adalah ${otp}.`,
+      outro:
+        'Jika Anda tidak meminta reset password, abaikan saja email ini. Password Anda tidak akan berubah.',
+    });
+  }
+
+  private async sendOtp(
+    to: string,
+    otp: string,
+    name: string | undefined,
+    copy: OtpEmailCopy,
+  ): Promise<void> {
+    const greeting = name ? `Halo ${name},` : 'Halo,';
+    const subject = copy.subject;
+    const text =
+      `${greeting}\n\n` +
+      `${copy.textIntro} Kode ini berlaku selama ${OTP_TTL_MINUTES} menit.\n\n` +
+      `${copy.outro}`;
+    const html = this.buildOtpHtml(otp, greeting, copy);
 
     if (this.mode === 'console') {
       this.logger.log(`[DEV] OTP for ${to}: ${otp}`);
@@ -95,23 +145,15 @@ export class MailService {
     await this.sendViaSmtp(to, subject, text, html);
   }
 
-  private buildOtpMessage(otp: string, name?: string) {
-    const greeting = name ? `Halo ${name},` : 'Halo,';
-    return {
-      subject: `${otp} adalah kode verifikasi Anda`,
-      text:
-        `${greeting}\n\n` +
-        `Kode verifikasi Anda adalah ${otp}. Kode ini berlaku selama ${OTP_TTL_MINUTES} menit.\n\n` +
-        `Jika Anda tidak meminta kode ini, abaikan saja email ini.`,
-      html: this.buildOtpHtml(otp, greeting),
-    };
-  }
-
   /**
    * Table-based, fully inlined HTML — the only layout that renders reliably
    * across Gmail / Outlook / Apple Mail (no flexbox, grid, or external CSS).
    */
-  private buildOtpHtml(otp: string, greeting: string): string {
+  private buildOtpHtml(
+    otp: string,
+    greeting: string,
+    copy: OtpEmailCopy,
+  ): string {
     const brand = this.fromName;
     const font =
       "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
@@ -128,10 +170,10 @@ export class MailService {
           <td style="padding:36px 36px 32px 36px;font-family:${font};">
             <p style="margin:0 0 28px 0;font-size:13px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:${PRIMARY};">${brand}</p>
 
-            <h1 style="margin:0 0 14px 0;font-size:22px;line-height:1.35;font-weight:700;color:${TEXT};">Verifikasi email Anda</h1>
+            <h1 style="margin:0 0 14px 0;font-size:22px;line-height:1.35;font-weight:700;color:${TEXT};">${copy.heading}</h1>
 
             <p style="margin:0 0 8px 0;font-size:15px;line-height:1.6;color:${TEXT};">${greeting}</p>
-            <p style="margin:0 0 26px 0;font-size:15px;line-height:1.6;color:${MUTED};">Gunakan kode verifikasi di bawah ini untuk menyelesaikan pendaftaran akun Anda.</p>
+            <p style="margin:0 0 26px 0;font-size:15px;line-height:1.6;color:${MUTED};">${copy.intro}</p>
 
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${TINT};border:1px solid ${TINT_BORDER};border-radius:10px;">
               <tr>
@@ -145,7 +187,7 @@ export class MailService {
 
             <div style="margin:28px 0 0 0;border-top:1px solid ${BORDER};"></div>
 
-            <p style="margin:20px 0 0 0;font-size:13px;line-height:1.6;color:${MUTED};">Jika Anda tidak meminta kode ini, abaikan saja email ini.</p>
+            <p style="margin:20px 0 0 0;font-size:13px;line-height:1.6;color:${MUTED};">${copy.outro}</p>
           </td>
         </tr>
       </table>

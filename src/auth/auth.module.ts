@@ -12,6 +12,10 @@ import {
   PendingRegistration,
   PendingRegistrationSchema,
 } from './schemas/pending-registration.schema';
+import {
+  PasswordReset,
+  PasswordResetSchema,
+} from './schemas/password-reset.schema';
 import { AuthGuard } from './guards/auth.guard';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { PositionsModule } from '../positions/positions.module';
@@ -38,6 +42,7 @@ import { MailModule } from '../mail/mail.module';
     MongooseModule.forFeature([
       { name: ActiveToken.name, schema: ActiveTokenSchema },
       { name: PendingRegistration.name, schema: PendingRegistrationSchema },
+      { name: PasswordReset.name, schema: PasswordResetSchema },
     ]),
   ],
   controllers: [AuthController],

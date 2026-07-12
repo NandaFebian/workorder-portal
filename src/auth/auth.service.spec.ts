@@ -10,6 +10,7 @@ import { HttpException, HttpStatus, BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { Role } from '../common/enums/role.enum';
 import { PendingRegistration } from './schemas/pending-registration.schema';
+import { PasswordReset } from './schemas/password-reset.schema';
 import { MailService } from '../mail/mail.service';
 import { hashOtp } from '../common/utils/otp.util';
 import { encrypt } from '../common/utils/crypto.util';
@@ -25,6 +26,7 @@ describe('AuthService', () => {
   let usersService: UsersService;
   let jwtService: JwtService;
   let pendingModel: any;
+  let passwordResetModel: any;
   let mailService: MailService;
 
   beforeEach(async () => {
@@ -37,6 +39,7 @@ describe('AuthService', () => {
             findOneByEmail: jest.fn(),
             create: jest.fn(),
             updateCompanyId: jest.fn(),
+            updatePasswordByEmail: jest.fn(),
           },
         },
         {
@@ -64,9 +67,18 @@ describe('AuthService', () => {
           },
         },
         {
+          provide: getModelToken(PasswordReset.name),
+          useValue: {
+            findOne: jest.fn(),
+            findOneAndUpdate: jest.fn(),
+            deleteOne: jest.fn(),
+          },
+        },
+        {
           provide: MailService,
           useValue: {
             sendOtpEmail: jest.fn().mockResolvedValue(undefined),
+            sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
           },
         },
       ],
@@ -76,6 +88,7 @@ describe('AuthService', () => {
     usersService = module.get<UsersService>(UsersService);
     jwtService = module.get<JwtService>(JwtService);
     pendingModel = module.get(getModelToken(PendingRegistration.name));
+    passwordResetModel = module.get(getModelToken(PasswordReset.name));
     mailService = module.get<MailService>(MailService);
   });
 
@@ -388,6 +401,112 @@ describe('AuthService', () => {
       await expect(authService.verifyOtp({ email, otp })).rejects.toThrow(
         /No pending registration/i,
       );
+    });
+  });
+
+  describe('forgotPassword()', () => {
+    it('stores a reset code and emails it when the account exists', async () => {
+      jest
+        .spyOn(usersService, 'findOneByEmail')
+        .mockResolvedValue({ name: 'Nanda' } as any);
+      passwordResetModel.findOneAndUpdate.mockReturnValue(asExec({}));
+
+      await authService.forgotPassword({ email: 'User@Example.com' });
+
+      const [filter, update, options] =
+        passwordResetModel.findOneAndUpdate.mock.calls[0];
+      expect(filter.email).toBe('user@example.com'); // normalized
+      expect(update.otpHash).toEqual(expect.any(String));
+      expect(update.attempts).toBe(0);
+      expect(options.upsert).toBe(true);
+
+      expect(mailService.sendPasswordResetEmail).toHaveBeenCalledWith(
+        'user@example.com',
+        expect.any(String),
+        'Nanda',
+      );
+    });
+
+    it('silently does nothing for an unknown email (no account enumeration)', async () => {
+      jest.spyOn(usersService, 'findOneByEmail').mockResolvedValue(null);
+
+      await expect(
+        authService.forgotPassword({ email: 'ghost@example.com' }),
+      ).resolves.toBeUndefined();
+
+      expect(passwordResetModel.findOneAndUpdate).not.toHaveBeenCalled();
+      expect(mailService.sendPasswordResetEmail).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('resetPassword()', () => {
+    const email = 'user@example.com';
+    const otp = '654321';
+
+    const makeReset = (overrides: any = {}) => ({
+      _id: 'reset-1',
+      email,
+      otpHash: hashOtp(otp),
+      otpExpiresAt: new Date(Date.now() + 60_000),
+      attempts: 0,
+      save: jest.fn().mockResolvedValue(undefined),
+      ...overrides,
+    });
+
+    it('sets the new password on a valid OTP and burns the code', async () => {
+      const reset = makeReset();
+      passwordResetModel.findOne.mockReturnValue(asExec(reset));
+      passwordResetModel.deleteOne.mockReturnValue(asExec({}));
+      const updateSpy = jest
+        .spyOn(usersService, 'updatePasswordByEmail')
+        .mockResolvedValue(undefined);
+
+      await authService.resetPassword({ email, otp, newPassword: 'newpass123' });
+
+      expect(updateSpy).toHaveBeenCalledWith(email, 'newpass123');
+      expect(passwordResetModel.deleteOne).toHaveBeenCalledWith({
+        _id: 'reset-1',
+      });
+    });
+
+    it('increments attempts and throws on an invalid OTP', async () => {
+      const reset = makeReset();
+      passwordResetModel.findOne.mockReturnValue(asExec(reset));
+      const updateSpy = jest.spyOn(usersService, 'updatePasswordByEmail');
+
+      await expect(
+        authService.resetPassword({
+          email,
+          otp: '000000',
+          newPassword: 'newpass123',
+        }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(reset.attempts).toBe(1);
+      expect(reset.save).toHaveBeenCalled();
+      expect(updateSpy).not.toHaveBeenCalled();
+    });
+
+    it('throws and clears the request when the OTP has expired', async () => {
+      const reset = makeReset({ otpExpiresAt: new Date(Date.now() - 1000) });
+      passwordResetModel.findOne.mockReturnValue(asExec(reset));
+      passwordResetModel.deleteOne.mockReturnValue(asExec({}));
+
+      await expect(
+        authService.resetPassword({ email, otp, newPassword: 'newpass123' }),
+      ).rejects.toThrow(/expired/i);
+
+      expect(passwordResetModel.deleteOne).toHaveBeenCalledWith({
+        _id: 'reset-1',
+      });
+    });
+
+    it('throws when there is no reset request', async () => {
+      passwordResetModel.findOne.mockReturnValue(asExec(null));
+
+      await expect(
+        authService.resetPassword({ email, otp, newPassword: 'newpass123' }),
+      ).rejects.toThrow(/No password reset request/i);
     });
   });
 });

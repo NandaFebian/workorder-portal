@@ -17,6 +17,8 @@ import { RegisterAuthDto } from './dto/register-auth.dto';
 import { RegisterCompanyDto } from './dto/register-company.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ResponseUtil } from 'src/common/utils/response.util';
 
 @UseGuards(ThrottlerGuard)
@@ -27,31 +29,50 @@ export class AuthController {
   @Post('register')
   @HttpCode(HttpStatus.OK)
   async register(@Body() registerAuthDto: RegisterAuthDto) {
-    const data = await this.authService.register(registerAuthDto);
+    await this.authService.register(registerAuthDto);
     return ResponseUtil.success(
       'Verification code sent to your email. Please verify to complete registration.',
-      data,
+      null,
     );
   }
 
   @Post('register-company')
   @HttpCode(HttpStatus.OK)
   async registerCompany(@Body() registerCompanyDto: RegisterCompanyDto) {
-    const data = await this.authService.registerCompany(registerCompanyDto);
+    await this.authService.registerCompany(registerCompanyDto);
     return ResponseUtil.success(
       'Verification code sent to your email. Please verify to complete registration.',
-      data,
+      null,
     );
   }
 
   @Post('verify-otp')
   @HttpCode(HttpStatus.OK)
   async verifyOtp(@Body() verifyOtpDto: VerifyOtpDto) {
-    const data = await this.authService.verifyOtp(verifyOtpDto);
+    await this.authService.verifyOtp(verifyOtpDto);
     return ResponseUtil.success(
       'Email verified and account created successfully',
-      data,
+      null,
     );
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    await this.authService.forgotPassword(forgotPasswordDto);
+    // Always the same response, whether or not the email exists, so this
+    // endpoint cannot be used to discover which emails are registered.
+    return ResponseUtil.success(
+      'If the email is registered, a password reset code has been sent to it.',
+      null,
+    );
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    await this.authService.resetPassword(resetPasswordDto);
+    return ResponseUtil.success('Password has been reset successfully', null);
   }
 
   @Post('login')

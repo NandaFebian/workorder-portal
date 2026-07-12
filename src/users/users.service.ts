@@ -27,6 +27,28 @@ export class UsersService {
     return newUser.save();
   }
 
+  /**
+   * Overwrites a user's password by email (used by the forgot-password flow,
+   * which has already been authorised by an emailed OTP — so no current
+   * password is required). The value is hashed by the schema's pre-save hook.
+   */
+  async updatePasswordByEmail(
+    email: string,
+    newPassword: string,
+  ): Promise<void> {
+    const user = await this.userModel
+      .findOne({ email })
+      .select('+password')
+      .exec();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    user.password = newPassword;
+    await user.save();
+  }
+
   async updateCompanyId(
     userId: Types.ObjectId,
     companyId: Types.ObjectId,

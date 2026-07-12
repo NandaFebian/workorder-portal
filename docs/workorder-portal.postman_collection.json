@@ -1,0 +1,3648 @@
+{
+  "info": {
+    "_postman_id": "workorder-portal-collection",
+    "name": "Work Order Portal API",
+    "description": "Auto-generated Postman collection for the Work Order Portal (NestJS) API.\n\n## Getting started\n1. Set the `base_url` variable (default `http://localhost:3000`).\n2. Run **Auth → Login** (or **Register company + owner**). A test script stores the JWT in the `{{token}}` collection variable.\n3. All other requests inherit Bearer auth from the collection using `{{token}}` — no manual copying needed.\n\n## Automation\nMany list/create requests include test scripts that capture resource IDs (`companyId`, `serviceId`, `formId`, `workOrderId`, etc.) into collection variables, so downstream requests can be run in sequence with the Collection Runner.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "companyId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "employeeUserId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "invitationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "positionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "formId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "serviceId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "servicePriceId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "serviceRequestId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "workOrderId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "workReportId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "membershipCodeId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "externalAccountId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "faqDocsId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "companyTypeId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "serviceTemplateId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "_postman_id": "wo-0001",
+      "item": [
+        {
+          "name": "Root / Health check",
+          "_postman_id": "wo-0000",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "_postman_id": "wo-0007",
+      "item": [
+        {
+          "name": "Register user (client / staff)",
+          "_postman_id": "wo-0002",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "role must be one of: client, unassigned_staff",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Client\",\n  \"email\": \"client@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"client\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register company + owner",
+          "_postman_id": "wo-0003",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/register-company",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register-company"
+              ]
+            },
+            "description": "Registers a company and its owner. Saves {{token}} and {{companyId}} automatically.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Owner Name\",\n  \"email\": \"owner@example.com\",\n  \"password\": \"password123\",\n  \"companyName\": \"My Company\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json && json.data) {",
+                  "  const raw = json.data.token || json.data.accessToken || '';",
+                  "  const jwt = String(raw).replace(/^Bearer\\s+/i, '');",
+                  "  if (jwt) {",
+                  "    pm.collectionVariables.set('token', jwt);",
+                  "    console.log('Auth token saved to {{token}}');",
+                  "  }",
+                  "  const companyId = (json.data.user && json.data.user.company && json.data.user.company._id) || (json.data.company && json.data.company._id);",
+                  "  if (companyId) pm.collectionVariables.set('companyId', companyId);",
+                  "}",
+                  "pm.test('Status is 2xx', () => pm.expect(pm.response.code).to.be.below(300));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "_postman_id": "wo-0004",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Saves the returned JWT into the {{token}} collection variable (used by all authenticated requests).",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner@example.com\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json && json.data) {",
+                  "  const raw = json.data.token || json.data.accessToken || '';",
+                  "  const jwt = String(raw).replace(/^Bearer\\s+/i, '');",
+                  "  if (jwt) {",
+                  "    pm.collectionVariables.set('token', jwt);",
+                  "    console.log('Auth token saved to {{token}}');",
+                  "  }",
+                  "  const companyId = (json.data.user && json.data.user.company && json.data.user.company._id) || (json.data.company && json.data.company._id);",
+                  "  if (companyId) pm.collectionVariables.set('companyId', companyId);",
+                  "}",
+                  "pm.test('Status is 2xx', () => pm.expect(pm.response.code).to.be.below(300));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "_postman_id": "wo-0005",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get profile",
+          "_postman_id": "wo-0006",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "profile"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Authentication flow. Run \"Login\" (or \"Register company + owner\") first — it stores the JWT in {{token}} for every other request."
+    },
+    {
+      "name": "Users",
+      "_postman_id": "wo-0010",
+      "item": [
+        {
+          "name": "Get my profile",
+          "_postman_id": "wo-0008",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/users/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update my profile",
+          "_postman_id": "wo-0009",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"email\": \"owner@example.com\",\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"newpassword123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Companies (Public)",
+      "_postman_id": "wo-0014",
+      "item": [
+        {
+          "name": "List public companies",
+          "_postman_id": "wo-0011",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/public/companies?keyword=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "public",
+                "companies"
+              ],
+              "query": [
+                {
+                  "key": "keyword",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Optional. Matches company name OR public service title."
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data[0] && json.data[0]._id; if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('companyId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get company by id",
+          "_postman_id": "wo-0012",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/public/companies/{{companyId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "public",
+                "companies",
+                "{{companyId}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get company services",
+          "_postman_id": "wo-0013",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/public/companies/{{companyId}}/services",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "public",
+                "companies",
+                "{{companyId}}",
+                "services"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Company (Internal)",
+      "_postman_id": "wo-0026",
+      "item": [
+        {
+          "name": "Get my company",
+          "_postman_id": "wo-0015",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "company"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && (json.data._id || (json.data.company && json.data.company._id)); if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('companyId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get company detail",
+          "_postman_id": "wo-0016",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company/detail",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "company",
+                "detail"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update company",
+          "_postman_id": "wo-0017",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/company",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "company"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My Company\",\n  \"address\": \"Jl. Example No. 1\",\n  \"description\": \"Company description\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete company",
+          "_postman_id": "wo-0018",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "company"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Invite employees",
+          "_postman_id": "wo-0019",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/company/invite",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "company",
+                "invite"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invites\": [\n    {\n      \"email\": \"manager@example.com\",\n      \"role\": \"company_manager\"\n    },\n    {\n      \"email\": \"staff@example.com\",\n      \"role\": \"company_staff\",\n      \"positionId\": \"{{positionId}}\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Invitation history",
+          "_postman_id": "wo-0020",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company/invitations/history",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "company",
+                "invitations",
+                "history"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List employees",
+          "_postman_id": "wo-0021",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company/employees",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "company",
+                "employees"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data[0] && (json.data[0]._id || json.data[0].userId); if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('employeeUserId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get employee by id",
+          "_postman_id": "wo-0022",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company/employees/{{employeeUserId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "company",
+                "employees",
+                "{{employeeUserId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Kick employee",
+          "_postman_id": "wo-0023",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/company/employees",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "company",
+                "employees"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"staff@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get integration config",
+          "_postman_id": "wo-0024",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company/integration-config",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "company",
+                "integration-config"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update integration config",
+          "_postman_id": "wo-0025",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/company/integration-config",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "company",
+                "integration-config"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"external_login_url\": \"https://external.example.com/login\",\n  \"external_verify_url\": \"https://external.example.com/verify\",\n  \"external_check_memberships_url\": \"https://external.example.com/memberships\",\n  \"external_check_status_url\": \"https://external.example.com/status\",\n  \"secret_key\": \"super-secret-key\",\n  \"is_integration_active\": true,\n  \"integration_type\": \"external_system\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Invitations",
+      "_postman_id": "wo-0031",
+      "item": [
+        {
+          "name": "Pending invitations",
+          "_postman_id": "wo-0027",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/invitations/pending",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "invitations",
+                "pending"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data[0] && json.data[0]._id; if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('invitationId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Accept invitation",
+          "_postman_id": "wo-0028",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/invitations/{{invitationId}}/accept",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "invitations",
+                "{{invitationId}}",
+                "accept"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reject invitation",
+          "_postman_id": "wo-0029",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/invitations/{{invitationId}}/reject",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "invitations",
+                "{{invitationId}}",
+                "reject"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete invitation",
+          "_postman_id": "wo-0030",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/invitations/{{invitationId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "invitations",
+                "{{invitationId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Positions",
+      "_postman_id": "wo-0037",
+      "item": [
+        {
+          "name": "List positions",
+          "_postman_id": "wo-0032",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/positions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "positions"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data[0] && json.data[0]._id; if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('positionId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get position by id",
+          "_postman_id": "wo-0033",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/positions/{{positionId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "positions",
+                "{{positionId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create position",
+          "_postman_id": "wo-0034",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/positions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "positions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Technician\",\n  \"description\": \"Field technician\",\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data._id; if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('positionId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update position",
+          "_postman_id": "wo-0035",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/positions/{{positionId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "positions",
+                "{{positionId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Senior Technician\",\n  \"description\": \"Updated\",\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete position",
+          "_postman_id": "wo-0036",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/positions/{{positionId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "positions",
+                "{{positionId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Forms",
+      "_postman_id": "wo-0044",
+      "item": [
+        {
+          "name": "Create form template",
+          "_postman_id": "wo-0038",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/forms",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "forms"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Intake Form\",\n  \"description\": \"Customer intake form\",\n  \"formType\": \"intake\",\n  \"fields\": [\n    {\n      \"order\": 1,\n      \"label\": \"Full name\",\n      \"type\": \"text\",\n      \"required\": true,\n      \"placeholder\": \"Your name\"\n    },\n    {\n      \"order\": 2,\n      \"label\": \"Quantity\",\n      \"type\": \"number\",\n      \"required\": true,\n      \"min\": 1,\n      \"max\": 10\n    },\n    {\n      \"order\": 3,\n      \"label\": \"Service type\",\n      \"type\": \"dropdown\",\n      \"required\": true,\n      \"options\": [\n        {\n          \"key\": \"a\",\n          \"value\": \"Option A\"\n        },\n        {\n          \"key\": \"b\",\n          \"value\": \"Option B\"\n        }\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data._id; if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('formId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List form templates",
+          "_postman_id": "wo-0039",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/forms",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "forms"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data[0] && json.data[0]._id; if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('formId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get form template by id",
+          "_postman_id": "wo-0040",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/forms/{{formId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "forms",
+                "{{formId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update form template",
+          "_postman_id": "wo-0041",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/forms/{{formId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "forms",
+                "{{formId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Intake Form (v2)\",\n  \"formType\": \"intake\",\n  \"fields\": [\n    {\n      \"order\": 1,\n      \"label\": \"Full name\",\n      \"type\": \"text\",\n      \"required\": true\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit form(s)",
+          "_postman_id": "wo-0042",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/forms/submissions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "forms",
+                "submissions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"submissions\": [\n    {\n      \"formId\": \"{{formId}}\",\n      \"fieldsData\": [\n        {\n          \"order\": 1,\n          \"value\": \"Example answer\"\n        }\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete form template",
+          "_postman_id": "wo-0043",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/forms/{{formId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "forms",
+                "{{formId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Services (Internal)",
+      "_postman_id": "wo-0053",
+      "item": [
+        {
+          "name": "Create service",
+          "_postman_id": "wo-0045",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/services",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "services"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Servis Motor\",\n  \"description\": \"Motorcycle service\",\n  \"accessType\": \"public\",\n  \"isActive\": true,\n  \"draftingWorkOrderType\": \"manual\",\n  \"serviceRequestConfig\": {\n    \"intakeFormId\": \"{{formId}}\",\n    \"reviewFormId\": null,\n    \"serviceRequestApprovalAccessType\": \"auto\",\n    \"reviewNeed\": false\n  },\n  \"workOrdersConfig\": [\n    {\n      \"positionId\": \"{{positionId}}\",\n      \"workOrderFormId\": \"{{formId}}\",\n      \"workReportFormId\": \"{{formId}}\",\n      \"workOrderApprovalAccessType\": \"auto\",\n      \"workReportApprovalAccessType\": \"auto\",\n      \"minStaff\": 1,\n      \"maxStaff\": 3,\n      \"showReportToRequester\": false\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data._id; if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('serviceId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List services",
+          "_postman_id": "wo-0046",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/services",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "services"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data[0] && json.data[0]._id; if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('serviceId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get service by id",
+          "_postman_id": "wo-0047",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/services/{{serviceId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "services",
+                "{{serviceId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get service intake form",
+          "_postman_id": "wo-0048",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/services/{{serviceId}}/intake-form",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "services",
+                "{{serviceId}}",
+                "intake-form"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create work order from service",
+          "_postman_id": "wo-0049",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/services/{{serviceId}}/create-work-order",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "services",
+                "{{serviceId}}",
+                "create-work-order"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceRequestId\": \"{{serviceRequestId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update service",
+          "_postman_id": "wo-0050",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/services/{{serviceId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "services",
+                "{{serviceId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Servis Motor Premium\",\n  \"description\": \"Updated\",\n  \"accessType\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Toggle service active",
+          "_postman_id": "wo-0051",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/services/{{serviceId}}/toggle-active",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "services",
+                "{{serviceId}}",
+                "toggle-active"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete service",
+          "_postman_id": "wo-0052",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/services/{{serviceId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "services",
+                "{{serviceId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Services (Public)",
+      "_postman_id": "wo-0057",
+      "item": [
+        {
+          "name": "List public services by company",
+          "_postman_id": "wo-0054",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/public/services/company/{{companyId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "public",
+                "services",
+                "company",
+                "{{companyId}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data[0] && json.data[0]._id; if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('serviceId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get public service by id",
+          "_postman_id": "wo-0055",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/public/services/{{serviceId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "public",
+                "services",
+                "{{serviceId}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get public service intake form",
+          "_postman_id": "wo-0056",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/public/services/{{serviceId}}/intake-form",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "public",
+                "services",
+                "{{serviceId}}",
+                "intake-form"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Service Price",
+      "_postman_id": "wo-0062",
+      "item": [
+        {
+          "name": "List service prices",
+          "_postman_id": "wo-0058",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service-price",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "service-price"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data[0] && json.data[0]._id; if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('servicePriceId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create service price",
+          "_postman_id": "wo-0059",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/service-price",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "service-price"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceId\": \"{{serviceId}}\",\n  \"price\": 150000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data._id; if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('servicePriceId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update service price",
+          "_postman_id": "wo-0060",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/service-price/{{servicePriceId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "service-price",
+                "{{servicePriceId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 175000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete service price",
+          "_postman_id": "wo-0061",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service-price/{{servicePriceId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "service-price",
+                "{{servicePriceId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Service Requests (Public)",
+      "_postman_id": "wo-0069",
+      "item": [
+        {
+          "name": "Submit intake (create service request)",
+          "_postman_id": "wo-0063",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/service-requests/service/{{serviceId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "service-requests",
+                "service",
+                "{{serviceId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"formId\": \"{{formId}}\",\n  \"fieldsData\": [\n    {\n      \"order\": 1,\n      \"value\": \"Example answer\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && (json.data._id || json.data.id); if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('serviceRequestId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sent service requests",
+          "_postman_id": "wo-0064",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service-requests/sent",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "service-requests",
+                "sent"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data[0] && json.data[0]._id; if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('serviceRequestId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get service request by id",
+          "_postman_id": "wo-0065",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service-requests/{{serviceRequestId}}?notificationId=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "service-requests",
+                "{{serviceRequestId}}"
+              ],
+              "query": [
+                {
+                  "key": "notificationId",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit review",
+          "_postman_id": "wo-0066",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/service-requests/{{serviceRequestId}}/review",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "service-requests",
+                "{{serviceRequestId}}",
+                "review"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"formId\": \"{{formId}}\",\n  \"fieldsData\": [\n    {\n      \"order\": 1,\n      \"value\": \"Review answer\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel service request",
+          "_postman_id": "wo-0067",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service-requests/{{serviceRequestId}}/cancel",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "service-requests",
+                "{{serviceRequestId}}",
+                "cancel"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get service request report",
+          "_postman_id": "wo-0068",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service-requests/{{serviceRequestId}}/report",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "service-requests",
+                "{{serviceRequestId}}",
+                "report"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Service Requests (Internal)",
+      "_postman_id": "wo-0075",
+      "item": [
+        {
+          "name": "Inbox",
+          "_postman_id": "wo-0070",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service-requests/inbox",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "service-requests",
+                "inbox"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data[0] && json.data[0]._id; if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('serviceRequestId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approve",
+          "_postman_id": "wo-0071",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service-requests/{{serviceRequestId}}/approve",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "service-requests",
+                "{{serviceRequestId}}",
+                "approve"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reject",
+          "_postman_id": "wo-0072",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service-requests/{{serviceRequestId}}/reject",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "service-requests",
+                "{{serviceRequestId}}",
+                "reject"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Assign staff",
+          "_postman_id": "wo-0073",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/service-requests/{{serviceRequestId}}/assign-staff",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "service-requests",
+                "{{serviceRequestId}}",
+                "assign-staff"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"staff_pic\": \"staff@example.com\",\n  \"assign_staffs\": [\n    \"staff@example.com\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete",
+          "_postman_id": "wo-0074",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service-requests/{{serviceRequestId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "service-requests",
+                "{{serviceRequestId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Work Orders (Internal)",
+      "_postman_id": "wo-0094",
+      "item": [
+        {
+          "name": "Create work order",
+          "_postman_id": "wo-0076",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/workorders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workorders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceRequestId\": \"{{serviceRequestId}}\",\n  \"serviceId\": \"{{serviceId}}\",\n  \"description\": \"Work order description\",\n  \"priority\": \"medium\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data._id; if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('workOrderId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List work orders",
+          "_postman_id": "wo-0077",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/workorders?status=&priority=&startDate=&endDate=&assignedStaffId=&clientId=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workorders"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "priority",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "startDate",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "assignedStaffId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "clientId",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data[0] && json.data[0]._id; if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('workOrderId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get work order by id",
+          "_postman_id": "wo-0078",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/workorders/{{workOrderId}}?notificationId=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workorders",
+                "{{workOrderId}}"
+              ],
+              "query": [
+                {
+                  "key": "notificationId",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update work order",
+          "_postman_id": "wo-0079",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/workorders/{{workOrderId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workorders",
+                "{{workOrderId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Updated description\",\n  \"priority\": \"high\",\n  \"notes\": \"Some notes\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update work order status",
+          "_postman_id": "wo-0080",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/workorders/{{workOrderId}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workorders",
+                "{{workOrderId}}",
+                "status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_progress\",\n  \"reason\": \"Starting work\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Assign staffs",
+          "_postman_id": "wo-0081",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/workorders/{{workOrderId}}/assign-staffs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workorders",
+                "{{workOrderId}}",
+                "assign-staffs"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"staff_pic\": \"staff@example.com\",\n  \"assign_staffs\": [\n    \"staff@example.com\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Save submissions",
+          "_postman_id": "wo-0082",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/workorders/{{workOrderId}}/submissions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workorders",
+                "{{workOrderId}}",
+                "submissions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"formId\": \"{{formId}}\",\n  \"fieldsData\": [\n    {\n      \"order\": 1,\n      \"value\": \"Example answer\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark sent",
+          "_postman_id": "wo-0083",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/workorders/{{workOrderId}}/sent",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workorders",
+                "{{workOrderId}}",
+                "sent"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Approve",
+          "_postman_id": "wo-0084",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/workorders/{{workOrderId}}/approve",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workorders",
+                "{{workOrderId}}",
+                "approve"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reject",
+          "_postman_id": "wo-0085",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/workorders/{{workOrderId}}/reject",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workorders",
+                "{{workOrderId}}",
+                "reject"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Recreate",
+          "_postman_id": "wo-0086",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/workorders/{{workOrderId}}/recreate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workorders",
+                "{{workOrderId}}",
+                "recreate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel",
+          "_postman_id": "wo-0087",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/workorders/{{workOrderId}}/cancel",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workorders",
+                "{{workOrderId}}",
+                "cancel"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Start",
+          "_postman_id": "wo-0088",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/workorders/{{workOrderId}}/start",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workorders",
+                "{{workOrderId}}",
+                "start"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Complete",
+          "_postman_id": "wo-0089",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/workorders/{{workOrderId}}/complete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workorders",
+                "{{workOrderId}}",
+                "complete"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Fail",
+          "_postman_id": "wo-0090",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/workorders/{{workOrderId}}/fail",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workorders",
+                "{{workOrderId}}",
+                "fail"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"issue\": \"Reason for failure\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete",
+          "_postman_id": "wo-0091",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/workorders/{{workOrderId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workorders",
+                "{{workOrderId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get report",
+          "_postman_id": "wo-0092",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/workorders/{{workOrderId}}/report",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workorders",
+                "{{workOrderId}}",
+                "report"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit report form",
+          "_postman_id": "wo-0093",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/workorders/{{workOrderId}}/report",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workorders",
+                "{{workOrderId}}",
+                "report"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"formId\": \"{{formId}}\",\n  \"fieldsData\": [\n    {\n      \"order\": 1,\n      \"value\": \"Report answer\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Work Orders (Staff)",
+      "_postman_id": "wo-0097",
+      "item": [
+        {
+          "name": "List my work orders",
+          "_postman_id": "wo-0095",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/staff/work-orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "staff",
+                "work-orders"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data[0] && json.data[0]._id; if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('workOrderId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get work order by id",
+          "_postman_id": "wo-0096",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/staff/work-orders/{{workOrderId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "staff",
+                "work-orders",
+                "{{workOrderId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Work Reports",
+      "_postman_id": "wo-0106",
+      "item": [
+        {
+          "name": "Create work report",
+          "_postman_id": "wo-0098",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/workreports",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workreports"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workOrderId\": \"{{workOrderId}}\",\n  \"companyId\": \"{{companyId}}\",\n  \"reportFormId\": \"{{formId}}\",\n  \"status\": \"drafted\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data._id; if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('workReportId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get work report by id",
+          "_postman_id": "wo-0099",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/workreports/{{workReportId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workreports",
+                "{{workReportId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update work report",
+          "_postman_id": "wo-0100",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/workreports/{{workReportId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workreports",
+                "{{workReportId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"on_progress\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit work report form",
+          "_postman_id": "wo-0101",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/workreports/{{workReportId}}/submit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workreports",
+                "{{workReportId}}",
+                "submit"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"formId\": \"{{formId}}\",\n  \"fieldsData\": [\n    {\n      \"order\": 1,\n      \"value\": \"Report answer\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark sent",
+          "_postman_id": "wo-0102",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/workreports/{{workReportId}}/sent",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workreports",
+                "{{workReportId}}",
+                "sent"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Approve",
+          "_postman_id": "wo-0103",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/workreports/{{workReportId}}/approve",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workreports",
+                "{{workReportId}}",
+                "approve"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reject",
+          "_postman_id": "wo-0104",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/workreports/{{workReportId}}/reject",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workreports",
+                "{{workReportId}}",
+                "reject"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete",
+          "_postman_id": "wo-0105",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/workreports/{{workReportId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "workreports",
+                "{{workReportId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Memberships",
+      "_postman_id": "wo-0112",
+      "item": [
+        {
+          "name": "My memberships",
+          "_postman_id": "wo-0107",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/memberships",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "memberships"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List membership codes",
+          "_postman_id": "wo-0108",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/memberships/codes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "memberships",
+                "codes"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data[0] && json.data[0]._id; if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('membershipCodeId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Import membership codes (CSV)",
+          "_postman_id": "wo-0109",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/memberships/codes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "memberships",
+                "codes"
+              ]
+            },
+            "description": "Upload a CSV file under the \"file\" form-data key.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Claim membership code",
+          "_postman_id": "wo-0110",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/memberships/codes/claim",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "memberships",
+                "codes",
+                "claim"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"ABC123\",\n  \"companyId\": \"{{companyId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete membership code",
+          "_postman_id": "wo-0111",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/memberships/codes/{{membershipCodeId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "memberships",
+                "codes",
+                "{{membershipCodeId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Customer Pairing",
+      "_postman_id": "wo-0118",
+      "item": [
+        {
+          "name": "Start pairing",
+          "_postman_id": "wo-0113",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/customer-pairing/start",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "customer-pairing",
+                "start"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"redirect_base_url\": \"https://app.example.com/callback\",\n  \"company_id\": \"{{companyId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Complete pairing",
+          "_postman_id": "wo-0114",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/customer-pairing/complete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "customer-pairing",
+                "complete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company_id\": \"{{companyId}}\",\n  \"code\": \"auth-code\",\n  \"state\": \"state-token\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List paired accounts",
+          "_postman_id": "wo-0115",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/customer-pairing",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "customer-pairing"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data[0] && json.data[0]._id; if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('externalAccountId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get paired account by company",
+          "_postman_id": "wo-0116",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/customer-pairing/company/{{companyId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "customer-pairing",
+                "company",
+                "{{companyId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete paired account",
+          "_postman_id": "wo-0117",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/customer-pairing/{{externalAccountId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "customer-pairing",
+                "{{externalAccountId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "FAQ",
+      "_postman_id": "wo-0126",
+      "item": [
+        {
+          "name": "Ask FAQ (public)",
+          "_postman_id": "wo-0119",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/faq/ask",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "faq",
+                "ask"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyId\": \"{{companyId}}\",\n  \"question\": \"What are your opening hours?\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "FAQ history (public)",
+          "_postman_id": "wo-0120",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/faq/{{companyId}}/history",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "faq",
+                "{{companyId}}",
+                "history"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Toggle FAQ active",
+          "_postman_id": "wo-0121",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/faq/toggle-active",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "faq",
+                "toggle-active"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Upload text docs",
+          "_postman_id": "wo-0122",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/faq/text-docs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "faq",
+                "text-docs"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Opening hours\",\n  \"content\": \"We are open 9-5 Monday to Friday.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Upload PDF docs",
+          "_postman_id": "wo-0123",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/faq/pdf-docs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "faq",
+                "pdf-docs"
+              ]
+            },
+            "description": "Upload a PDF under the \"file\" form-data key.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "title",
+                  "value": "Company handbook",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List FAQ docs",
+          "_postman_id": "wo-0124",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/faq/docs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "faq",
+                "docs"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data[0] && (json.data[0].id || json.data[0]._id); if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('faqDocsId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete FAQ doc",
+          "_postman_id": "wo-0125",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/faq/docs/{{faqDocsId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "faq",
+                "docs",
+                "{{faqDocsId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "_postman_id": "wo-0130",
+      "item": [
+        {
+          "name": "List notifications",
+          "_postman_id": "wo-0127",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/notifications",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "notifications"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register FCM token",
+          "_postman_id": "wo-0128",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notifications/fcm-token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "notifications",
+                "fcm-token"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"fcm-device-token\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Unregister FCM token",
+          "_postman_id": "wo-0129",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notifications/fcm-token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "notifications",
+                "fcm-token"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"fcm-device-token\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "_postman_id": "wo-0134",
+      "item": [
+        {
+          "name": "Service request stats",
+          "_postman_id": "wo-0131",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/dashboard/service-request?period_type=monthly",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "dashboard",
+                "service-request"
+              ],
+              "query": [
+                {
+                  "key": "period_type",
+                  "value": "monthly",
+                  "disabled": false
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Work order stats",
+          "_postman_id": "wo-0132",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/dashboard/work-order?period_type=monthly",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "dashboard",
+                "work-order"
+              ],
+              "query": [
+                {
+                  "key": "period_type",
+                  "value": "monthly",
+                  "disabled": false
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Company stats",
+          "_postman_id": "wo-0133",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/dashboard/company",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "dashboard",
+                "company"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Template",
+      "_postman_id": "wo-0139",
+      "item": [
+        {
+          "name": "List company types",
+          "_postman_id": "wo-0135",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/template/company-type",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "template",
+                "company-type"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data[0] && (json.data[0].id || json.data[0]._id); if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('companyTypeId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List services by company type",
+          "_postman_id": "wo-0136",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/template/company-type/{{companyTypeId}}/services",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "template",
+                "company-type",
+                "{{companyTypeId}}",
+                "services"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data[0] && (json.data[0].id || json.data[0]._id); if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('serviceTemplateId', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get service template by id",
+          "_postman_id": "wo-0137",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/template/services/{{serviceTemplateId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "template",
+                "services",
+                "{{serviceTemplateId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Generate services from templates",
+          "_postman_id": "wo-0138",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/template/services/generate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "template",
+                "services",
+                "generate"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceTemplateIds\": [\n    \"{{serviceTemplateId}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Files",
+      "_postman_id": "wo-0141",
+      "item": [
+        {
+          "name": "Upload file",
+          "_postman_id": "wo-0140",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/files",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "files"
+              ]
+            },
+            "description": "Upload a file under the \"file\" form-data key.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

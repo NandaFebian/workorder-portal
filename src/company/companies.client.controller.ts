@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CompaniesClientService } from './companies.client.service';
@@ -18,8 +19,8 @@ export class CompaniesClientController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  async findAll() {
-    const companies = await this.clientService.findAllPublic();
+  async findAll(@Query('keyword') keyword?: string) {
+    const companies = await this.clientService.findAllPublic(keyword);
     return {
       message: 'Companies retrieved successfully',
       data: companies,

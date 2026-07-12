@@ -11,6 +11,7 @@ import {
   MembershipCode,
   MembershipCodeSchema,
 } from 'src/membership/schemas/membership.schema';
+import { Service, ServiceSchema } from 'src/service/schemas/service.schema';
 import { CompaniesInternalController } from './companies.internal.controller';
 import { CompaniesClientController } from './companies.client.controller';
 import { AuthModule } from 'src/auth/auth.module';
@@ -27,6 +28,7 @@ import { CompaniesClientService } from './companies.client.service';
       { name: Invitation.name, schema: InvitationSchema },
       { name: ExternalAccount.name, schema: ExternalAccountSchema },
       { name: MembershipCode.name, schema: MembershipCodeSchema },
+      { name: Service.name, schema: ServiceSchema },
     ]),
     UsersModule,
     forwardRef(() => AuthModule),

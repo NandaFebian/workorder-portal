@@ -48,6 +48,16 @@
       "type": "string"
     },
     {
+      "key": "invitationCodeId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "invitationCode",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "positionId",
       "value": "",
       "type": "string"
@@ -980,12 +990,231 @@
       ]
     },
     {
+      "name": "Invitation Codes",
+      "_postman_id": "wo-0039",
+      "item": [
+        {
+          "name": "Create invitation code",
+          "_postman_id": "wo-0032",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/company/invitation-codes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "company",
+                "invitation-codes"
+              ]
+            },
+            "description": "Owner/manager configures a shareable code. Same rules as a regular invite: role must be company_staff or company_manager, and positionId is required for staff. Omit \"code\" to auto-generate one; omit maxUses/expiresInDays for unlimited/never-expiring.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"company_staff\",\n  \"positionId\": \"{{positionId}}\",\n  \"maxUses\": 10,\n  \"expiresInDays\": 30\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data._id; if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('invitationCodeId', val); } catch (e) {}",
+                  "  try { const val = json.data && json.data.code; if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('invitationCode', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List invitation codes",
+          "_postman_id": "wo-0033",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company/invitation-codes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "company",
+                "invitation-codes"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = (() => { try { return pm.response.json(); } catch (e) { return null; } })();",
+                  "if (json) {",
+                  "  try { const val = json.data && json.data[0] && json.data[0]._id; if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('invitationCodeId', val); } catch (e) {}",
+                  "  try { const val = json.data && json.data[0] && json.data[0].code; if (val !== undefined && val !== null && val !== '') pm.collectionVariables.set('invitationCode', val); } catch (e) {}",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get invitation code",
+          "_postman_id": "wo-0034",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company/invitation-codes/{{invitationCodeId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "company",
+                "invitation-codes",
+                "{{invitationCodeId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update invitation code",
+          "_postman_id": "wo-0035",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/company/invitation-codes/{{invitationCodeId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "company",
+                "invitation-codes",
+                "{{invitationCodeId}}"
+              ]
+            },
+            "description": "Partial update. Role/position are re-validated together, so a partial change cannot leave an invalid config (e.g. staff with no position).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": false,\n  \"maxUses\": 20\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Revoke invitation code",
+          "_postman_id": "wo-0036",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company/invitation-codes/{{invitationCodeId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "company",
+                "invitation-codes",
+                "{{invitationCodeId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Preview code (before claiming)",
+          "_postman_id": "wo-0037",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/invitation-codes/{{invitationCode}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "invitation-codes",
+                "{{invitationCode}}"
+              ]
+            },
+            "description": "Shows which company / role / department the code grants, before claiming it."
+          },
+          "response": []
+        },
+        {
+          "name": "Claim invitation code",
+          "_postman_id": "wo-0038",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/invitation-codes/claim",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "invitation-codes",
+                "claim"
+              ]
+            },
+            "description": "Only a staff_unassigned user with no company may claim. On success their role + position are set from the code config and they join the company. Log in as the unassigned staff user first.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{invitationCode}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Invitation by unique code. An owner/manager configures a code carrying a role + department; any unassigned staff user can claim it to join with exactly that configuration."
+    },
+    {
       "name": "Invitations",
-      "_postman_id": "wo-0036",
+      "_postman_id": "wo-0044",
       "item": [
         {
           "name": "Pending invitations",
-          "_postman_id": "wo-0032",
+          "_postman_id": "wo-0040",
           "request": {
             "method": "GET",
             "header": [],
@@ -1018,7 +1247,7 @@
         },
         {
           "name": "Accept invitation",
-          "_postman_id": "wo-0033",
+          "_postman_id": "wo-0041",
           "request": {
             "method": "PUT",
             "header": [],
@@ -1038,7 +1267,7 @@
         },
         {
           "name": "Reject invitation",
-          "_postman_id": "wo-0034",
+          "_postman_id": "wo-0042",
           "request": {
             "method": "PUT",
             "header": [],
@@ -1058,7 +1287,7 @@
         },
         {
           "name": "Delete invitation",
-          "_postman_id": "wo-0035",
+          "_postman_id": "wo-0043",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -1079,11 +1308,11 @@
     },
     {
       "name": "Positions",
-      "_postman_id": "wo-0042",
+      "_postman_id": "wo-0050",
       "item": [
         {
           "name": "List positions",
-          "_postman_id": "wo-0037",
+          "_postman_id": "wo-0045",
           "request": {
             "method": "GET",
             "header": [],
@@ -1115,7 +1344,7 @@
         },
         {
           "name": "Get position by id",
-          "_postman_id": "wo-0038",
+          "_postman_id": "wo-0046",
           "request": {
             "method": "GET",
             "header": [],
@@ -1134,7 +1363,7 @@
         },
         {
           "name": "Create position",
-          "_postman_id": "wo-0039",
+          "_postman_id": "wo-0047",
           "request": {
             "method": "POST",
             "header": [
@@ -1180,7 +1409,7 @@
         },
         {
           "name": "Update position",
-          "_postman_id": "wo-0040",
+          "_postman_id": "wo-0048",
           "request": {
             "method": "PUT",
             "header": [
@@ -1213,7 +1442,7 @@
         },
         {
           "name": "Delete position",
-          "_postman_id": "wo-0041",
+          "_postman_id": "wo-0049",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -1234,11 +1463,11 @@
     },
     {
       "name": "Forms",
-      "_postman_id": "wo-0049",
+      "_postman_id": "wo-0057",
       "item": [
         {
           "name": "Create form template",
-          "_postman_id": "wo-0043",
+          "_postman_id": "wo-0051",
           "request": {
             "method": "POST",
             "header": [
@@ -1284,7 +1513,7 @@
         },
         {
           "name": "List form templates",
-          "_postman_id": "wo-0044",
+          "_postman_id": "wo-0052",
           "request": {
             "method": "GET",
             "header": [],
@@ -1316,7 +1545,7 @@
         },
         {
           "name": "Get form template by id",
-          "_postman_id": "wo-0045",
+          "_postman_id": "wo-0053",
           "request": {
             "method": "GET",
             "header": [],
@@ -1335,7 +1564,7 @@
         },
         {
           "name": "Update form template",
-          "_postman_id": "wo-0046",
+          "_postman_id": "wo-0054",
           "request": {
             "method": "PUT",
             "header": [
@@ -1368,7 +1597,7 @@
         },
         {
           "name": "Submit form(s)",
-          "_postman_id": "wo-0047",
+          "_postman_id": "wo-0055",
           "request": {
             "method": "POST",
             "header": [
@@ -1401,7 +1630,7 @@
         },
         {
           "name": "Delete form template",
-          "_postman_id": "wo-0048",
+          "_postman_id": "wo-0056",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -1422,11 +1651,11 @@
     },
     {
       "name": "Services (Internal)",
-      "_postman_id": "wo-0058",
+      "_postman_id": "wo-0066",
       "item": [
         {
           "name": "Create service",
-          "_postman_id": "wo-0050",
+          "_postman_id": "wo-0058",
           "request": {
             "method": "POST",
             "header": [
@@ -1472,7 +1701,7 @@
         },
         {
           "name": "List services",
-          "_postman_id": "wo-0051",
+          "_postman_id": "wo-0059",
           "request": {
             "method": "GET",
             "header": [],
@@ -1504,7 +1733,7 @@
         },
         {
           "name": "Get service by id",
-          "_postman_id": "wo-0052",
+          "_postman_id": "wo-0060",
           "request": {
             "method": "GET",
             "header": [],
@@ -1523,7 +1752,7 @@
         },
         {
           "name": "Get service intake form",
-          "_postman_id": "wo-0053",
+          "_postman_id": "wo-0061",
           "request": {
             "method": "GET",
             "header": [],
@@ -1543,7 +1772,7 @@
         },
         {
           "name": "Create work order from service",
-          "_postman_id": "wo-0054",
+          "_postman_id": "wo-0062",
           "request": {
             "method": "POST",
             "header": [
@@ -1577,7 +1806,7 @@
         },
         {
           "name": "Update service",
-          "_postman_id": "wo-0055",
+          "_postman_id": "wo-0063",
           "request": {
             "method": "PUT",
             "header": [
@@ -1610,7 +1839,7 @@
         },
         {
           "name": "Toggle service active",
-          "_postman_id": "wo-0056",
+          "_postman_id": "wo-0064",
           "request": {
             "method": "PATCH",
             "header": [
@@ -1644,7 +1873,7 @@
         },
         {
           "name": "Delete service",
-          "_postman_id": "wo-0057",
+          "_postman_id": "wo-0065",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -1665,11 +1894,11 @@
     },
     {
       "name": "Services (Public)",
-      "_postman_id": "wo-0062",
+      "_postman_id": "wo-0070",
       "item": [
         {
           "name": "List public services by company",
-          "_postman_id": "wo-0059",
+          "_postman_id": "wo-0067",
           "request": {
             "method": "GET",
             "header": [],
@@ -1707,7 +1936,7 @@
         },
         {
           "name": "Get public service by id",
-          "_postman_id": "wo-0060",
+          "_postman_id": "wo-0068",
           "request": {
             "method": "GET",
             "header": [],
@@ -1730,7 +1959,7 @@
         },
         {
           "name": "Get public service intake form",
-          "_postman_id": "wo-0061",
+          "_postman_id": "wo-0069",
           "request": {
             "method": "GET",
             "header": [],
@@ -1753,11 +1982,11 @@
     },
     {
       "name": "Service Price",
-      "_postman_id": "wo-0067",
+      "_postman_id": "wo-0075",
       "item": [
         {
           "name": "List service prices",
-          "_postman_id": "wo-0063",
+          "_postman_id": "wo-0071",
           "request": {
             "method": "GET",
             "header": [],
@@ -1789,7 +2018,7 @@
         },
         {
           "name": "Create service price",
-          "_postman_id": "wo-0064",
+          "_postman_id": "wo-0072",
           "request": {
             "method": "POST",
             "header": [
@@ -1835,7 +2064,7 @@
         },
         {
           "name": "Update service price",
-          "_postman_id": "wo-0065",
+          "_postman_id": "wo-0073",
           "request": {
             "method": "PUT",
             "header": [
@@ -1868,7 +2097,7 @@
         },
         {
           "name": "Delete service price",
-          "_postman_id": "wo-0066",
+          "_postman_id": "wo-0074",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -1889,11 +2118,11 @@
     },
     {
       "name": "Service Requests (Public)",
-      "_postman_id": "wo-0074",
+      "_postman_id": "wo-0082",
       "item": [
         {
           "name": "Submit intake (create service request)",
-          "_postman_id": "wo-0068",
+          "_postman_id": "wo-0076",
           "request": {
             "method": "POST",
             "header": [
@@ -1941,7 +2170,7 @@
         },
         {
           "name": "Sent service requests",
-          "_postman_id": "wo-0069",
+          "_postman_id": "wo-0077",
           "request": {
             "method": "GET",
             "header": [],
@@ -1974,7 +2203,7 @@
         },
         {
           "name": "Get service request by id",
-          "_postman_id": "wo-0070",
+          "_postman_id": "wo-0078",
           "request": {
             "method": "GET",
             "header": [],
@@ -2000,7 +2229,7 @@
         },
         {
           "name": "Submit review",
-          "_postman_id": "wo-0071",
+          "_postman_id": "wo-0079",
           "request": {
             "method": "POST",
             "header": [
@@ -2034,7 +2263,7 @@
         },
         {
           "name": "Cancel service request",
-          "_postman_id": "wo-0072",
+          "_postman_id": "wo-0080",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2054,7 +2283,7 @@
         },
         {
           "name": "Get service request report",
-          "_postman_id": "wo-0073",
+          "_postman_id": "wo-0081",
           "request": {
             "method": "GET",
             "header": [],
@@ -2076,11 +2305,11 @@
     },
     {
       "name": "Service Requests (Internal)",
-      "_postman_id": "wo-0080",
+      "_postman_id": "wo-0088",
       "item": [
         {
           "name": "Inbox",
-          "_postman_id": "wo-0075",
+          "_postman_id": "wo-0083",
           "request": {
             "method": "GET",
             "header": [],
@@ -2113,7 +2342,7 @@
         },
         {
           "name": "Approve",
-          "_postman_id": "wo-0076",
+          "_postman_id": "wo-0084",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2133,7 +2362,7 @@
         },
         {
           "name": "Reject",
-          "_postman_id": "wo-0077",
+          "_postman_id": "wo-0085",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2153,7 +2382,7 @@
         },
         {
           "name": "Assign staff",
-          "_postman_id": "wo-0078",
+          "_postman_id": "wo-0086",
           "request": {
             "method": "PATCH",
             "header": [
@@ -2187,7 +2416,7 @@
         },
         {
           "name": "Delete",
-          "_postman_id": "wo-0079",
+          "_postman_id": "wo-0087",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -2208,11 +2437,11 @@
     },
     {
       "name": "Work Orders (Internal)",
-      "_postman_id": "wo-0099",
+      "_postman_id": "wo-0107",
       "item": [
         {
           "name": "Create work order",
-          "_postman_id": "wo-0081",
+          "_postman_id": "wo-0089",
           "request": {
             "method": "POST",
             "header": [
@@ -2258,7 +2487,7 @@
         },
         {
           "name": "List work orders",
-          "_postman_id": "wo-0082",
+          "_postman_id": "wo-0090",
           "request": {
             "method": "GET",
             "header": [],
@@ -2322,7 +2551,7 @@
         },
         {
           "name": "Get work order by id",
-          "_postman_id": "wo-0083",
+          "_postman_id": "wo-0091",
           "request": {
             "method": "GET",
             "header": [],
@@ -2348,7 +2577,7 @@
         },
         {
           "name": "Update work order",
-          "_postman_id": "wo-0084",
+          "_postman_id": "wo-0092",
           "request": {
             "method": "PATCH",
             "header": [
@@ -2381,7 +2610,7 @@
         },
         {
           "name": "Update work order status",
-          "_postman_id": "wo-0085",
+          "_postman_id": "wo-0093",
           "request": {
             "method": "PATCH",
             "header": [
@@ -2415,7 +2644,7 @@
         },
         {
           "name": "Assign staffs",
-          "_postman_id": "wo-0086",
+          "_postman_id": "wo-0094",
           "request": {
             "method": "PUT",
             "header": [
@@ -2449,7 +2678,7 @@
         },
         {
           "name": "Save submissions",
-          "_postman_id": "wo-0087",
+          "_postman_id": "wo-0095",
           "request": {
             "method": "PUT",
             "header": [
@@ -2483,7 +2712,7 @@
         },
         {
           "name": "Mark sent",
-          "_postman_id": "wo-0088",
+          "_postman_id": "wo-0096",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2503,7 +2732,7 @@
         },
         {
           "name": "Approve",
-          "_postman_id": "wo-0089",
+          "_postman_id": "wo-0097",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2523,7 +2752,7 @@
         },
         {
           "name": "Reject",
-          "_postman_id": "wo-0090",
+          "_postman_id": "wo-0098",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2543,7 +2772,7 @@
         },
         {
           "name": "Recreate",
-          "_postman_id": "wo-0091",
+          "_postman_id": "wo-0099",
           "request": {
             "method": "POST",
             "header": [],
@@ -2563,7 +2792,7 @@
         },
         {
           "name": "Cancel",
-          "_postman_id": "wo-0092",
+          "_postman_id": "wo-0100",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2583,7 +2812,7 @@
         },
         {
           "name": "Start",
-          "_postman_id": "wo-0093",
+          "_postman_id": "wo-0101",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2603,7 +2832,7 @@
         },
         {
           "name": "Complete",
-          "_postman_id": "wo-0094",
+          "_postman_id": "wo-0102",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2623,7 +2852,7 @@
         },
         {
           "name": "Fail",
-          "_postman_id": "wo-0095",
+          "_postman_id": "wo-0103",
           "request": {
             "method": "PATCH",
             "header": [
@@ -2657,7 +2886,7 @@
         },
         {
           "name": "Delete",
-          "_postman_id": "wo-0096",
+          "_postman_id": "wo-0104",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -2676,7 +2905,7 @@
         },
         {
           "name": "Get report",
-          "_postman_id": "wo-0097",
+          "_postman_id": "wo-0105",
           "request": {
             "method": "GET",
             "header": [],
@@ -2696,7 +2925,7 @@
         },
         {
           "name": "Submit report form",
-          "_postman_id": "wo-0098",
+          "_postman_id": "wo-0106",
           "request": {
             "method": "PUT",
             "header": [
@@ -2732,11 +2961,11 @@
     },
     {
       "name": "Work Orders (Staff)",
-      "_postman_id": "wo-0102",
+      "_postman_id": "wo-0110",
       "item": [
         {
           "name": "List my work orders",
-          "_postman_id": "wo-0100",
+          "_postman_id": "wo-0108",
           "request": {
             "method": "GET",
             "header": [],
@@ -2769,7 +2998,7 @@
         },
         {
           "name": "Get work order by id",
-          "_postman_id": "wo-0101",
+          "_postman_id": "wo-0109",
           "request": {
             "method": "GET",
             "header": [],
@@ -2791,11 +3020,11 @@
     },
     {
       "name": "Work Reports",
-      "_postman_id": "wo-0111",
+      "_postman_id": "wo-0119",
       "item": [
         {
           "name": "Create work report",
-          "_postman_id": "wo-0103",
+          "_postman_id": "wo-0111",
           "request": {
             "method": "POST",
             "header": [
@@ -2841,7 +3070,7 @@
         },
         {
           "name": "Get work report by id",
-          "_postman_id": "wo-0104",
+          "_postman_id": "wo-0112",
           "request": {
             "method": "GET",
             "header": [],
@@ -2860,7 +3089,7 @@
         },
         {
           "name": "Update work report",
-          "_postman_id": "wo-0105",
+          "_postman_id": "wo-0113",
           "request": {
             "method": "PUT",
             "header": [
@@ -2893,7 +3122,7 @@
         },
         {
           "name": "Submit work report form",
-          "_postman_id": "wo-0106",
+          "_postman_id": "wo-0114",
           "request": {
             "method": "POST",
             "header": [
@@ -2927,7 +3156,7 @@
         },
         {
           "name": "Mark sent",
-          "_postman_id": "wo-0107",
+          "_postman_id": "wo-0115",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2947,7 +3176,7 @@
         },
         {
           "name": "Approve",
-          "_postman_id": "wo-0108",
+          "_postman_id": "wo-0116",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2967,7 +3196,7 @@
         },
         {
           "name": "Reject",
-          "_postman_id": "wo-0109",
+          "_postman_id": "wo-0117",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -2987,7 +3216,7 @@
         },
         {
           "name": "Delete",
-          "_postman_id": "wo-0110",
+          "_postman_id": "wo-0118",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -3008,11 +3237,11 @@
     },
     {
       "name": "Memberships",
-      "_postman_id": "wo-0117",
+      "_postman_id": "wo-0125",
       "item": [
         {
           "name": "My memberships",
-          "_postman_id": "wo-0112",
+          "_postman_id": "wo-0120",
           "request": {
             "method": "GET",
             "header": [],
@@ -3030,7 +3259,7 @@
         },
         {
           "name": "List membership codes",
-          "_postman_id": "wo-0113",
+          "_postman_id": "wo-0121",
           "request": {
             "method": "GET",
             "header": [],
@@ -3063,7 +3292,7 @@
         },
         {
           "name": "Import membership codes (CSV)",
-          "_postman_id": "wo-0114",
+          "_postman_id": "wo-0122",
           "request": {
             "method": "POST",
             "header": [],
@@ -3093,7 +3322,7 @@
         },
         {
           "name": "Claim membership code",
-          "_postman_id": "wo-0115",
+          "_postman_id": "wo-0123",
           "request": {
             "method": "POST",
             "header": [
@@ -3127,7 +3356,7 @@
         },
         {
           "name": "Delete membership code",
-          "_postman_id": "wo-0116",
+          "_postman_id": "wo-0124",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -3149,11 +3378,11 @@
     },
     {
       "name": "Customer Pairing",
-      "_postman_id": "wo-0123",
+      "_postman_id": "wo-0131",
       "item": [
         {
           "name": "Start pairing",
-          "_postman_id": "wo-0118",
+          "_postman_id": "wo-0126",
           "request": {
             "method": "POST",
             "header": [
@@ -3186,7 +3415,7 @@
         },
         {
           "name": "Complete pairing",
-          "_postman_id": "wo-0119",
+          "_postman_id": "wo-0127",
           "request": {
             "method": "POST",
             "header": [
@@ -3219,7 +3448,7 @@
         },
         {
           "name": "List paired accounts",
-          "_postman_id": "wo-0120",
+          "_postman_id": "wo-0128",
           "request": {
             "method": "GET",
             "header": [],
@@ -3251,7 +3480,7 @@
         },
         {
           "name": "Get paired account by company",
-          "_postman_id": "wo-0121",
+          "_postman_id": "wo-0129",
           "request": {
             "method": "GET",
             "header": [],
@@ -3271,7 +3500,7 @@
         },
         {
           "name": "Delete paired account",
-          "_postman_id": "wo-0122",
+          "_postman_id": "wo-0130",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -3292,11 +3521,11 @@
     },
     {
       "name": "FAQ",
-      "_postman_id": "wo-0131",
+      "_postman_id": "wo-0139",
       "item": [
         {
           "name": "Ask FAQ (public)",
-          "_postman_id": "wo-0124",
+          "_postman_id": "wo-0132",
           "request": {
             "method": "POST",
             "header": [
@@ -3332,7 +3561,7 @@
         },
         {
           "name": "FAQ history (public)",
-          "_postman_id": "wo-0125",
+          "_postman_id": "wo-0133",
           "request": {
             "method": "GET",
             "header": [],
@@ -3355,7 +3584,7 @@
         },
         {
           "name": "Toggle FAQ active",
-          "_postman_id": "wo-0126",
+          "_postman_id": "wo-0134",
           "request": {
             "method": "PUT",
             "header": [
@@ -3388,7 +3617,7 @@
         },
         {
           "name": "Upload text docs",
-          "_postman_id": "wo-0127",
+          "_postman_id": "wo-0135",
           "request": {
             "method": "POST",
             "header": [
@@ -3421,7 +3650,7 @@
         },
         {
           "name": "Upload PDF docs",
-          "_postman_id": "wo-0128",
+          "_postman_id": "wo-0136",
           "request": {
             "method": "POST",
             "header": [],
@@ -3456,7 +3685,7 @@
         },
         {
           "name": "List FAQ docs",
-          "_postman_id": "wo-0129",
+          "_postman_id": "wo-0137",
           "request": {
             "method": "GET",
             "header": [],
@@ -3489,7 +3718,7 @@
         },
         {
           "name": "Delete FAQ doc",
-          "_postman_id": "wo-0130",
+          "_postman_id": "wo-0138",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -3511,11 +3740,11 @@
     },
     {
       "name": "Notifications",
-      "_postman_id": "wo-0135",
+      "_postman_id": "wo-0143",
       "item": [
         {
           "name": "List notifications",
-          "_postman_id": "wo-0132",
+          "_postman_id": "wo-0140",
           "request": {
             "method": "GET",
             "header": [],
@@ -3533,7 +3762,7 @@
         },
         {
           "name": "Register FCM token",
-          "_postman_id": "wo-0133",
+          "_postman_id": "wo-0141",
           "request": {
             "method": "POST",
             "header": [
@@ -3566,7 +3795,7 @@
         },
         {
           "name": "Unregister FCM token",
-          "_postman_id": "wo-0134",
+          "_postman_id": "wo-0142",
           "request": {
             "method": "DELETE",
             "header": [
@@ -3601,11 +3830,11 @@
     },
     {
       "name": "Dashboard",
-      "_postman_id": "wo-0139",
+      "_postman_id": "wo-0147",
       "item": [
         {
           "name": "Service request stats",
-          "_postman_id": "wo-0136",
+          "_postman_id": "wo-0144",
           "request": {
             "method": "GET",
             "header": [],
@@ -3631,7 +3860,7 @@
         },
         {
           "name": "Work order stats",
-          "_postman_id": "wo-0137",
+          "_postman_id": "wo-0145",
           "request": {
             "method": "GET",
             "header": [],
@@ -3657,7 +3886,7 @@
         },
         {
           "name": "Company stats",
-          "_postman_id": "wo-0138",
+          "_postman_id": "wo-0146",
           "request": {
             "method": "GET",
             "header": [],
@@ -3678,11 +3907,11 @@
     },
     {
       "name": "Template",
-      "_postman_id": "wo-0144",
+      "_postman_id": "wo-0152",
       "item": [
         {
           "name": "List company types",
-          "_postman_id": "wo-0140",
+          "_postman_id": "wo-0148",
           "request": {
             "method": "GET",
             "header": [],
@@ -3715,7 +3944,7 @@
         },
         {
           "name": "List services by company type",
-          "_postman_id": "wo-0141",
+          "_postman_id": "wo-0149",
           "request": {
             "method": "GET",
             "header": [],
@@ -3750,7 +3979,7 @@
         },
         {
           "name": "Get service template by id",
-          "_postman_id": "wo-0142",
+          "_postman_id": "wo-0150",
           "request": {
             "method": "GET",
             "header": [],
@@ -3770,7 +3999,7 @@
         },
         {
           "name": "Generate services from templates",
-          "_postman_id": "wo-0143",
+          "_postman_id": "wo-0151",
           "request": {
             "method": "POST",
             "header": [
@@ -3806,11 +4035,11 @@
     },
     {
       "name": "Files",
-      "_postman_id": "wo-0146",
+      "_postman_id": "wo-0154",
       "item": [
         {
           "name": "Upload file",
-          "_postman_id": "wo-0145",
+          "_postman_id": "wo-0153",
           "request": {
             "method": "POST",
             "header": [],

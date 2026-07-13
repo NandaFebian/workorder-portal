@@ -205,6 +205,13 @@ export class AuthService {
    */
   async registerCompany(registerCompanyDto: RegisterCompanyDto) {
     await this.assertEmailAvailable(registerCompanyDto.email);
+    // Fail here rather than after the user has fetched and typed in an OTP,
+    // only to discover the company name was taken all along.
+    await this.companiesService.assertNameAvailable(
+      registerCompanyDto.companyName,
+      undefined,
+      'companyName',
+    );
     return this.createPendingAndSendOtp({
       type: 'company',
       name: registerCompanyDto.name,
@@ -358,11 +365,14 @@ export class AuthService {
       role: Role.CompanyOwner,
     });
 
-    const newCompany = await this.companiesService.create({
-      name: data.companyName,
-      address: null,
-      ownerId: newOwner._id as import('mongoose').Types.ObjectId,
-    });
+    const newCompany = await this.companiesService.create(
+      {
+        name: data.companyName,
+        address: null,
+        ownerId: newOwner._id as import('mongoose').Types.ObjectId,
+      },
+      'companyName',
+    );
 
     await this.usersService.updateCompanyId(
       newOwner._id as import('mongoose').Types.ObjectId,

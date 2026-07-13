@@ -4,6 +4,7 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  ConflictException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -51,11 +52,59 @@ export class CompaniesInternalService {
     private fcmService: FcmService,
   ) {}
 
-  async create(createCompanyDto: {
-    name: string;
-    address: string | null;
-    ownerId: Types.ObjectId;
-  }): Promise<CompanyDocument> {
+  /**
+   * Company names must be unique. The check is case-insensitive and ignores
+   * surrounding whitespace, so "PT Maju Jaya" and "pt maju  jaya " collide.
+   * Soft-deleted companies do not reserve their name.
+   *
+   * @param excludeId company allowed to keep its own name (used on update)
+   * @param field     which request field to attribute the error to
+   */
+  async assertNameAvailable(
+    name: string,
+    excludeId?: string,
+    field: string = 'name',
+  ): Promise<void> {
+    const trimmed = (name ?? '').trim();
+    if (!trimmed) return; // emptiness is the DTO's job, not ours
+
+    // Escape regex metacharacters so the name is matched literally, and anchor
+    // it so this is an exact (not partial) case-insensitive match.
+    const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    const query: any = {
+      name: { $regex: new RegExp(`^${escaped}$`, 'i') },
+      deletedAt: null,
+    };
+    if (excludeId) {
+      query._id = { $ne: new Types.ObjectId(excludeId) };
+    }
+
+    const existing = await this.companyModel
+      .findOne(query)
+      .select('_id')
+      .exec();
+
+    if (existing) {
+      throw new ConflictException({
+        message: 'Company name already registered',
+        code: 'COMPANY_NAME_EXISTS',
+        errors: {
+          field: [{ [field]: 'This company name is already in use' }],
+        },
+      });
+    }
+  }
+
+  async create(
+    createCompanyDto: {
+      name: string;
+      address: string | null;
+      ownerId: Types.ObjectId;
+    },
+    nameField: string = 'name',
+  ): Promise<CompanyDocument> {
+    await this.assertNameAvailable(createCompanyDto.name, undefined, nameField);
     const newCompany = new this.companyModel(createCompanyDto);
     return newCompany.save(); // __v: 0 akan ditambahkan otomatis
   }
@@ -71,6 +120,12 @@ export class CompaniesInternalService {
     const existingCompany = await this.companyModel.findById(id).exec();
     if (!existingCompany) {
       throw new NotFoundException(`Company with ID ${id} not found`);
+    }
+
+    // Renaming must not collide with another company. Passing `id` lets a
+    // company keep (or re-case) its own name.
+    if (updateCompanyDto.name !== undefined) {
+      await this.assertNameAvailable(updateCompanyDto.name, id);
     }
 
     Object.assign(existingCompany, updateCompanyDto);

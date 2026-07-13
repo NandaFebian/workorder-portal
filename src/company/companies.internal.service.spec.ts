@@ -4,9 +4,13 @@ import { CompaniesInternalService } from './companies.internal.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { Company } from './schemas/company.schemas';
 import { Invitation } from './schemas/invitation.schemas';
+import { ExternalAccount } from 'src/customer-pairing/schemas/external-account.schema';
+import { MembershipCode } from 'src/membership/schemas/membership.schema';
 import { UsersService } from '../users/users.service';
 import { PositionsService } from '../positions/positions.service';
+import { FcmService } from '../fcm/fcm.service';
 import {
+  ConflictException,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
@@ -57,6 +61,18 @@ describe('CompaniesInternalService', () => {
             findById: jest.fn(),
           },
         },
+        {
+          provide: getModelToken(ExternalAccount.name),
+          useValue: { find: jest.fn(), findOne: jest.fn() },
+        },
+        {
+          provide: getModelToken(MembershipCode.name),
+          useValue: { find: jest.fn(), findOne: jest.fn() },
+        },
+        {
+          provide: FcmService,
+          useValue: { sendToUser: jest.fn().mockResolvedValue(undefined) },
+        },
       ],
     }).compile();
 
@@ -85,6 +101,17 @@ describe('CompaniesInternalService', () => {
       id: '507f1f77bcf86cd799439050',
       name: 'Developer',
     };
+
+    beforeEach(() => {
+      // Second pass loads the company name for the notification, and cancels
+      // any superseded pending invitations.
+      companyModel.findById.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue(mockCompany),
+        }),
+      });
+      invitationModel.updateMany = jest.fn().mockResolvedValue({});
+    });
 
     it('UT-CMP-001: should invite single employee successfully', async () => {
       // Arrange
@@ -393,6 +420,126 @@ describe('CompaniesInternalService', () => {
       expect(createSpy).toHaveBeenCalled();
       const createCall = createSpy.mock.calls[0][0] as any;
       expect(createCall.status).toBe('pending');
+    });
+  });
+  describe('company name uniqueness', () => {
+    // findOne().select().exec() chain used by assertNameAvailable
+    const nameLookup = (result: any) => {
+      const chain: any = {};
+      chain.select = jest.fn().mockReturnValue(chain);
+      chain.exec = jest.fn().mockResolvedValue(result);
+      return chain;
+    };
+
+    const matchedName = () => companyModel.findOne.mock.calls[0][0].name.$regex;
+
+    it('rejects a create whose name is already taken', async () => {
+      companyModel.findOne.mockReturnValue(nameLookup({ _id: 'existing' }));
+
+      await expect(
+        service.create({
+          name: 'PT Maju Jaya',
+          address: null,
+          ownerId: new Types.ObjectId(),
+        }),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('matches case-insensitively and ignores surrounding whitespace', async () => {
+      companyModel.findOne.mockReturnValue(nameLookup({ _id: 'existing' }));
+
+      await expect(
+        service.create({
+          name: '  pt maju jaya  ',
+          address: null,
+          ownerId: new Types.ObjectId(),
+        }),
+      ).rejects.toThrow(ConflictException);
+
+      const regex: RegExp = matchedName();
+      expect(regex.test('PT Maju Jaya')).toBe(true); // different case -> collision
+      expect(regex.flags).toContain('i');
+    });
+
+    it('is an exact match, not a partial one', async () => {
+      companyModel.findOne.mockReturnValue(nameLookup(null));
+      (companyModel as any).prototype = undefined;
+
+      await service
+        .create({
+          name: 'Maju',
+          address: null,
+          ownerId: new Types.ObjectId(),
+        })
+        .catch(() => undefined); // creation itself is not what we assert here
+
+      const regex: RegExp = matchedName();
+      expect(regex.test('Maju')).toBe(true);
+      expect(regex.test('Maju Jaya')).toBe(false); // must not collide
+    });
+
+    it('escapes regex metacharacters in the name', async () => {
+      companyModel.findOne.mockReturnValue(nameLookup(null));
+
+      await service
+        .create({
+          name: 'A.B*C',
+          address: null,
+          ownerId: new Types.ObjectId(),
+        })
+        .catch(() => undefined);
+
+      const regex: RegExp = matchedName();
+      expect(regex.test('A.B*C')).toBe(true);
+      expect(regex.test('AXBXXC')).toBe(false); // metachars must be literal
+    });
+
+    it('rejects an update that renames onto another company', async () => {
+      const id = '507f1f77bcf86cd799439012';
+      companyModel.findById.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ _id: id, name: 'Old Name' }),
+      });
+      companyModel.findOne.mockReturnValue(nameLookup({ _id: 'someone-else' }));
+
+      await expect(service.update(id, { name: 'Taken Name' })).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('lets a company keep its own name on update', async () => {
+      const id = '507f1f77bcf86cd799439012';
+      const doc: any = {
+        _id: id,
+        name: 'Same Name',
+        save: jest.fn().mockResolvedValue({ _id: id, name: 'Same Name' }),
+      };
+      companyModel.findById.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(doc),
+      });
+      companyModel.findOne.mockReturnValue(nameLookup(null));
+
+      await service.update(id, { name: 'Same Name' });
+
+      // The company excludes itself from the collision check.
+      const filter = companyModel.findOne.mock.calls[0][0];
+      expect(filter._id.$ne.toString()).toBe(id);
+      expect(doc.save).toHaveBeenCalled();
+    });
+
+    it('skips the check when the update does not touch the name', async () => {
+      const id = '507f1f77bcf86cd799439012';
+      const doc: any = {
+        _id: id,
+        name: 'Same Name',
+        save: jest.fn().mockResolvedValue({}),
+      };
+      companyModel.findById.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(doc),
+      });
+
+      await service.update(id, { address: 'New address' });
+
+      expect(companyModel.findOne).not.toHaveBeenCalled();
     });
   });
 });

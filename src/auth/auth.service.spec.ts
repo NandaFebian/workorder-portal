@@ -6,7 +6,12 @@ import { UsersService } from '../users/users.service';
 import { CompaniesInternalService } from '../company/companies.internal.service';
 import { PositionsService } from '../positions/positions.service';
 import { JwtService } from '@nestjs/jwt';
-import { HttpException, HttpStatus, BadRequestException } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { Role } from '../common/enums/role.enum';
 import { PendingRegistration } from './schemas/pending-registration.schema';
@@ -28,6 +33,7 @@ describe('AuthService', () => {
   let pendingModel: any;
   let passwordResetModel: any;
   let mailService: MailService;
+  let companiesService: CompaniesInternalService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -46,6 +52,7 @@ describe('AuthService', () => {
           provide: CompaniesInternalService,
           useValue: {
             create: jest.fn(),
+            assertNameAvailable: jest.fn().mockResolvedValue(undefined),
           },
         },
         {
@@ -90,6 +97,9 @@ describe('AuthService', () => {
     pendingModel = module.get(getModelToken(PendingRegistration.name));
     passwordResetModel = module.get(getModelToken(PasswordReset.name));
     mailService = module.get<MailService>(MailService);
+    companiesService = module.get<CompaniesInternalService>(
+      CompaniesInternalService,
+    );
   });
 
   afterEach(() => {
@@ -401,6 +411,52 @@ describe('AuthService', () => {
       await expect(authService.verifyOtp({ email, otp })).rejects.toThrow(
         /No pending registration/i,
       );
+    });
+  });
+
+  describe('registerCompany() — company name checked before the OTP', () => {
+    const dto = {
+      name: 'Owner',
+      email: 'owner@example.com',
+      password: 'password123',
+      companyName: 'PT Maju Jaya',
+    };
+
+    it('does NOT send an OTP or store a pending signup when the name is taken', async () => {
+      jest.spyOn(usersService, 'findOneByEmail').mockResolvedValue(null);
+      jest
+        .spyOn(companiesService, 'assertNameAvailable')
+        .mockRejectedValue(
+          new ConflictException('Company name already registered'),
+        );
+
+      await expect(authService.registerCompany(dto as any)).rejects.toThrow(
+        ConflictException,
+      );
+
+      // The whole point: the user must not be made to fetch and type an OTP
+      // only to find out afterwards that the name was unavailable.
+      expect(mailService.sendOtpEmail).not.toHaveBeenCalled();
+      expect(pendingModel.findOneAndUpdate).not.toHaveBeenCalled();
+    });
+
+    it('checks the name before creating the pending registration', async () => {
+      jest.spyOn(usersService, 'findOneByEmail').mockResolvedValue(null);
+      const nameCheck = jest.spyOn(companiesService, 'assertNameAvailable');
+      pendingModel.findOneAndUpdate.mockReturnValue(asExec({}));
+
+      await authService.registerCompany(dto as any);
+
+      expect(nameCheck).toHaveBeenCalledWith(
+        'PT Maju Jaya',
+        undefined,
+        'companyName',
+      );
+      // Ordering: name validated first, pending stored + OTP sent afterwards.
+      expect(nameCheck.mock.invocationCallOrder[0]).toBeLessThan(
+        pendingModel.findOneAndUpdate.mock.invocationCallOrder[0],
+      );
+      expect(mailService.sendOtpEmail).toHaveBeenCalled();
     });
   });
 

@@ -67,12 +67,19 @@ export class InvitationCodesService {
       claimedBy: [],
     });
 
-    return this.findOneOrFail((created._id as any).toString(), companyId);
+    return this.findOneOrFail((created._id as any).toString(), companyId, user);
   }
 
-  async findAllByCompany(companyId: string): Promise<InvitationCodeDocument[]> {
+  async findAllByCompany(
+    companyId: string,
+    user: AuthenticatedUser,
+  ): Promise<InvitationCodeDocument[]> {
     return this.invitationCodeModel
-      .find({ companyId: new Types.ObjectId(companyId), deletedAt: null })
+      .find({
+        companyId: new Types.ObjectId(companyId),
+        deletedAt: null,
+        ...this.visibilityScope(user),
+      })
       .populate('positionId', 'name description')
       .populate('createdBy', 'name email')
       .sort({ createdAt: -1 })
@@ -82,8 +89,9 @@ export class InvitationCodesService {
   async findOne(
     id: string,
     companyId: string,
+    user: AuthenticatedUser,
   ): Promise<InvitationCodeDocument> {
-    return this.findOneOrFail(id, companyId);
+    return this.findOneOrFail(id, companyId, user);
   }
 
   async update(
@@ -92,7 +100,7 @@ export class InvitationCodesService {
     dto: UpdateInvitationCodeDto,
     user: AuthenticatedUser,
   ): Promise<InvitationCodeDocument> {
-    const invitationCode = await this.findOneOrFail(id, companyId);
+    const invitationCode = await this.findOneOrFail(id, companyId, user);
 
     // Re-validate the role/position pair against whatever the update leaves in
     // place, so a partial update can't produce an invalid configuration (e.g.
@@ -129,11 +137,15 @@ export class InvitationCodesService {
     }
 
     await invitationCode.save();
-    return this.findOneOrFail(id, companyId);
+    return this.findOneOrFail(id, companyId, user);
   }
 
-  async remove(id: string, companyId: string): Promise<{ _id: string }> {
-    const invitationCode = await this.findOneOrFail(id, companyId);
+  async remove(
+    id: string,
+    companyId: string,
+    user: AuthenticatedUser,
+  ): Promise<{ _id: string }> {
+    const invitationCode = await this.findOneOrFail(id, companyId, user);
     invitationCode.deletedAt = new Date();
     invitationCode.isActive = false;
     await invitationCode.save();
@@ -259,8 +271,9 @@ export class InvitationCodesService {
   // ─── Internals ────────────────────────────────────────────────────────────
 
   /**
-   * Applies the same role/position rules as a regular email invitation:
+   * Role/position rules for configuring a code:
    *  - role must be company_staff or company_manager
+   *  - only the company owner may configure a company_manager code
    *  - company_staff requires a position; company_manager may omit it
    *  - the position must exist and belong to the caller's company
    *  - a department manager may only configure staff for their own department
@@ -275,6 +288,14 @@ export class InvitationCodesService {
         message: 'Validation failed',
         errors: { field: [{ role: 'Invalid role specified' }] },
       });
+    }
+
+    // Managers (general or department) may only ever hand out staff codes —
+    // granting the manager role is the owner's prerogative.
+    if (role === Role.CompanyManager && user.role !== Role.CompanyOwner) {
+      throw new ForbiddenException(
+        'Only the company owner can configure manager invitation codes.',
+      );
     }
 
     if (role === Role.CompanyManager && !positionId) {
@@ -334,9 +355,36 @@ export class InvitationCodesService {
     return new Types.ObjectId(positionId as string);
   }
 
+  /**
+   * Which codes a user is allowed to see/act on, as a Mongo filter fragment:
+   *
+   *  - Owner              → every code in the company (staff and manager codes)
+   *  - General manager    → staff codes only, any department; never manager codes
+   *  - Department manager → staff codes in their own department only
+   *
+   * Out-of-scope codes are reported as "not found" rather than "forbidden", so
+   * a manager cannot probe for the existence of codes they may not see.
+   */
+  private visibilityScope(user: AuthenticatedUser): Record<string, any> {
+    if (DepartmentAuthHelper.isDepartmentManager(user)) {
+      return {
+        role: Role.CompanyStaff,
+        positionId: new Types.ObjectId(user.position!._id.toString()),
+      };
+    }
+
+    if (DepartmentAuthHelper.isGeneralManager(user)) {
+      return { role: Role.CompanyStaff };
+    }
+
+    // Company owner — unrestricted.
+    return {};
+  }
+
   private async findOneOrFail(
     id: string,
     companyId: string,
+    user: AuthenticatedUser,
   ): Promise<InvitationCodeDocument> {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException(`Invitation code with ID ${id} not found`);
@@ -347,6 +395,7 @@ export class InvitationCodesService {
         _id: id,
         companyId: new Types.ObjectId(companyId),
         deletedAt: null,
+        ...this.visibilityScope(user),
       })
       .populate('positionId', 'name description')
       .populate('createdBy', 'name email')

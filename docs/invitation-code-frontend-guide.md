@@ -57,6 +57,25 @@ Read `message` for the toast, and `errors.field[]` to highlight the offending in
 
 All endpoints below require a **Bearer token** and role `owner_company` or `manager_company`.
 
+## ⚠️ Permissions — read this first
+
+There are **three** effective actor types, and they see different things. A "manager" is split by whether they have a position:
+
+| Actor | Can create | Can see / edit / revoke |
+|---|---|---|
+| **Owner** (`owner_company`) | Staff **and** Manager codes, any department | **All** codes in the company |
+| **General manager** (`manager_company`, **no** position) | **Staff codes only**, any department | **Staff codes only**, any department |
+| **Department manager** (`manager_company`, **has** a position) | **Staff codes only**, **own department only** | **Staff codes only**, **own department only** |
+
+Key consequences for the UI:
+
+- **Only the owner may grant the manager role.** For any manager, hide/disable the **Manager** option in the role dropdown — the API returns `403` otherwise.
+- A **department manager**'s department picker should be **locked to their own position**.
+- The list endpoint is **already filtered** for you. A manager simply won't receive manager codes, and a department manager only receives codes for their own department — so **don't build client-side filtering**; just render what you get.
+- Codes outside a user's scope return **`404 Not Found`**, not `403`. This is deliberate (it stops a manager probing for codes they can't see). So a department manager opening another department's code id gets the same "not found" screen as a genuinely missing code.
+
+> **How to tell general vs department manager on the client:** a manager with `position === null` is a *general* manager; one with a `position` object is a *department* manager. (Available on the user object from `GET /users/me` / login.)
+
 ## 1. Create a code
 
 ```http
@@ -114,12 +133,14 @@ Content-Type: application/json
 
 ### UI rules to enforce
 
-The backend enforces these, but mirror them client-side for better UX:
+The backend enforces all of these, but mirror them client-side for better UX:
 
-- Role dropdown: only **Staff** and **Manager**.
+- Role dropdown options depend on who's logged in:
+  - **Owner** → Staff **and** Manager
+  - **Any manager** → Staff **only** (hide/disable Manager → the API returns `403`)
 - If role = **Staff** → the department/position field becomes **required**.
-- If role = **Manager** → department is **optional**.
-- If the logged-in user is a **department manager** (a manager who has a position), they may only create **Staff** codes for **their own department** — so lock the department picker to their own position.
+- If role = **Manager** → department is **optional** (owner only).
+- If the user is a **department manager** → lock the department picker to **their own position**.
 
 ---
 
@@ -160,6 +181,7 @@ Use this for the **Activate / Deactivate toggle** (`{ "isActive": false }`).
 
 > ⚠️ Role and position are **re-validated together**. You cannot switch a code to `company_staff` while leaving its position empty — you must send `positionId` in the same request.
 > `maxUses` cannot be set below the number of claims already made (`422`).
+> The **same permission rules as create** apply: a manager cannot promote a code to `company_manager` (`403`), and a department manager cannot move a code to another department (`422`). A code outside the caller's scope returns `404`.
 
 ## 5. Revoke
 
@@ -253,8 +275,10 @@ So right after a successful claim you can navigate straight into the company are
 |---|---|---|
 | `422` | `Validation failed` → `errors.field[].role` | Role isn't staff/manager |
 | `422` | `Validation failed` → `errors.field[].positionId` | Staff role with no position, bad id, position not found, or a department manager picking another department |
+| **`403`** | **`Only the company owner can configure manager invitation codes.`** | **A manager tried to create/update a code with role `company_manager`** |
 | `409` | `Invitation code "X" is already taken.` | Custom `code` collides — ask for another |
 | `403` | `You are not associated with any company.` | Caller has no company |
+| **`404`** | **`Invitation code with ID X not found`** | Either it genuinely doesn't exist, **or it's outside the caller's scope** (e.g. a department manager touching another department's code). Treat both as "not found". |
 
 ### Claiming (employee side)
 
@@ -272,14 +296,14 @@ So right after a successful claim you can navigate straight into the company are
 
 ## Quick reference
 
-| Method | Endpoint | Who |
-|---|---|---|
-| `POST` | `/company/invitation-codes` | Owner / Manager |
-| `GET` | `/company/invitation-codes` | Owner / Manager |
-| `GET` | `/company/invitation-codes/:id` | Owner / Manager |
-| `PATCH` | `/company/invitation-codes/:id` | Owner / Manager |
-| `DELETE` | `/company/invitation-codes/:id` | Owner / Manager |
-| `GET` | `/invitation-codes/:code` | Any logged-in user |
-| `POST` | `/invitation-codes/claim` | Unassigned staff only |
+| Method | Endpoint | Who | Scope |
+|---|---|---|---|
+| `POST` | `/company/invitation-codes` | Owner / Manager | Owner: any role. Manager: staff only (dept manager: own department only) |
+| `GET` | `/company/invitation-codes` | Owner / Manager | Pre-filtered to the caller's scope |
+| `GET` | `/company/invitation-codes/:id` | Owner / Manager | `404` if outside scope |
+| `PATCH` | `/company/invitation-codes/:id` | Owner / Manager | `404` if outside scope |
+| `DELETE` | `/company/invitation-codes/:id` | Owner / Manager | `404` if outside scope |
+| `GET` | `/invitation-codes/:code` | Any logged-in user | — |
+| `POST` | `/invitation-codes/claim` | Unassigned staff only | — |
 
 A ready-to-run **Invitation Codes** folder is included in `docs/workorder-portal.postman_collection.json`.

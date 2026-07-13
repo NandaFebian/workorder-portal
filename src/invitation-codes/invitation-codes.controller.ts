@@ -65,6 +65,7 @@ export class InvitationCodesController {
   async findAll(@GetUser() user: AuthenticatedUser) {
     const codes = await this.invitationCodesService.findAllByCompany(
       this.requireCompanyId(user),
+      user,
     );
     return ResponseUtil.success(
       'Invitation codes retrieved successfully',
@@ -81,6 +82,7 @@ export class InvitationCodesController {
     const code = await this.invitationCodesService.findOne(
       id,
       this.requireCompanyId(user),
+      user,
     );
     return ResponseUtil.success(
       'Invitation code retrieved successfully',
@@ -113,6 +115,7 @@ export class InvitationCodesController {
     const data = await this.invitationCodesService.remove(
       id,
       this.requireCompanyId(user),
+      user,
     );
     return ResponseUtil.success('Invitation code revoked successfully', data);
   }

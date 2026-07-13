@@ -162,6 +162,137 @@ describe('InvitationCodesService', () => {
     });
   });
 
+  describe('role limits', () => {
+    const generalManager: any = {
+      _id: new Types.ObjectId().toString(),
+      role: Role.CompanyManager,
+      company: { _id: COMPANY_ID },
+      // no position -> general manager
+    };
+    const deptManager: any = {
+      _id: new Types.ObjectId().toString(),
+      role: Role.CompanyManager,
+      company: { _id: COMPANY_ID },
+      position: { _id: POSITION_ID },
+    };
+
+    describe('configuring (create)', () => {
+      it('lets the owner create a manager code', async () => {
+        codeModel.findOne.mockReturnValue(asChain(null));
+        codeModel.create.mockResolvedValue({ _id: new Types.ObjectId() });
+        jest
+          .spyOn(service as any, 'findOneOrFail')
+          .mockResolvedValue({} as any);
+
+        await service.create(
+          COMPANY_ID,
+          { role: Role.CompanyManager } as any,
+          owner,
+        );
+
+        expect(codeModel.create.mock.calls[0][0].role).toBe(
+          Role.CompanyManager,
+        );
+      });
+
+      it('stops a general manager creating a manager code', async () => {
+        await expect(
+          service.create(
+            COMPANY_ID,
+            { role: Role.CompanyManager } as any,
+            generalManager,
+          ),
+        ).rejects.toThrow(ForbiddenException);
+        expect(codeModel.create).not.toHaveBeenCalled();
+      });
+
+      it('stops a department manager creating a manager code', async () => {
+        await expect(
+          service.create(
+            COMPANY_ID,
+            { role: Role.CompanyManager } as any,
+            deptManager,
+          ),
+        ).rejects.toThrow(ForbiddenException);
+        expect(codeModel.create).not.toHaveBeenCalled();
+      });
+
+      it('lets a general manager create a staff code in any department', async () => {
+        jest
+          .spyOn(positionsService, 'findById')
+          .mockResolvedValue({ _id: OTHER_POSITION_ID } as any);
+        codeModel.findOne.mockReturnValue(asChain(null));
+        codeModel.create.mockResolvedValue({ _id: new Types.ObjectId() });
+        jest
+          .spyOn(service as any, 'findOneOrFail')
+          .mockResolvedValue({} as any);
+
+        await service.create(
+          COMPANY_ID,
+          { role: Role.CompanyStaff, positionId: OTHER_POSITION_ID } as any,
+          generalManager,
+        );
+
+        expect(codeModel.create.mock.calls[0][0].role).toBe(Role.CompanyStaff);
+      });
+    });
+
+    describe('visibility (list / get / update / delete)', () => {
+      it('shows the owner every code', async () => {
+        codeModel.find.mockReturnValue(asChain([]));
+
+        await service.findAllByCompany(COMPANY_ID, owner);
+
+        const filter = codeModel.find.mock.calls[0][0];
+        expect(filter.role).toBeUndefined(); // unrestricted
+        expect(filter.positionId).toBeUndefined();
+      });
+
+      it('shows a general manager staff codes only — never manager codes', async () => {
+        codeModel.find.mockReturnValue(asChain([]));
+
+        await service.findAllByCompany(COMPANY_ID, generalManager);
+
+        const filter = codeModel.find.mock.calls[0][0];
+        expect(filter.role).toBe(Role.CompanyStaff);
+        expect(filter.positionId).toBeUndefined(); // any department
+      });
+
+      it('shows a department manager only staff codes in their own department', async () => {
+        codeModel.find.mockReturnValue(asChain([]));
+
+        await service.findAllByCompany(COMPANY_ID, deptManager);
+
+        const filter = codeModel.find.mock.calls[0][0];
+        expect(filter.role).toBe(Role.CompanyStaff);
+        expect(filter.positionId.toString()).toBe(POSITION_ID);
+      });
+
+      it('hides an out-of-scope code from a department manager (404, not 403)', async () => {
+        // The scope is baked into the query, so a manager code simply isn't found.
+        codeModel.findOne.mockReturnValue(asChain(null));
+
+        await expect(
+          service.findOne(new Types.ObjectId().toString(), COMPANY_ID, deptManager),
+        ).rejects.toThrow(NotFoundException);
+
+        const filter = codeModel.findOne.mock.calls[0][0];
+        expect(filter.role).toBe(Role.CompanyStaff);
+        expect(filter.positionId.toString()).toBe(POSITION_ID);
+      });
+
+      it('applies the same scope when deleting', async () => {
+        codeModel.findOne.mockReturnValue(asChain(null));
+
+        await expect(
+          service.remove(new Types.ObjectId().toString(), COMPANY_ID, generalManager),
+        ).rejects.toThrow(NotFoundException);
+
+        expect(codeModel.findOne.mock.calls[0][0].role).toBe(Role.CompanyStaff);
+      });
+    });
+  });
+
   describe('claim()', () => {
     const CODE_ID = new Types.ObjectId();
 

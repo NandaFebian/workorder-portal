@@ -1,0 +1,325 @@
+<mxfile host="Electron" pages="1">
+  <diagram id="dfd-l2-auth-otp" name="DFD Level 2 - Modul Autentikasi (OTP)">
+    <mxGraphModel dx="1200" dy="800" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ============ EXISTING: external entities ============ -->
+        <mxCell id="16" value="&lt;div&gt;&lt;font style=&quot;font-size: 15px;&quot;&gt;MODUL&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 15px;&quot;&gt;AUTENTIKASI&lt;/font&gt;&lt;/div&gt;" style="html=1;dashed=0;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="-70" y="60" width="140" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="26" value="&lt;font style=&quot;font-size: 15px;&quot;&gt;Owner&lt;/font&gt;" style="html=1;dashed=0;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="-70" y="210" width="140" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="27" value="&lt;font style=&quot;font-size: 15px;&quot;&gt;Manager&lt;/font&gt;" style="html=1;dashed=0;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="-70" y="450" width="140" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="30" value="&lt;font style=&quot;font-size: 15px;&quot;&gt;Pegawai&lt;/font&gt;" style="html=1;dashed=0;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="-70" y="610" width="140" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="33" value="&lt;font style=&quot;font-size: 15px;&quot;&gt;Kustomer&lt;/font&gt;" style="html=1;dashed=0;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="-70" y="790" width="140" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="42" value="&lt;div&gt;&lt;font style=&quot;font-size: 15px;&quot;&gt;MANAJEMEN&amp;nbsp;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 15px;&quot;&gt;MASTER DATA&lt;/font&gt;&lt;/div&gt;" style="html=1;dashed=0;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="850" y="800" width="160" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ============ NEW: external entity - email provider ============ -->
+        <mxCell id="50" value="&lt;div&gt;&lt;font style=&quot;font-size: 15px;&quot;&gt;LAYANAN&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 15px;&quot;&gt;EMAIL&lt;/font&gt;&lt;/div&gt;" style="html=1;dashed=0;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="-70" y="990" width="140" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ============ EXISTING: processes ============ -->
+        <mxCell id="8" value="3.1" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=20;fillColor=#ffffff;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;rounded=1;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="390" y="190" width="150" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="9" value="&lt;font style=&quot;font-size: 15px;&quot;&gt;CREATE DATA PENGGUNA&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" vertex="1" parent="8">
+          <mxGeometry y="20" width="150" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="10" value="3.2" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=20;fillColor=#ffffff;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;rounded=1;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="390" y="430" width="150" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="11" value="&lt;div&gt;&lt;font style=&quot;font-size: 15px;&quot;&gt;READ DATA&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 15px;&quot;&gt;PENGGUNA&lt;/font&gt;&lt;/div&gt;" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" vertex="1" parent="10">
+          <mxGeometry y="20" width="150" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="12" value="3.3" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=20;fillColor=#ffffff;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;rounded=1;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="390" y="670" width="150" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="13" value="&lt;div&gt;&lt;font style=&quot;font-size: 15px;&quot;&gt;UPDATE DATA&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 15px;&quot;&gt;PENGGUNA&lt;/font&gt;&lt;/div&gt;" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" vertex="1" parent="12">
+          <mxGeometry y="20" width="150" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ============ NEW: processes 3.4 / 3.5 ============ -->
+        <mxCell id="51" value="3.4" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=20;fillColor=#ffffff;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;rounded=1;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="390" y="930" width="150" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="52" value="&lt;div&gt;&lt;font style=&quot;font-size: 15px;&quot;&gt;REGISTRASI &amp;amp;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 15px;&quot;&gt;KIRIM KODE OTP&lt;/font&gt;&lt;/div&gt;" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" vertex="1" parent="51">
+          <mxGeometry y="20" width="150" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="53" value="3.5" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=20;fillColor=#ffffff;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;rounded=1;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="390" y="1090" width="150" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="54" value="&lt;div&gt;&lt;font style=&quot;font-size: 15px;&quot;&gt;VERIFIKASI&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 15px;&quot;&gt;KODE OTP&lt;/font&gt;&lt;/div&gt;" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" vertex="1" parent="53">
+          <mxGeometry y="20" width="150" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ============ EXISTING: data store D8 ============ -->
+        <mxCell id="17" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="840" y="683" width="170" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="18" value="D8" style="html=1;dashed=0;whiteSpace=wrap;shape=mxgraph.dfd.dataStoreID;align=left;spacingLeft=3;points=[[0,0],[0.5,0],[1,0],[0,0.5],[1,0.5],[0,1],[0.5,1],[1,1]];" vertex="1" parent="17">
+          <mxGeometry width="140" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="19" value="Master Data Pengguna" style="html=1;dashed=0;whiteSpace=wrap;shape=partialRectangle;right=0;" vertex="1" parent="17">
+          <mxGeometry x="30" width="140" height="35" as="geometry" />
+        </mxCell>
+
+        <!-- ============ NEW: data store D9 (pending registration) ============ -->
+        <mxCell id="55" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="840" y="1005" width="180" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="56" value="D9" style="html=1;dashed=0;whiteSpace=wrap;shape=mxgraph.dfd.dataStoreID;align=left;spacingLeft=3;points=[[0,0],[0.5,0],[1,0],[0,0.5],[1,0.5],[0,1],[0.5,1],[1,1]];" vertex="1" parent="55">
+          <mxGeometry width="150" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="57" value="Data Registrasi Sementara" style="html=1;dashed=0;whiteSpace=wrap;shape=partialRectangle;right=0;" vertex="1" parent="55">
+          <mxGeometry x="30" width="150" height="35" as="geometry" />
+        </mxCell>
+
+        <!-- ============ EXISTING: flows ============ -->
+        <mxCell id="14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="16" target="8">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="465" y="100" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="15" value="&lt;div align=&quot;left&quot;&gt;Data Credential Perusahaan;&lt;/div&gt;&lt;div align=&quot;left&quot;&gt;Data Credential Manager;&lt;/div&gt;&lt;div align=&quot;left&quot;&gt;Data Credential Pegawai;&lt;/div&gt;&lt;div align=&quot;left&quot;&gt;Data Credential Kustomer;&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="14">
+          <mxGeometry x="-0.3646" y="3" relative="1" as="geometry"><mxPoint x="-71" y="-27" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="24" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="26" target="9">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="250" y="230" /><mxPoint x="250" y="230" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="25" value="Data Akun Perusahaan;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="24">
+          <mxGeometry x="-0.5324" y="-2" relative="1" as="geometry"><mxPoint x="-5" y="-12" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="26" target="13">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="250" y="270" /><mxPoint x="250" y="710" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3" value="Data Akun Perusahaan;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="2">
+          <mxGeometry x="-0.7763" relative="1" as="geometry"><mxPoint x="-14" y="-10" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;jumpStyle=arc;" edge="1" parent="1" source="11" target="30">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="260" y="480" /><mxPoint x="260" y="650" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5" value="Informasi Akun Pegawai;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="4">
+          <mxGeometry x="0.7511" relative="1" as="geometry"><mxPoint x="13" y="-10" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="11" target="26">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="260" y="460" /><mxPoint x="260" y="250" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="7" value="Informasi Akun Perusahaan;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="6">
+          <mxGeometry x="0.7925" y="2" relative="1" as="geometry"><mxPoint x="26" y="-12" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="9" target="19">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="930" y="240" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="21" value="&lt;div align=&quot;left&quot;&gt;Data Akun Perusahaan;&lt;/div&gt;&lt;div align=&quot;left&quot;&gt;Data Akun Pegawai;&lt;/div&gt;&lt;div align=&quot;left&quot;&gt;Data Akun Kustomer;&amp;nbsp;&lt;/div&gt;" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="20">
+          <mxGeometry x="-0.6652" y="4" relative="1" as="geometry"><mxPoint x="-11" y="-31" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="19" target="11">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="920" y="480" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="23" value="&lt;div align=&quot;left&quot;&gt;Data Akun Perusahaan;&lt;/div&gt;&lt;div align=&quot;left&quot;&gt;Data Akun Manager;&lt;/div&gt;&lt;div align=&quot;left&quot;&gt;Data Akun Pegawai;&lt;/div&gt;&lt;div align=&quot;left&quot;&gt;Data Akun Kustomer;&amp;nbsp;&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="22">
+          <mxGeometry x="0.4201" y="-3" relative="1" as="geometry"><mxPoint x="7" y="-32" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="28" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;jumpStyle=arc;" edge="1" parent="1" source="30" target="9">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="310" y="630" /><mxPoint x="310" y="245" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="29" value="Data Akun Pegawai;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="28">
+          <mxGeometry x="-0.8294" y="-5" relative="1" as="geometry"><mxPoint x="3" y="-18" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="31" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;jumpStyle=arc;" edge="1" parent="1" source="33" target="9">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="320" y="810" /><mxPoint x="320" y="260" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="32" value="Data Akun Kustomer;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="31">
+          <mxGeometry x="-0.9055" y="-3" relative="1" as="geometry"><mxPoint x="27" y="-18" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="34" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="11" target="12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="35" value="&lt;div align=&quot;left&quot;&gt;Data Akun Perusahaan;&lt;/div&gt;&lt;div align=&quot;left&quot;&gt;Data Akun Manager;&lt;/div&gt;&lt;div align=&quot;left&quot;&gt;Data Akun Pegawai;&lt;/div&gt;&lt;div align=&quot;left&quot;&gt;Data Akun Kustomer;&lt;/div&gt;" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="34">
+          <mxGeometry x="-0.16" y="3" relative="1" as="geometry"><mxPoint x="2" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="36" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="13" target="18">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="630" y="700" /><mxPoint x="630" y="700" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="37" value="&lt;div align=&quot;left&quot;&gt;Data Akun Perusahaan;&lt;/div&gt;&lt;div align=&quot;left&quot;&gt;Data Akun Manager;&lt;/div&gt;&lt;div&gt;Data Akun Pegawai;&lt;/div&gt;&lt;div&gt;Data Akun Kustomer;&lt;/div&gt;" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="36">
+          <mxGeometry x="-0.4309" y="-3" relative="1" as="geometry"><mxPoint x="20" y="-38" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="38" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;jumpStyle=arc;" edge="1" parent="1" source="11" target="33">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="330" y="490" /><mxPoint x="330" y="830" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="39" value="Informasi Akun Kustomer;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="38">
+          <mxGeometry x="0.8214" y="-2" relative="1" as="geometry"><mxPoint x="21" y="-10" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="40" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;jumpStyle=arc;" edge="1" parent="1" source="42" target="13">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="465" y="860" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="41" value="&lt;div align=&quot;left&quot;&gt;Data Pegawai;&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="40">
+          <mxGeometry x="0.2173" y="2" relative="1" as="geometry"><mxPoint x="55" y="-19" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="43" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;jumpStyle=arc;" edge="1" parent="1" source="11" target="27">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="250" y="470" /><mxPoint x="250" y="470" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="44" value="Informasi Akun Manager;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="43">
+          <mxGeometry x="0.5644" y="-1" relative="1" as="geometry"><mxPoint x="10" y="-9" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- ============ NEW FLOWS: registration -> OTP ============ -->
+
+        <!-- Owner / Pegawai / Kustomer submit registration data to 3.4 -->
+        <mxCell id="60" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;jumpStyle=arc;" edge="1" parent="1" source="26" target="52">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="180" y="245" /><mxPoint x="180" y="960" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="61" value="Data Registrasi Perusahaan;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="60">
+          <mxGeometry x="0.6" relative="1" as="geometry"><mxPoint y="-10" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="62" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;jumpStyle=arc;" edge="1" parent="1" source="30" target="52">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="200" y="645" /><mxPoint x="200" y="975" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="63" value="Data Registrasi Pegawai;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="62">
+          <mxGeometry x="0.5" relative="1" as="geometry"><mxPoint y="-10" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="64" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;jumpStyle=arc;" edge="1" parent="1" source="33" target="52">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="220" y="825" /><mxPoint x="220" y="990" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="65" value="Data Registrasi Kustomer;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="64">
+          <mxGeometry x="0.4" relative="1" as="geometry"><mxPoint y="-10" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- 3.4 writes the pending signup + hashed OTP to D9 -->
+        <mxCell id="66" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="52" target="57">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="700" y="980" /><mxPoint x="700" y="1022" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="67" value="&lt;div align=&quot;left&quot;&gt;Data Registrasi Sementara;&lt;/div&gt;&lt;div align=&quot;left&quot;&gt;Hash Kode OTP;&lt;/div&gt;" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="66">
+          <mxGeometry x="-0.2" relative="1" as="geometry"><mxPoint y="-20" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- 3.4 sends the OTP out to the email provider (leaves the system) -->
+        <mxCell id="68" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="52" target="50">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="300" y="1010" /><mxPoint x="300" y="1025" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="69" value="&lt;div align=&quot;left&quot;&gt;Kode OTP;&lt;/div&gt;&lt;div align=&quot;left&quot;&gt;Alamat Email;&lt;/div&gt;" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="68">
+          <mxGeometry x="0.1" relative="1" as="geometry"><mxPoint y="-18" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- User types the code they received back into 3.5 -->
+        <mxCell id="70" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;jumpStyle=arc;" edge="1" parent="1" source="26" target="54">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="160" y="260" /><mxPoint x="160" y="1120" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="71" value="Email; Kode OTP;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="70">
+          <mxGeometry x="0.7" relative="1" as="geometry"><mxPoint y="-10" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="72" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;jumpStyle=arc;" edge="1" parent="1" source="30" target="54">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="140" y="660" /><mxPoint x="140" y="1140" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="73" value="Email; Kode OTP;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="72">
+          <mxGeometry x="0.6" relative="1" as="geometry"><mxPoint y="-10" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="74" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;jumpStyle=arc;" edge="1" parent="1" source="33" target="54">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="120" y="840" /><mxPoint x="120" y="1160" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="75" value="Email; Kode OTP;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="74">
+          <mxGeometry x="0.5" relative="1" as="geometry"><mxPoint y="-10" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- 3.5 reads the pending signup + hashed OTP from D9 -->
+        <mxCell id="76" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="57" target="54">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="750" y="1040" /><mxPoint x="750" y="1140" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="77" value="&lt;div align=&quot;left&quot;&gt;Data Registrasi Sementara;&lt;/div&gt;&lt;div align=&quot;left&quot;&gt;Hash Kode OTP;&lt;/div&gt;" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="76">
+          <mxGeometry x="0.2" relative="1" as="geometry"><mxPoint y="-20" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- On success 3.5 hands verified data to 3.1, which creates the real account -->
+        <mxCell id="78" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;jumpStyle=arc;" edge="1" parent="1" source="54" target="9">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="600" y="1140" /><mxPoint x="600" y="215" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="79" value="Data Akun Terverifikasi;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="78">
+          <mxGeometry x="0.85" relative="1" as="geometry"><mxPoint x="-10" y="-10" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- The temporary record is discarded once redeemed -->
+        <mxCell id="80" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="54" target="57">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="800" y="1160" /><mxPoint x="800" y="1035" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="81" value="Hapus Data Registrasi Sementara;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="80">
+          <mxGeometry x="0.3" relative="1" as="geometry"><mxPoint y="-10" as="offset" /></mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

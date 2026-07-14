@@ -426,3 +426,75 @@ Tabel 3.23 Kamus Data Active Tokens
 | updatedAt | Date | Menyimpan waktu pembaruan token sesi terakhir kali. |
 
 Validasi keberadaan token di dalam tabel ini berfungsi sebagai gerbang pengaman tambahan pada proses autentikasi (token verification). Begitu pengguna melakukan logout, data token terkait langsung dihapus sehingga sesi akses segera dinyatakan tidak berlaku.
+
+---
+
+### 19. Kamus Data Pending Registrations (Module Auth)
+
+Tabel pendingregistrations menampung data pendaftaran yang telah diajukan namun belum diverifikasi melalui kode OTP. Akun pengguna maupun perusahaan yang sebenarnya tidak dibuat pada tahap ini, sehingga sistem tidak menyimpan akun yang alamat surelnya belum terbukti sah.
+
+Tabel 3.24 Kamus Data Pending Registrations
+| Nama Kolom | Tipe Data | Keterangan |
+|---|---|---|
+| _id | ObjectId | Berfungsi sebagai primary key unik dari tabel pendingregistrations. |
+| email | String | Menyimpan alamat surel unik calon pengguna sekaligus tujuan pengiriman kode OTP. |
+| name | String | Menyimpan nama lengkap calon pengguna yang mendaftar. |
+| password | String | Menyimpan kata sandi calon pengguna dalam bentuk terenkripsi (reversible), bukan dalam bentuk teks terbuka. |
+| type | String | Menentukan jenis pendaftaran, bernilai user untuk akun perorangan atau company untuk pendaftaran perusahaan beserta pemiliknya. |
+| role | String | Menyimpan peran yang akan diberikan saat verifikasi berhasil, digunakan ketika type bernilai user. |
+| companyName | String | Menyimpan nama perusahaan yang akan dibuat saat verifikasi berhasil, digunakan ketika type bernilai company. |
+| otpHash | String | Menyimpan nilai hash SHA-256 dari kode OTP, sehingga kode asli tidak pernah tersimpan di basis data. |
+| otpExpiresAt | Date | Menyimpan batas waktu kedaluwarsa kode OTP, yaitu 5 menit sejak kode diterbitkan. |
+| lastOtpSentAt | Date | Menyimpan waktu pengiriman kode OTP terakhir sebagai dasar pembatasan jeda kirim ulang (cooldown). |
+| attempts | Number | Mencatat jumlah percobaan verifikasi yang gagal untuk membatasi upaya penebakan kode OTP. |
+| createdAt | Date | Menyimpan waktu pembuatan data pertama kali. |
+| updatedAt | Date | Menyimpan waktu pembaruan data terakhir kali. |
+
+Kata sandi disimpan dalam bentuk terenkripsi karena proses hashing akhir baru dilakukan ketika akun pengguna resmi dibuat pada tahap verifikasi. Melalui indeks TTL pada kolom otpExpiresAt, data pendaftaran yang ditinggalkan akan terhapus secara otomatis sehingga tidak menumpuk di dalam basis data.
+
+---
+
+### 20. Kamus Data Password Resets (Module Auth)
+
+Tabel passwordresets menyimpan permintaan pengaturan ulang kata sandi yang diajukan pengguna melalui mekanisme kode OTP. Kode yang tercatat pada tabel ini menjadi satu-satunya dasar otorisasi penggantian kata sandi tanpa memerlukan kata sandi lama.
+
+Tabel 3.25 Kamus Data Password Resets
+| Nama Kolom | Tipe Data | Keterangan |
+|---|---|---|
+| _id | ObjectId | Berfungsi sebagai primary key unik dari tabel passwordresets. |
+| email | String | Menyimpan alamat surel unik pemilik akun yang mengajukan pengaturan ulang kata sandi. |
+| otpHash | String | Menyimpan nilai hash SHA-256 dari kode OTP pengaturan ulang kata sandi. |
+| otpExpiresAt | Date | Menyimpan batas waktu kedaluwarsa kode OTP, yaitu 5 menit sejak kode diterbitkan. |
+| lastOtpSentAt | Date | Menyimpan waktu pengiriman kode terakhir sebagai dasar pembatasan jeda kirim ulang (cooldown). |
+| attempts | Number | Mencatat jumlah percobaan verifikasi yang gagal untuk membatasi upaya penebakan kode OTP. |
+| createdAt | Date | Menyimpan waktu pembuatan permintaan pertama kali. |
+| updatedAt | Date | Menyimpan waktu pembaruan permintaan terakhir kali. |
+
+Setiap kode bersifat sekali pakai sehingga data permintaan langsung dihapus begitu kata sandi berhasil diperbarui. Indeks TTL pada kolom otpExpiresAt menjamin permintaan yang tidak pernah diselesaikan akan hilang dengan sendirinya.
+
+---
+
+### 21. Kamus Data Invitation Codes (Module Invitation Codes)
+
+Tabel invitationcodes mengelola kode undangan unik yang dapat dibagikan oleh pemilik atau manajer perusahaan sebagai alternatif undangan melalui surel. Konfigurasi peran dan jabatan yang tersimpan pada kode inilah yang akan diterapkan kepada pengguna saat kode tersebut diklaim.
+
+Tabel 3.26 Kamus Data Invitation Codes
+| Nama Kolom | Tipe Data | Keterangan |
+|---|---|---|
+| _id | ObjectId | Berfungsi sebagai primary key unik dari tabel invitationcodes. |
+| code | String | Menyimpan kode undangan unik yang dibagikan kepada calon karyawan. |
+| companyId | ObjectId | Merujuk ke perusahaan yang menerbitkan kode undangan. |
+| role | String | Menentukan peran yang akan diberikan kepada pengguna saat kode diklaim, bernilai staff_company atau manager_company. |
+| positionId | ObjectId | Merujuk ke jabatan yang akan diberikan saat kode diklaim, bersifat wajib untuk peran staf. |
+| createdBy | ObjectId | Merujuk ke pengguna yang menerbitkan kode undangan. |
+| isActive | Boolean | Menentukan status keaktifan kode undangan sehingga penerbit dapat menonaktifkannya sewaktu-waktu. |
+| maxUses | Number | Menyimpan batas maksimum jumlah klaim, bernilai null apabila kode dapat diklaim tanpa batas. |
+| usedCount | Number | Mencatat jumlah klaim yang telah dilakukan terhadap kode undangan. |
+| expiresAt | Date | Menyimpan batas waktu kedaluwarsa kode, bernilai null apabila kode tidak memiliki masa berlaku. |
+| claimedBy | Array of ObjectId | Menyimpan daftar referensi pengguna yang telah berhasil mengklaim kode undangan. |
+| deletedAt | Date | Menyimpan data waktu saat kode undangan dicabut secara soft delete. |
+| __v | Number | Version key internal untuk pelacakan perubahan dokumen di basis data. |
+| createdAt | Date | Menyimpan waktu pembuatan kode pertama kali. |
+| updatedAt | Date | Menyimpan waktu pembaruan kode terakhir kali. |
+
+Kombinasi kolom maxUses dan usedCount memungkinkan satu kode digunakan secara terbatas maupun massal sesuai kebutuhan perekrutan. Pencatatan pada kolom claimedBy menjaga jejak audit mengenai pengguna yang bergabung melalui setiap kode undangan yang diterbitkan.

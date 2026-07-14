@@ -4,20 +4,21 @@ Berikut disajikan tabel rincian teknis dari masing-masing *endpoint* yang terdap
 
 ### 1. Melihat Daftar Seluruh Perusahaan Publik
 
-Pengambilan daftar seluruh perusahaan yang berstatus publik dilakukan guna memberikan informasi katalog kepada klien. Akses ini disediakan secara terbuka sehingga dapat diakses tanpa token otorisasi.
+Pengambilan daftar seluruh perusahaan yang berstatus publik dilakukan guna memberikan informasi katalog kepada klien. Akses ini disediakan secara terbuka sehingga dapat diakses tanpa token otorisasi, serta dilengkapi parameter pencarian opsional `keyword`.
 
 | Keterangan | Detail |
 |---|---|
-| Endpoint | GET `/public/companies` |
+| Endpoint | GET `/public/companies?keyword={keyword}` |
 | Autentikasi | Tidak Diperlukan (Optional) |
 | Role | Semua role / Publik |
 | Path Parameter | N/A |
+| Query Parameter | `keyword` : kata kunci pencarian (opsional) |
 | Request Body | N/A |
 | Headers | N/A |
 | Status Code | 200 |
 | Response | <pre>{<br>&nbsp;&nbsp;"success":&nbsp;true,<br>&nbsp;&nbsp;"code":&nbsp;200,<br>&nbsp;&nbsp;"message":&nbsp;"Companies&nbsp;retrieved&nbsp;successfully",<br>&nbsp;&nbsp;"data":&nbsp;[<br>&nbsp;&nbsp;&nbsp;&nbsp;{<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"_id":&nbsp;"6a244ebe41eaf94062e39357",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"name":&nbsp;"Pt.&nbsp;Besi&nbsp;Jaya&nbsp;Abadi",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"address":&nbsp;"Jalan&nbsp;Raya&nbsp;Muding&nbsp;Indonesia",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"description":&nbsp;"",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ownerId":&nbsp;"6a244ebe41eaf94062e39355"<br>&nbsp;&nbsp;&nbsp;&nbsp;},<br>&nbsp;&nbsp;&nbsp;&nbsp;{<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"_id":&nbsp;"6a244e5141eaf94062e3931e",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"name":&nbsp;"Pt.&nbsp;Mata&nbsp;Air&nbsp;Tirta&nbsp;Gangga",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"address":&nbsp;"Jalan&nbsp;Raya&nbsp;Bualu",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"description":&nbsp;"",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ownerId":&nbsp;"6a244e5141eaf94062e3931c"<br>&nbsp;&nbsp;&nbsp;&nbsp;},<br>&nbsp;&nbsp;&nbsp;&nbsp;{<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"_id":&nbsp;"6a244de641eaf94062e392e6",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"name":&nbsp;"Pt.&nbsp;Citra&nbsp;Abadi",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"address":&nbsp;"Jalan&nbsp;Raya&nbsp;Udayana&nbsp;Selatan",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"description":&nbsp;"",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ownerId":&nbsp;"6a244de641eaf94062e392e4"<br>&nbsp;&nbsp;&nbsp;&nbsp;},<br>&nbsp;&nbsp;&nbsp;&nbsp;{<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"_id":&nbsp;"6a21c2b9a7bdad3a940c3df1",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"name":&nbsp;"PT.&nbsp;Sukses&nbsp;Indonesia",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"address":&nbsp;"Jln.&nbsp;Udayana",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"description":&nbsp;"Mengalokasikan&nbsp;projek&nbsp;untuk&nbsp;Indonesia",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ownerId":&nbsp;"6a21c2b9a7bdad3a940c3def"<br>&nbsp;&nbsp;&nbsp;&nbsp;}<br>&nbsp;&nbsp;]<br>}</pre> |
 
-Data perusahaan yang dikembalikan berupa daftar ringkas berisi identitas nama dan deskripsi singkat perusahaan. Klien dapat menggunakan informasi ini sebagai acuan sebelum mengajukan permintaan layanan.
+Data perusahaan yang dikembalikan berupa daftar ringkas berisi identitas nama dan deskripsi singkat perusahaan. Apabila parameter `keyword` diisi, penelusuran dilakukan terhadap nama perusahaan maupun nama layanan berstatus publik yang dimilikinya, sehingga sebuah perusahaan tetap muncul pada hasil pencarian meskipun kata kunci hanya cocok dengan nama layanannya. Klien dapat menggunakan informasi ini sebagai acuan sebelum mengajukan permintaan layanan.
 
 ---
 
@@ -154,7 +155,26 @@ Dokumen undangan baru dengan status tunda (*pending*) dibuat di dalam database d
 
 ---
 
-### 9. Melihat Riwayat Undangan Pegawai
+### 9. Mencari Calon Pegawai yang Dapat Diundang
+
+Penelusuran calon pegawai berdasarkan alamat surel disediakan agar pemilik atau manajer dapat memastikan ketersediaan pengguna sebelum undangan dikirimkan. Hasil pencarian hanya menampilkan pengguna yang benar-benar memenuhi syarat untuk diundang.
+
+| Keterangan | Detail |
+|---|---|
+| Endpoint | GET `/company/invitable-users?email={keyword}` |
+| Autentikasi | Diperlukan (JWT Token) |
+| Role | Owner, Manager |
+| Path Parameter | N/A |
+| Query Parameter | `email` : kata kunci alamat surel (wajib, pencocokan sebagian) |
+| Request Body | N/A |
+| Headers | Authorization: Bearer {token} |
+| Status Code | 200 |
+| Response | <pre>{<br>&nbsp;&nbsp;"success":&nbsp;true,<br>&nbsp;&nbsp;"code":&nbsp;200,<br>&nbsp;&nbsp;"message":&nbsp;"Invitable&nbsp;users&nbsp;retrieved&nbsp;successfully",<br>&nbsp;&nbsp;"data":&nbsp;[<br>&nbsp;&nbsp;&nbsp;&nbsp;{<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"_id":&nbsp;"6a21c2ceec7ef2549a52b50f",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"name":&nbsp;"Siti",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"email":&nbsp;"siti@example.com",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"role":&nbsp;"staff_unassigned",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"createdAt":&nbsp;"2026-07-01T02:10:00.000Z"<br>&nbsp;&nbsp;&nbsp;&nbsp;}<br>&nbsp;&nbsp;]<br>}</pre> |
+
+Pengguna yang telah berafiliasi dengan suatu perusahaan maupun yang berperan selain *unassigned staff* tidak akan muncul pada hasil pencarian. Penyaringan ini menggunakan kriteria yang sama dengan validasi pengiriman undangan sehingga pengguna yang ditampilkan dipastikan tidak akan gagal ketika diundang.
+
+---
+### 10. Melihat Riwayat Undangan Pegawai
 
 Pemantauan daftar riwayat pengiriman undangan rekrutmen pegawai dilakukan guna mengawasi progres rekrutmen internal. Akses pemantauan ini dibatasi bagi jajaran manajemen perusahaan terdaftar.
 
@@ -173,7 +193,7 @@ Array berisi daftar objek riwayat undangan yang dikirimkan oleh pengelola perusa
 
 ---
 
-### 10. Melihat Daftar Pegawai Aktif
+### 11. Melihat Daftar Pegawai Aktif
 
 Pemeriksaan daftar seluruh staf dan manajer yang terdaftar aktif di dalam perusahaan dilakukan melalui pemanggilan *endpoint* kepegawaian. Hak akses dibatasi bagi pemilik dan manajer guna menjaga kerahasiaan data internal karyawan.
 
@@ -192,7 +212,7 @@ Daftar objek pegawai lengkap beserta perannya dikembalikan setelah token divalid
 
 ---
 
-### 11. Melihat Detail Pegawai Berdasarkan ID
+### 12. Melihat Detail Pegawai Berdasarkan ID
 
 Pemeriksaan detail profil dari salah satu pegawai aktif dilakukan dengan mengirimkan ID unik karyawan sebagai parameter penunjuk. Akses rincian data karyawan ini dibatasi secara ketat di tingkat manajerial.
 
@@ -211,7 +231,7 @@ Informasi detail mengenai data kepegawaian, performa, dan riwayat penugasan dike
 
 ---
 
-### 12. Mengeluarkan Pegawai dari Perusahaan
+### 13. Mengeluarkan Pegawai dari Perusahaan
 
 Pemberhentian keanggotaan pegawai dari struktur organisasi perusahaan diproses melalui *endpoint* kepegawaian. Permintaan ini mewajibkan pengiriman alamat email pegawai yang akan dikeluarkan.
 
@@ -230,7 +250,7 @@ Hubungan afiliasi pegawai didelegitimasi seketika di dalam database setelah pros
 
 ---
 
-### 13. Mengambil Konfigurasi Integrasi Pihak Ketiga
+### 14. Mengambil Konfigurasi Integrasi Pihak Ketiga
 
 Pemeriksaan parameter integrasi platform eksternal milik perusahaan dilakukan oleh pemilik perusahaan. Token otorisasi verifikasi diterapkan guna mengamankan data rahasia seperti kunci rahasia integrasi.
 
@@ -249,7 +269,7 @@ Data konfigurasi integrasi dikembalikan oleh peladen guna memuat isian pengatura
 
 ---
 
-### 14. Mengubah Konfigurasi Integrasi Pihak Ketiga
+### 15. Mengubah Konfigurasi Integrasi Pihak Ketiga
 
 Pembaruan detail alamat URL penjelajah (*callback*) dan token integrasi platform eksternal dijalankan melalui pengiriman konfigurasi baru. Akses pembaruan ini dibatasi khusus bagi pemilik perusahaan saja.
 

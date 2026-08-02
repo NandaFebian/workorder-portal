@@ -9,6 +9,7 @@ import {
   Body,
   UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ServicesClientService } from './services.client.service';
 import { ServiceRequestService } from 'src/service-request/service-request.service';
 import { SubmitIntakeFormDto } from './dto/submit-intake-forms.dto'; // Import DTO Baru
@@ -17,6 +18,7 @@ import { OptionalAuthGuard } from 'src/auth/guards/optional-auth.guard';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 
+@ApiTags('Services (Client)')
 @Controller('public/services')
 export class ServicesClientController {
   constructor(
@@ -27,6 +29,7 @@ export class ServicesClientController {
   @Get('company/:companyId')
   @UseGuards(OptionalAuthGuard)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List public services of a company' })
   async findAllByCompanyId(
     @Param('companyId') companyId: string,
     @GetUser() user: AuthenticatedUser | null,
@@ -44,6 +47,7 @@ export class ServicesClientController {
   @Get(':id')
   @UseGuards(OptionalAuthGuard)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get public service detail' })
   async findById(
     @Param('id') id: string,
     @GetUser() user: AuthenticatedUser | null,
@@ -58,6 +62,7 @@ export class ServicesClientController {
   @Get(':id/intake-form')
   @UseGuards(OptionalAuthGuard)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get the public intake form for a service' })
   async getClientIntakeForms(
     @Param('id') id: string,
     @GetUser() user: AuthenticatedUser | null,

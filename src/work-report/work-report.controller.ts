@@ -11,6 +11,7 @@ import {
   HttpStatus,
   UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { WorkReportService } from './work-report.service';
 import { CreateWorkReportDto } from './dto/create-work-report.dto';
 import { UpdateWorkReportDto } from './dto/update-work-report.dto';
@@ -24,6 +25,8 @@ import { GetUser } from 'src/common/decorators/get-user.decorator';
 import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 // import { RolesGuard } from 'src/auth/guards/roles.guard'; // Jika perlu role specific
 
+@ApiTags('Work Reports')
+@ApiBearerAuth('access-token')
 @Controller('workreports')
 @UseGuards(AuthGuard) // Amankan endpoint dengan token
 export class WorkReportController {
@@ -32,6 +35,7 @@ export class WorkReportController {
   // GET {{base_url}}/workreports/{{id}}
   @Get(':id')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get a work report by id' })
   async findOne(@Param('id') id: string) {
     const data = await this.workReportService.findOne(id);
     return {
@@ -43,6 +47,7 @@ export class WorkReportController {
   // POST {{base_url}}/workreports (Manual Creation jika diperlukan)
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a work report (manual)' })
   async create(@Body() createDto: CreateWorkReportDto) {
     const data = await this.workReportService.create(createDto);
     return {
@@ -54,6 +59,7 @@ export class WorkReportController {
   // PUT {{base_url}}/workreports/{{id}}
   @Put(':id')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update a work report' })
   async update(
     @Param('id') id: string,
     @Body() updateDto: UpdateWorkReportDto,
@@ -70,6 +76,7 @@ export class WorkReportController {
   @UseGuards(RolesGuard)
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Submit the work report form' })
   async submitForm(
     @Param('id') workReportId: string,
     @Body() submitDto: SubmitWorkReportFormDto,
@@ -88,6 +95,7 @@ export class WorkReportController {
   @UseGuards(RolesGuard)
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Mark a work report as sent' })
   async markAsSent(
     @Param('id') id: string,
     @GetUser() user: AuthenticatedUser,
@@ -100,6 +108,7 @@ export class WorkReportController {
   @UseGuards(RolesGuard)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Approve a work report' })
   async approve(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const data = await this.workReportService.approve(id, user);
     return ResponseUtil.success('Work report approved', data);
@@ -109,6 +118,7 @@ export class WorkReportController {
   @UseGuards(RolesGuard)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reject a work report' })
   async reject(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const data = await this.workReportService.reject(id, user);
     return ResponseUtil.success('Work report rejected', data);
@@ -118,6 +128,7 @@ export class WorkReportController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(RolesGuard)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @ApiOperation({ summary: 'Delete a work report' })
   async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const data = await this.workReportService.remove(id, user);
     return ResponseUtil.success('Work report deleted successfully', data);

@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { ServicePriceService } from './service-price.service';
 import { CreateServicePriceDto } from './dto/create-service-price.dto';
 import { UpdateServicePriceDto } from './dto/update-service-price.dto';
@@ -21,6 +22,8 @@ import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { ResponseUtil } from 'src/common/utils/response.util';
 
+@ApiTags('Service Pricing')
+@ApiBearerAuth('access-token')
 @Controller('service-price')
 @UseGuards(AuthGuard, RolesGuard)
 export class ServicePriceController {
@@ -29,6 +32,7 @@ export class ServicePriceController {
   @Get()
   @HttpCode(HttpStatus.OK)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @ApiOperation({ summary: 'List service prices' })
   async findAll(@GetUser() user: AuthenticatedUser) {
     const data = await this.servicePriceService.findAll(user);
     return ResponseUtil.success('Service pricing loaded successfully', data);
@@ -37,6 +41,7 @@ export class ServicePriceController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @ApiOperation({ summary: 'Create a service price' })
   async create(
     @Body() dto: CreateServicePriceDto,
     @GetUser() user: AuthenticatedUser,
@@ -48,6 +53,7 @@ export class ServicePriceController {
   @Put(':id')
   @HttpCode(HttpStatus.OK)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @ApiOperation({ summary: 'Update a service price' })
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateServicePriceDto,
@@ -60,6 +66,7 @@ export class ServicePriceController {
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @ApiOperation({ summary: 'Delete a service price' })
   async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const data = await this.servicePriceService.remove(id, user);
     return ResponseUtil.success('Service pricing deleted successfully', data);

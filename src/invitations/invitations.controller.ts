@@ -13,6 +13,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -22,6 +23,8 @@ import { InvitationsService } from './invitations.service';
 import { Role } from '../common/enums/role.enum';
 import { ResponseUtil } from '../common/utils/response.util';
 
+@ApiTags('Invitations')
+@ApiBearerAuth('access-token')
 @Controller('invitations')
 @UseGuards(AuthGuard) // Semua endpoint di sini butuh login
 export class InvitationsController {
@@ -31,6 +34,7 @@ export class InvitationsController {
   @UseGuards(RolesGuard)
   @Roles(Role.UnassignedStaff)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List my pending invitations' })
   async getMyPendingInvitations(@GetUser() user: AuthenticatedUser) {
     // Anda perlu menambahkan method 'findPendingForUser' di InvitationsService
     const pendingInvitations = await this.invitationsService.findPendingForUser(
@@ -46,6 +50,7 @@ export class InvitationsController {
   @UseGuards(RolesGuard)
   @Roles(Role.UnassignedStaff)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Accept an invitation' })
   async acceptInvitation(
     @Param('id') invitationId: string,
     @GetUser() user: AuthenticatedUser,
@@ -65,6 +70,7 @@ export class InvitationsController {
   @UseGuards(RolesGuard)
   @Roles(Role.UnassignedStaff)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reject an invitation' })
   async rejectInvitation(
     @Param('id') invitationId: string,
     @GetUser() user: AuthenticatedUser,
@@ -80,6 +86,7 @@ export class InvitationsController {
   @UseGuards(RolesGuard)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete/revoke an invitation' })
   async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const data = await this.invitationsService.remove(id, user);
     return ResponseUtil.success('Invitation deleted successfully', data);

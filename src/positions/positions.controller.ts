@@ -7,6 +7,7 @@ import {
   Param,
   UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { PositionsService } from './positions.service';
 import { UsersService } from 'src/users/users.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
@@ -16,6 +17,8 @@ import { Role } from 'src/common/enums/role.enum';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 
+@ApiTags('Positions')
+@ApiBearerAuth('access-token')
 @Controller('positions')
 @UseGuards(AuthGuard, RolesGuard)
 @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
@@ -27,6 +30,7 @@ export class PositionsController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List positions in the company' })
   async findAll(@GetUser() user: AuthenticatedUser) {
     const positions = await this.positionsService.findAll(user);
     return {
@@ -37,6 +41,7 @@ export class PositionsController {
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get a position with its employees' })
   async findById(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const position = await this.positionsService.findById(id, user);
     const employees = await this.usersService.findByPositionId(id);

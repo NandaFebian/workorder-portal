@@ -10,6 +10,7 @@ import {
   HttpStatus,
   UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { FaqService } from './faq.service';
 import { AskFaqDto } from './dto/ask-faq.dto';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
@@ -17,6 +18,8 @@ import { GetUser } from 'src/common/decorators/get-user.decorator';
 import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { ResponseUtil } from 'src/common/utils/response.util';
 
+@ApiTags('FAQ')
+@ApiBearerAuth('access-token')
 @Controller('faq')
 export class FaqPublicController {
   constructor(private readonly faqService: FaqService) {}
@@ -29,6 +32,7 @@ export class FaqPublicController {
   @Post('ask')
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Ask a question to a company's FAQ chatbot" })
   async ask(@GetUser() user: AuthenticatedUser, @Body() dto: AskFaqDto) {
     const result = await this.faqService.ask(
       dto.companyId,
@@ -45,6 +49,7 @@ export class FaqPublicController {
   @Get(':companyId/history')
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Get the current user's FAQ chat history" })
   async getHistory(
     @GetUser() user: AuthenticatedUser,
     @Param('companyId') companyId: string,

@@ -9,6 +9,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { TemplateService } from './template.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -18,6 +19,8 @@ import { GetUser } from '../common/decorators/get-user.decorator';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { ResponseUtil } from '../common/utils/response.util';
 
+@ApiTags('Templates')
+@ApiBearerAuth('access-token')
 @Controller('template')
 @UseGuards(AuthGuard)
 export class TemplateController {
@@ -27,6 +30,7 @@ export class TemplateController {
 
   @Get('company-type')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List company types' })
   async getCompanyTypes() {
     const data = await this.templateService.getCompanyTypes();
     return ResponseUtil.success('Load company types success', data);
@@ -36,6 +40,7 @@ export class TemplateController {
 
   @Get('company-type/:companyTypeId/services')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List service templates for a company type' })
   async getServicesByCompanyType(
     @Param('companyTypeId') companyTypeId: string,
   ) {
@@ -46,6 +51,7 @@ export class TemplateController {
 
   @Get('services/:serviceTemplateId')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Preview a service template' })
   async getServiceTemplatePreview(
     @Param('serviceTemplateId') serviceTemplateId: string,
   ) {
@@ -60,6 +66,7 @@ export class TemplateController {
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(RolesGuard)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @ApiOperation({ summary: 'Generate services from selected templates' })
   async generateServices(
     @Body('serviceTemplateIds') serviceTemplateIds: any[],
     @GetUser() user: AuthenticatedUser,

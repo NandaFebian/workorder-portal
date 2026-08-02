@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { WorkOrderService } from './work-order.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
@@ -15,6 +16,8 @@ import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { ResponseUtil } from 'src/common/utils/response.util';
 
+@ApiTags('Work Orders (Staff)')
+@ApiBearerAuth('access-token')
 @Controller('staff/work-orders')
 @UseGuards(AuthGuard, RolesGuard)
 @Roles(Role.CompanyStaff, Role.CompanyManager)
@@ -23,6 +26,7 @@ export class WorkOrderStaffController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List work orders assigned to the staff member' })
   async findAll(@GetUser() user: AuthenticatedUser) {
     const data = await this.workOrderService.findAllInternal(user, {});
     return ResponseUtil.success('Load data success', data);
@@ -30,6 +34,7 @@ export class WorkOrderStaffController {
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get an assigned work order by id' })
   async findOne(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const result = await this.workOrderService.findOneInternal(id, user);
     return ResponseUtil.success('Load data success', result.data, result.meta);

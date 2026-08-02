@@ -14,6 +14,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { Types } from 'mongoose';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 // Import Service Internal
 import { ServicesInternalService } from './services.internal.service';
 import { CreateServiceDto } from './dto/create-service.dto';
@@ -28,6 +29,8 @@ import { ResponseUtil } from 'src/common/utils/response.util';
 import { ServiceRequestService } from 'src/service-request/service-request.service';
 import { WorkOrderService } from 'src/work-order/work-order.service';
 
+@ApiTags('Services (Internal)')
+@ApiBearerAuth('access-token')
 @Controller('services')
 @UseGuards(AuthGuard, RolesGuard)
 export class ServicesController {
@@ -41,6 +44,7 @@ export class ServicesController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @ApiOperation({ summary: 'Create a service' })
   async create(
     @Body() createServiceDto: CreateServiceDto,
     @GetUser() user: AuthenticatedUser,
@@ -58,6 +62,7 @@ export class ServicesController {
   @Get()
   @HttpCode(HttpStatus.OK)
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
+  @ApiOperation({ summary: 'List services of the company' })
   async findAll(@GetUser() user: AuthenticatedUser) {
     const services = await this.internalService.findAll(user);
     return ResponseUtil.success('Load data success', services);
@@ -66,6 +71,7 @@ export class ServicesController {
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @ApiOperation({ summary: 'Get a service by version id' })
   async findOne(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const service = await this.internalService.findByVersionId(id, user);
     return ResponseUtil.success('Load data success', service);
@@ -74,6 +80,7 @@ export class ServicesController {
   @Get(':serviceId/intake-form')
   @HttpCode(HttpStatus.OK)
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
+  @ApiOperation({ summary: 'Get a service intake form (internal)' })
   async getIntakeFormInternal(
     @Param('serviceId') serviceId: string,
     @GetUser() user: AuthenticatedUser,
@@ -89,6 +96,7 @@ export class ServicesController {
   @Post(':serviceId/create-work-order')
   @HttpCode(HttpStatus.CREATED)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @ApiOperation({ summary: 'Manually create work order(s) from a service' })
   async createWorkOrder(
     @Param('serviceId') serviceId: string,
     @Body() body: any,
@@ -155,6 +163,7 @@ export class ServicesController {
   @Put(':id')
   @HttpCode(HttpStatus.OK)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @ApiOperation({ summary: 'Update a service (creates a new version)' })
   async update(
     @Param('id') id: string,
     @Body() updateServiceDto: UpdateServiceDto,
@@ -174,6 +183,7 @@ export class ServicesController {
   @Patch(':id/toggle-active')
   @HttpCode(HttpStatus.OK)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @ApiOperation({ summary: 'Toggle a service active/inactive' })
   async toggleActive(
     @Param('id') id: string,
     @Body('isActive') isActive: boolean,
@@ -197,6 +207,7 @@ export class ServicesController {
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @ApiOperation({ summary: 'Delete a service' })
   async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const data = await this.internalService.removeById(id, user);
     return ResponseUtil.success('Service deleted successfully', data);

@@ -8,13 +8,30 @@ import {
   FileTypeValidator,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
 import { StorageService } from './storage.service';
 
+@ApiTags('Files')
 @Controller('files')
 export class StorageController {
   constructor(private readonly storageService: StorageService) {}
 
   @Post()
+  @ApiOperation({ summary: 'Upload an image file (max 5MB, image/* only)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
   @UseInterceptors(FileInterceptor('file')) // File di-intercept dan disimpan di Memory/RAM sebagai buffer
   async uploadImage(
     @UploadedFile(

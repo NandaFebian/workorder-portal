@@ -9,6 +9,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { CustomerPairingService } from './customer-pairing.service';
 import { StartPairingDto } from './dto/start-pairing.dto';
 import { CompletePairingDto } from './dto/complete-pairing.dto';
@@ -20,6 +21,8 @@ import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interf
 import { Role } from 'src/common/enums/role.enum';
 import { ResponseUtil } from 'src/common/utils/response.util';
 
+@ApiTags('Customer Pairing')
+@ApiBearerAuth('access-token')
 @Controller('customer-pairing')
 @UseGuards(AuthGuard)
 export class CustomerPairingController {
@@ -31,6 +34,7 @@ export class CustomerPairingController {
   @UseGuards(RolesGuard)
   @Roles(Role.Client)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Start pairing with an external account' })
   async startPairing(
     @Body() dto: StartPairingDto,
     @GetUser() user: AuthenticatedUser,
@@ -43,6 +47,7 @@ export class CustomerPairingController {
   @UseGuards(RolesGuard)
   @Roles(Role.Client)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Complete pairing with a verification code' })
   async completePairing(
     @Body() dto: CompletePairingDto,
     @GetUser() user: AuthenticatedUser,
@@ -55,6 +60,7 @@ export class CustomerPairingController {
   @UseGuards(RolesGuard)
   @Roles(Role.Client)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List all paired external accounts' })
   async findAllPairedAccounts(@GetUser() user: AuthenticatedUser) {
     const data = await this.customerPairingService.findAllForUser(user);
     return ResponseUtil.success('Paired accounts retrieved successfully', data);
@@ -64,6 +70,7 @@ export class CustomerPairingController {
   @UseGuards(RolesGuard)
   @Roles(Role.Client)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get paired account for a specific company' })
   async findPairedInCompany(
     @Param('companyId') companyId: string,
     @GetUser() user: AuthenticatedUser,
@@ -79,6 +86,7 @@ export class CustomerPairingController {
   @UseGuards(RolesGuard)
   @Roles(Role.Client)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Unpair an external account' })
   async unpair(
     @Param('external_account_id') id: string,
     @GetUser() user: AuthenticatedUser,

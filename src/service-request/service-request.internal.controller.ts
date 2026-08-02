@@ -10,6 +10,7 @@ import {
   Delete,
   Body,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { ServiceRequestService } from './service-request.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
@@ -21,6 +22,8 @@ import { ResponseUtil } from 'src/common/utils/response.util';
 import { ServiceRequestStatus } from 'src/common/enums/service-request-status.enum';
 import { AssignStaffDto } from 'src/work-order/dto/assign-staff.dto';
 
+@ApiTags('Service Requests (Internal)')
+@ApiBearerAuth('access-token')
 @Controller()
 @UseGuards(AuthGuard, RolesGuard)
 export class ServiceRequestInternalController {
@@ -31,6 +34,7 @@ export class ServiceRequestInternalController {
   @Get('service-requests/inbox')
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get the company service request inbox' })
   async getInbox(@GetUser() user: AuthenticatedUser) {
     if (!user.company?._id)
       throw new ForbiddenException('No company associated');
@@ -47,6 +51,7 @@ export class ServiceRequestInternalController {
   @Patch('service-requests/:id/approve')
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Approve a service request' })
   async approve(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const data = await this.csrService.updateStatus(
       id,
@@ -59,6 +64,7 @@ export class ServiceRequestInternalController {
   @Patch('service-requests/:id/reject')
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reject a service request' })
   async reject(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const data = await this.csrService.updateStatus(
       id,
@@ -71,6 +77,7 @@ export class ServiceRequestInternalController {
   @Patch('service-requests/:id/assign-staff')
   @Roles(Role.CompanyOwner, Role.CompanyManager)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Assign staff to a service request' })
   async assignStaff(
     @Param('id') id: string,
     @Body() assignStaffDto: AssignStaffDto,
@@ -83,6 +90,7 @@ export class ServiceRequestInternalController {
   @Delete('service-requests/:id')
   @Roles(Role.CompanyOwner, Role.CompanyManager)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete a service request' })
   async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const data = await this.csrService.remove(id, user);
     return ResponseUtil.success('Service request deleted successfully', data);

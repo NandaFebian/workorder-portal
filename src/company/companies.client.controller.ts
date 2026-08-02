@@ -7,17 +7,20 @@ import {
   Param,
   UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CompaniesClientService } from './companies.client.service';
 import { OptionalAuthGuard } from 'src/auth/guards/optional-auth.guard';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 
+@ApiTags('Companies (Client)')
 @Controller('public/companies')
 export class CompaniesClientController {
   constructor(private readonly clientService: CompaniesClientService) {}
 
   @Get()
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List all public companies' })
   async findAll() {
     const companies = await this.clientService.findAllPublic();
     return {
@@ -30,6 +33,7 @@ export class CompaniesClientController {
   @Get(':id')
   @UseGuards(OptionalAuthGuard)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get a public company by id' })
   async findById(
     @Param('id') id: string,
     @GetUser() user: AuthenticatedUser | null,
@@ -51,6 +55,7 @@ export class CompaniesClientController {
   @Get(':id/services')
   @UseGuards(OptionalAuthGuard)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List public services offered by a company' })
   async findServicesByCompanyId(
     @Param('id') id: string,
     @GetUser() user: AuthenticatedUser | null,

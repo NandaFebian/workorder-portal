@@ -16,7 +16,7 @@ import { GetUser } from '../common/decorators/get-user.decorator';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 
 @ApiTags('Notifications')
-@ApiBearerAuth()
+@ApiBearerAuth('access-token')
 @UseGuards(AuthGuard)
 @Controller('notifications')
 export class NotificationsController {

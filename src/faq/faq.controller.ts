@@ -16,6 +16,13 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
 import { memoryStorage } from 'multer';
 import { FaqService } from './faq.service';
 import { ToggleFaqDto } from './dto/toggle-faq.dto';
@@ -29,6 +36,8 @@ import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.i
 import { ResponseUtil } from 'src/common/utils/response.util';
 import { CompanyResource } from 'src/company/resources/company.resource';
 
+@ApiTags('FAQ')
+@ApiBearerAuth('access-token')
 @Controller('faq')
 @UseGuards(AuthGuard, RolesGuard)
 @Roles(Role.CompanyOwner)
@@ -42,6 +51,7 @@ export class FaqController {
    */
   @Put('toggle-active')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Enable/disable the FAQ feature for the company' })
   async toggleActive(
     @GetUser() user: AuthenticatedUser,
     @Body() dto: ToggleFaqDto,
@@ -63,6 +73,7 @@ export class FaqController {
    */
   @Post('text-docs')
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Upload a text knowledge document' })
   async uploadTextDocs(
     @GetUser() user: AuthenticatedUser,
     @Body() dto: UploadTextDocsDto,
@@ -82,6 +93,17 @@ export class FaqController {
    */
   @Post('pdf-docs')
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Upload a PDF knowledge document (max 10MB)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string' },
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
@@ -113,6 +135,7 @@ export class FaqController {
    */
   @Get('docs')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List all knowledge documents for the company' })
   async getDocs(@GetUser() user: AuthenticatedUser) {
     const docs = await this.faqService.getDocs(user);
     return ResponseUtil.success('Documents retrieved successfully.', docs);
@@ -124,6 +147,7 @@ export class FaqController {
    */
   @Delete('docs/:docsId')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete a knowledge document by its provider ID' })
   async deleteDoc(
     @GetUser() user: AuthenticatedUser,
     @Param('docsId', ParseIntPipe) docsId: number,

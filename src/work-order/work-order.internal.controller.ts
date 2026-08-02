@@ -12,6 +12,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { WorkOrderService } from './work-order.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
@@ -28,6 +29,8 @@ import { CreateSubmissionsDto } from './dto/create-submissions.dto';
 import { SubmitWorkReportFormDto } from 'src/work-report/dto/submit-work-report-form.dto';
 import { ResponseUtil } from 'src/common/utils/response.util';
 
+@ApiTags('Work Orders')
+@ApiBearerAuth('access-token')
 @Controller('workorders')
 @UseGuards(AuthGuard, RolesGuard)
 @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
@@ -36,6 +39,7 @@ export class WorkOrderInternalController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a work order' })
   async create(
     @Body() createWorkOrderDto: CreateWorkOrderDto,
     @GetUser() user: AuthenticatedUser,
@@ -50,6 +54,7 @@ export class WorkOrderInternalController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List work orders (with filters)' })
   async findAll(
     @GetUser() user: AuthenticatedUser,
     @Query() filterDto: WorkOrderFilterDto,
@@ -60,6 +65,7 @@ export class WorkOrderInternalController {
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get a work order by id' })
   async findOne(
     @Param('id') id: string,
     @GetUser() user: AuthenticatedUser,
@@ -75,6 +81,7 @@ export class WorkOrderInternalController {
 
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update a work order' })
   async update(
     @Param('id') id: string,
     @Body() updateWorkOrderDto: UpdateWorkOrderDto,
@@ -94,6 +101,7 @@ export class WorkOrderInternalController {
 
   @Patch(':id/status')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update work order status' })
   async updateStatus(
     @Param('id') id: string,
     @Body() updateStatusDto: UpdateWorkOrderStatusDto,
@@ -114,6 +122,7 @@ export class WorkOrderInternalController {
   @Put(':id/assign-staffs')
   @HttpCode(HttpStatus.OK)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @ApiOperation({ summary: 'Assign staff to a work order' })
   async assignStaff(
     @Param('id') id: string,
     @Body() assignStaffDto: AssignStaffDto,
@@ -133,6 +142,7 @@ export class WorkOrderInternalController {
 
   @Put(':id/submissions')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Save work order form submissions' })
   async createSubmissions(
     @Param('id') id: string,
     @Body() createSubmissionsDto: CreateSubmissionsDto,
@@ -153,6 +163,7 @@ export class WorkOrderInternalController {
   @Patch(':id/sent')
   @HttpCode(HttpStatus.OK)
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
+  @ApiOperation({ summary: 'Mark a work order as sent' })
   async markAsSent(
     @Param('id') id: string,
     @GetUser() user: AuthenticatedUser,
@@ -167,6 +178,7 @@ export class WorkOrderInternalController {
 
   @Patch(':id/approve')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Approve a work order' })
   async approve(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const result = await this.workOrderService.approve(id, user);
     return ResponseUtil.success(
@@ -178,6 +190,7 @@ export class WorkOrderInternalController {
 
   @Patch(':id/reject')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reject a work order' })
   async reject(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const result = await this.workOrderService.reject(id, user);
     return ResponseUtil.success(
@@ -190,6 +203,7 @@ export class WorkOrderInternalController {
   @Post(':id/recreate')
   @HttpCode(HttpStatus.CREATED)
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
+  @ApiOperation({ summary: 'Recreate a work order from an existing one' })
   async recreate(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const result = await this.workOrderService.recreate(id, user);
     return ResponseUtil.success(
@@ -202,6 +216,7 @@ export class WorkOrderInternalController {
   @Patch(':id/cancel')
   @HttpCode(HttpStatus.OK)
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
+  @ApiOperation({ summary: 'Cancel a work order' })
   async cancel(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const result = await this.workOrderService.cancel(id, user);
     return ResponseUtil.success(
@@ -213,6 +228,7 @@ export class WorkOrderInternalController {
 
   @Patch(':id/start')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Start a work order' })
   async start(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const result = await this.workOrderService.start(id, user);
     return ResponseUtil.success('Work Order started', result.data, result.meta);
@@ -221,6 +237,7 @@ export class WorkOrderInternalController {
   @Patch(':id/complete')
   @HttpCode(HttpStatus.OK)
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
+  @ApiOperation({ summary: 'Complete a work order' })
   async complete(
     @Param('id') id: string,
     @Body('issue') issue: string,
@@ -241,6 +258,7 @@ export class WorkOrderInternalController {
   @Patch(':id/fail')
   @HttpCode(HttpStatus.OK)
   @Roles(Role.CompanyOwner, Role.CompanyManager, Role.CompanyStaff)
+  @ApiOperation({ summary: 'Mark a work order as failed' })
   async fail(
     @Param('id') id: string,
     @Body('issue') issue: string,
@@ -253,6 +271,7 @@ export class WorkOrderInternalController {
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @ApiOperation({ summary: 'Delete a work order' })
   async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const result = await this.workOrderService.remove(id, user);
     return ResponseUtil.success(
@@ -264,6 +283,7 @@ export class WorkOrderInternalController {
 
   @Get(':id/report')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get the report of a work order' })
   async getReport(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const result = await this.workOrderService.getReport(id, user);
     return ResponseUtil.success(
@@ -275,6 +295,7 @@ export class WorkOrderInternalController {
 
   @Put(':id/report')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Submit the work report form for a work order' })
   async submitReportForm(
     @Param('id') id: string,
     @Body() submitDto: SubmitWorkReportFormDto,

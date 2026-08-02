@@ -12,6 +12,7 @@ import {
   ForbiddenException,
   Delete,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { CompaniesInternalService } from './companies.internal.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { UpdateCompanyDto } from './dto/update-company.dto';
@@ -27,6 +28,8 @@ import { Role } from 'src/common/enums/role.enum';
 import { ResponseUtil } from 'src/common/utils/response.util';
 import { CompanyResource } from './resources/company.resource';
 
+@ApiTags('Companies (Internal)')
+@ApiBearerAuth('access-token')
 @Controller('company')
 export class CompaniesInternalController {
   constructor(
@@ -38,6 +41,7 @@ export class CompaniesInternalController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.AppAdmin, Role.CompanyOwner)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List companies (admin) or get own company (owner)' })
   async findAll(@GetUser() user: AuthenticatedUser) {
     if (user.role === 'admin_app') {
       const companies = await this.companiesInternalService.findAllInternal();
@@ -71,6 +75,7 @@ export class CompaniesInternalController {
   @Post('invite')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @ApiOperation({ summary: 'Invite employees to the company by email' })
   async inviteEmployees(
     @GetUser() invitingUser: AuthenticatedUser,
     @Body() inviteEmployeesDto: InviteEmployeesDto,
@@ -90,6 +95,7 @@ export class CompaniesInternalController {
   @Get('invitations/history')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @ApiOperation({ summary: 'Get the company invitation history' })
   async getInvitationHistory(@GetUser() user: AuthenticatedUser) {
     if (!user.company?._id) {
       throw new ForbiddenException('You are not associated with any company.');
@@ -104,6 +110,7 @@ export class CompaniesInternalController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.CompanyOwner, Role.CompanyManager) // Gunakan enum Role
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List employees of the company' })
   async findAllEmployees(@GetUser() user: AuthenticatedUser) {
     if (!user.company?._id) {
       throw new ForbiddenException('You are not associated with any company.');
@@ -139,6 +146,7 @@ export class CompaniesInternalController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.CompanyOwner, Role.CompanyManager) // Tentukan siapa yg boleh update
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Update the current user's company" })
   async update(
     @GetUser() user: AuthenticatedUser,
     @Body() updateCompanyDto: UpdateCompanyDto,
@@ -163,6 +171,7 @@ export class CompaniesInternalController {
   @UseGuards(AuthGuard, RolesGuard)
   @HttpCode(HttpStatus.OK)
   @Roles(Role.CompanyOwner, Role.CompanyManager)
+  @ApiOperation({ summary: "Get the current user's company detail" })
   async findById(@GetUser() user: AuthenticatedUser) {
     if (!user.company?._id) {
       throw new ForbiddenException('You are not associated with any company.');
@@ -180,6 +189,7 @@ export class CompaniesInternalController {
   @UseGuards(AuthGuard, RolesGuard)
   @HttpCode(HttpStatus.OK)
   @Roles(Role.CompanyOwner)
+  @ApiOperation({ summary: "Delete the current user's company" })
   async remove(@GetUser() user: AuthenticatedUser) {
     if (!user.company?._id) {
       throw new ForbiddenException('You are not associated with any company.');
@@ -193,6 +203,7 @@ export class CompaniesInternalController {
   @UseGuards(AuthGuard, RolesGuard)
   @HttpCode(HttpStatus.OK)
   @Roles(Role.CompanyOwner)
+  @ApiOperation({ summary: 'Get the company integration config' })
   async getIntegrationConfig(@GetUser() user: AuthenticatedUser) {
     if (!user.company?._id) {
       throw new ForbiddenException('You are not associated with any company.');
@@ -210,6 +221,7 @@ export class CompaniesInternalController {
   @UseGuards(AuthGuard, RolesGuard)
   @HttpCode(HttpStatus.OK)
   @Roles(Role.CompanyOwner)
+  @ApiOperation({ summary: 'Update the company integration config' })
   async updateIntegrationConfig(
     @GetUser() user: AuthenticatedUser,
     @Body() dto: UpdateIntegrationConfigDto,

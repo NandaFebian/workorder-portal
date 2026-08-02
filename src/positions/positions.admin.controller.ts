@@ -10,6 +10,7 @@ import {
   Delete,
   UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { PositionsService } from './positions.service';
 import { CreatePositionDto } from './dto/create-position.dto';
 import { UpdatePositionDto } from './dto/update-position.dto';
@@ -21,6 +22,8 @@ import { GetUser } from 'src/common/decorators/get-user.decorator';
 import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { ResponseUtil } from 'src/common/utils/response.util';
 
+@ApiTags('Positions')
+@ApiBearerAuth('access-token')
 @Controller('positions')
 @UseGuards(AuthGuard, RolesGuard)
 @Roles(Role.AppAdmin, Role.CompanyOwner, Role.CompanyManager)
@@ -29,6 +32,7 @@ export class PositionsAdminController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a position' })
   async create(
     @Body() createPositionDto: CreatePositionDto,
     @GetUser() user: AuthenticatedUser,
@@ -45,6 +49,7 @@ export class PositionsAdminController {
 
   @Put(':id')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update a position' })
   async update(
     @Param('id') id: string,
     @Body() updatePositionDto: UpdatePositionDto,
@@ -63,6 +68,7 @@ export class PositionsAdminController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete a position' })
   async remove(@Param('id') id: string, @GetUser() user: AuthenticatedUser) {
     const data = await this.positionsService.remove(id, user);
     return ResponseUtil.success('Position deleted successfully', data);
